@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "paths": {
+      "@/*": ["src/*"],
+      "@worker/*": ["worker/*"]
+    },
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022",
+    "types": ["vite/client", "bun", "./worker-configuration.d.ts"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "worker/**/*.ts",
+    "tests/**/*.ts",
+    "vite.config.ts"
+  ]
+}

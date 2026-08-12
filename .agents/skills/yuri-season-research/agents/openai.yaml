@@ -1,0 +1,4 @@
+interface:
+  display_name: "Yuri Season Research"
+  short_description: "Incremental, evidence-first seasonal yuri updates"
+  default_prompt: "Use $yuri-season-research in incremental mode. Stop without broad search when the deterministic diff is empty."

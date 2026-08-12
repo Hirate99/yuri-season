@@ -1,0 +1,2 @@
+# 本地更新脚本使用；生产环境通过 `wrangler secret put ADMIN_TOKEN` 配置。
+ADMIN_TOKEN=replace-with-a-long-random-token

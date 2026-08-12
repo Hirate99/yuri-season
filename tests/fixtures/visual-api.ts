@@ -1,0 +1,100 @@
+const slot = (id: string, weekday: number, time: string, label: string) => ({
+  id, label, weekday, localTime: time, timezone: "Asia/Tokyo", platformUrl: null, isPrimary: true,
+});
+
+export const anime = [
+  {
+    id: "anime-kimishinu", slug: "kimishinu", titleZh: "与你相恋到生命尽头", titleJa: "きみが死ぬまで恋をしたい",
+    titleEn: "I Want to Love You Till Your Dying Day", synopsis: "在将孤儿培养为战争兵器的学校里，无法接受死亡成为日常的希娜，遇见了浑身是血却总在微笑的美美。少女之间的爱意，被放在战争、牺牲与想活下去的愿望之间。",
+    editorialNote: "本季明确百合主线。改编节奏、系列构成，以及动画如何处理原作的残酷与轻柔，是最值得持续观察的三个点。",
+    yuriKind: "canon", yuriStatus: "confirmed", status: "airing", premiereAt: "2026-07-08T00:30:00+09:00", episodeCount: 13, studio: "ROLL2",
+    officialUrl: "https://www.kimishinu-anime.com/", bangumiUrl: "https://bgm.tv/subject/541285", officialXUrl: "https://x.com/anime_kimishinu",
+    coverUrl: "https://lain.bgm.tv/r/400/pic/cover/l/b3/26/541285_CYBZc.jpg", coverSourceUrl: "https://bgm.tv/subject/541285",
+    visualTheme: "rose", featured: true, primarySlot: slot("slot-kimi", 2, "24:30", "TOKYO MX / AT-X"), latestFeedAt: "2026-08-10T12:00:00Z", feedCount: 3,
+  },
+  {
+    id: "anime-taiari", slug: "taiari", titleZh: "感谢对战。～大小姐才不会玩格斗游戏～", titleJa: "対ありでした。～お嬢さまは格闘ゲームなんてしない～",
+    titleEn: "Young Ladies Don’t Play Fighting Games", synopsis: "以成为优雅大小姐为目标的深月绫，撞见白百合大人夜绘美绪在空教室里狂热地打格斗游戏。",
+    editorialNote: "女性关系性与竞技喜剧并重。格斗场面的可读性和角色之间的火花同样重要。",
+    yuriKind: "strong", yuriStatus: "confirmed", status: "airing", premiereAt: "2026-07-07T23:00:00+09:00", episodeCount: 12, studio: "diomedéa",
+    officialUrl: "https://taiari-anime.com/", bangumiUrl: "https://bgm.tv/subject/325767", officialXUrl: "https://x.com/taiari_anime",
+    coverUrl: "https://lain.bgm.tv/r/400/pic/cover/l/a1/d3/325767_u3pvR.jpg", coverSourceUrl: "https://bgm.tv/subject/325767",
+    visualTheme: "violet", featured: true, primarySlot: slot("slot-tai", 2, "23:00", "TOKYO MX"), latestFeedAt: "2026-08-09T12:00:00Z", feedCount: 1,
+  },
+  {
+    id: "anime-nanoha", slug: "nanoha-exceeds", titleZh: "魔法少女奈叶 EXCEEDS", titleJa: "魔法少女リリカルなのは EXCEEDS Gun Blaze Vengeance",
+    titleEn: "Magical Girl Lyrical Nanoha EXCEEDS", synopsis: "《魔法少女奈叶》系列完全新作。奈叶等人在新的组织与战斗框架下继续面对责任与彼此关系的变化。",
+    editorialNote: null, yuriKind: "strong", yuriStatus: "confirmed", status: "airing", premiereAt: "2026-07-05T01:00:00+09:00", episodeCount: null, studio: "Seven Arcs",
+    officialUrl: "https://www.nanoha.com/EXGV/", bangumiUrl: "https://bgm.tv/subject/530729", officialXUrl: "https://x.com/exgv_official",
+    coverUrl: "https://lain.bgm.tv/r/400/pic/cover/l/cf/0b/530729_82Fm9.jpg", coverSourceUrl: "https://bgm.tv/subject/530729", visualTheme: "blue", featured: false,
+    primarySlot: slot("slot-nanoha", 6, "25:00", "TOKYO MX / BS11"), latestFeedAt: null, feedCount: 0,
+  },
+  {
+    id: "anime-azurlane-bisoku-2", slug: "azurlane-bisoku-2", titleZh: "碧蓝航线：微速前行！第二季", titleJa: "アズールレーン びそくぜんしんっ！にっ！！",
+    titleEn: "Azur Lane: Slow Ahead! Season 2", synopsis: "以舰船少女们的宿舍、训练与休息日为中心的短篇日常续作，延续轻松群像与角色组合互动。",
+    editorialNote: null, yuriKind: "adjacent", yuriStatus: "confirmed", status: "airing", premiereAt: "2026-07-06T01:05:00+09:00", episodeCount: null, studio: "Studio CANDY BOX",
+    officialUrl: "https://www.azurlane-bisoku.jp/", bangumiUrl: "https://bgm.tv/subject/454083", officialXUrl: "https://x.com/azurlane_bisoku",
+    coverUrl: "https://lain.bgm.tv/r/400/pic/cover/l/61/12/454083_DtM3t.jpg", coverSourceUrl: "https://bgm.tv/subject/454083", visualTheme: "amber", featured: false,
+    primarySlot: slot("slot-azur", 0, "25:05", "TOKYO MX"), latestFeedAt: null, feedCount: 0,
+  },
+  {
+    id: "anime-grow-up-show", slug: "grow-up-show", titleZh: "向日葵马戏团", titleJa: "グロウアップショウ ～ひまわりのサーカス団～",
+    titleEn: "Grow Up Show", synopsis: "昭和30年代，天才杂技少女鹤卷瑞佳加入四处巡演的向日葵马戏团。",
+    editorialNote: null, yuriKind: "strong", yuriStatus: "pending", status: "airing", premiereAt: "2026-07-05T00:00:00+09:00", episodeCount: 13, studio: "A-1 Pictures / Psyde Kick Studio",
+    officialUrl: "https://growupshow.com/", bangumiUrl: "https://bgm.tv/subject/570583", officialXUrl: "https://x.com/growupshow",
+    coverUrl: "https://lain.bgm.tv/r/400/pic/cover/l/0c/cf/570583_d3QZD.jpg", coverSourceUrl: "https://bgm.tv/subject/570583", visualTheme: "amber", featured: false,
+    primarySlot: slot("slot-grow", 6, "24:00", "TOKYO MX / BS11"), latestFeedAt: null, feedCount: 0,
+  },
+  {
+    id: "anime-goodbye-lara", slug: "goodbye-lara", titleZh: "再见菈菈", titleJa: "さよならララ",
+    titleEn: "Goodbye, Lara", synopsis: "两百年前化作泡沫的人鱼公主菈菈在琵琶湖苏醒，并住进女高中生拳击手大津茉里的家。",
+    editorialNote: null, yuriKind: "strong", yuriStatus: "pending", status: "airing", premiereAt: "2026-07-06T00:30:00+09:00", episodeCount: 12, studio: "Kinema citrus",
+    officialUrl: "https://goodbyelara.com/", bangumiUrl: "https://bgm.tv/subject/495291", officialXUrl: "https://x.com/goodbye_lara",
+    coverUrl: "https://lain.bgm.tv/r/400/pic/cover/l/18/af/495291_9WuBW.jpg", coverSourceUrl: "https://bgm.tv/subject/495291", visualTheme: "lake", featured: false,
+    primarySlot: slot("slot-lara", 0, "24:30", "TOKYO MX"), latestFeedAt: null, feedCount: 0,
+  },
+] as const;
+
+export const feedItems = [
+  { id: "feed-1", animeId: "anime-kimishinu", animeSlug: "kimishinu", animeTitle: "与你相恋到生命尽头", animeCoverUrl: "https://example.com/kimishinu.jpg", personId: null, personName: null, characterId: null, characterName: null, contentClass: "schedule", sourceIdentity: "official", title: "每周二 24:30 放送", summary: "AT-X、TOKYO MX、WOWOW 等平台自 7 月 7 日起播出。", url: "https://www.kimishinu-anime.com/", sourceName: "动画公式", sourceAccount: "@anime_kimishinu", importance: 5, publishedAt: "2026-08-10T12:00:00+09:00", safetyRating: "safe", spoilerLevel: "none", autoPublished: false, pinned: true, media: null },
+  { id: "feed-2", animeId: "anime-kimishinu", animeSlug: "kimishinu", animeTitle: "与你相恋到生命尽头", animeCoverUrl: "https://example.com/kimishinu.jpg", personId: null, personName: null, characterId: null, characterName: null, contentClass: "creator_art", sourceIdentity: "creator", title: "原作者公开第六话纪念图", summary: "あおのなち公开与第六话相关的纪念绘图；本站仅提供作者原始发布链接。", url: "https://example.com/creator-art", sourceName: "あおのなち", sourceAccount: "@aooont", importance: 3, publishedAt: "2026-08-09T18:00:00+09:00", safetyRating: "safe", spoilerLevel: "mild", autoPublished: true, pinned: false, media: null },
+  { id: "feed-3", animeId: "anime-taiari", animeSlug: "taiari", animeTitle: "感谢对战。～大小姐才不会玩格斗游戏～", animeCoverUrl: "https://example.com/taiari.jpg", personId: null, personName: null, characterId: null, characterName: null, contentClass: "official_news", sourceIdentity: "official", title: "与 Street Fighter 6 正式联动", summary: "作品公开 CAPCOM 协力与联动内容。", url: "https://taiari-anime.com/news/", sourceName: "动画公式", sourceAccount: "@taiari_anime", importance: 4, publishedAt: "2026-08-08T12:00:00+09:00", safetyRating: "safe", spoilerLevel: "none", autoPublished: false, pinned: false, media: null },
+] as const;
+
+export const catalog = { season: { id: "season", slug: "2026-summer", label: "2026 夏", startsOn: "2026-07-01", endsOn: "2026-09-30" }, anime, events: [], generatedAt: new Date().toISOString() };
+export const calendar = { season: catalog.season, entries: anime.map((item) => ({ animeId: item.id, animeSlug: item.slug, titleZh: item.titleZh, titleJa: item.titleJa, yuriKind: item.yuriKind, yuriStatus: item.yuriStatus, visualTheme: item.visualTheme, coverUrl: item.coverUrl, currentEpisode: 6, slot: item.primarySlot })), events: [] };
+
+export const detail = {
+  anime: { ...anime[0], episodeDurationMin: 24, sourceMaterial: "漫画 · Comic 百合姬", broadcasts: [anime[0].primarySlot],
+    staff: [
+      { id: "s1", personId: "p1", role: "原作", name: "あおのなち", nameNative: "あおのなち", profileUrl: null, accounts: [{ id: "a1", platform: "X", handle: "@aooont", url: "https://x.com/aooont", verified: true }] },
+      { id: "s2", personId: "p2", role: "监督", name: "友田康", nameNative: "友田 康", profileUrl: null, accounts: [] },
+      { id: "s3", personId: "p3", role: "系列构成 / 脚本", name: "花田十辉", nameNative: "花田 十輝", profileUrl: null, accounts: [] },
+    ],
+    cast: [
+      { id: "c1", characterId: "ch1", personId: "cv1", characterName: "托茨基·希娜", characterNameNative: "トツキ・シーナ", characterProfile: null, personName: "高桥李依", personNameNative: "高橋 李依", birthdayMonth: null, birthdayDay: null, birthdayVerified: false, accounts: [{ id: "ca1", platform: "X", handle: "@taka8rie", url: "https://x.com/taka8rie", verified: true }] },
+      { id: "c2", characterId: "ch2", personId: "cv2", characterName: "卡嘉莉·美美", characterNameNative: "カガリ・ミミ", characterProfile: null, personName: "日高里菜", personNameNative: "日高 里菜", birthdayMonth: null, birthdayDay: null, birthdayVerified: false, accounts: [] },
+    ],
+    accounts: [{ id: "official", platform: "X", handle: "@anime_kimishinu", url: "https://x.com/anime_kimishinu", verified: true }], events: [] },
+  feed: feedItems.slice(0, 2),
+  media: [{ id: "m1", contentClass: "official_art", title: "第 2 弹主视觉", creatorName: "动画制作委员会", creatorUrl: "https://www.kimishinu-anime.com/", originalUrl: "https://www.kimishinu-anime.com/", previewUrl: null, presentationMode: "link_only", safetyRating: "safe", spoilerLevel: "none", rightsNote: "仅原链", publishedAt: "2026-06-09T12:00:00+09:00" }],
+  discussions: [{ id: "d1", platform: "Bangumi", title: "条目讨论版", url: "https://bgm.tv/subject/541285/board", note: "单集与改编讨论较集中", lastActivityAt: "2026-08-10T12:00:00Z", lastCheckedAt: "2026-08-11T12:00:00Z" }],
+};
+
+export const admin = {
+  counts: { anime: 6, held: 1, sources: 14, activeDiscussions: 5, autoPublished: 1 }, anime,
+  coverage: anime.map((item) => ({ animeId: item.id, animeTitle: item.titleZh, seasonId: "season", hasCover: Boolean(item.coverUrl), broadcasts: 1, staff: 5, cast: 5, mainCharacters: 5, mainCharacterExpected: 5, sourcedMainCharacters: 5, namedMainCharacters: 5, auditedMainBirthdays: 5, verifiedMainBirthdays: 1, verifiedAccounts: 1, sources: 2, verifiedEvents: 1, media: 0, discussions: 1, themeSongs: 0, themeSongCovers: 0 })),
+  heldCandidates: [{ id: "candidate-1", animeId: "anime-kimishinu", animeTitle: "与你相恋到生命尽头", contentClass: "creator_art", sourceIdentity: "creator", title: "原作者公开第六话纪念图", summary: "候选摘要等待人工确认作者署名与剧透级别。", url: "https://example.com/art", sourceName: "あおのなち", sourceAccount: "@aooont", importance: 3, publishedAt: "2026-08-10T12:00:00Z", presentationMode: "link_only", safetyRating: "safe", spoilerLevel: "mild", confidence: .86, status: "held", discoveredBy: "local_skill" }],
+  sources: [
+    { id: "source-kimi-news", animeTitle: "与你相恋到生命尽头", label: "动画公式 NEWS", sourceType: "official_json", changeKind: "feed_candidate", trustLevel: "official", cadenceProfile: "local", url: "https://www.kimishinu-anime.com/news/newslist.json", itemUrlTemplate: "https://www.kimishinu-anime.com/news/{id}.html", enabled: true, nextCheckAt: null, lastCheckedAt: "2026-08-11T10:00:00Z", failureCount: 0, lastError: null },
+    { id: "source-kimi-bgm", animeTitle: "与你相恋到生命尽头", label: "Bangumi 条目", sourceType: "bangumi", changeKind: "catalog_metadata", trustLevel: "community", cadenceProfile: "local", url: "https://api.bgm.tv/v0/subjects/541285", itemUrlTemplate: null, enabled: true, nextCheckAt: null, lastCheckedAt: null, failureCount: 0, lastError: null },
+    { id: "source-tai-news", animeTitle: "感谢对战。～大小姐才不会玩格斗游戏～", label: "动画公式 NEWS", sourceType: "official_json", changeKind: "feed_candidate", trustLevel: "official", cadenceProfile: "local", url: "https://taiari-anime.com/news/newslist.json", itemUrlTemplate: "https://taiari-anime.com/news/?id={id}", enabled: true, nextCheckAt: null, lastCheckedAt: null, failureCount: 0, lastError: null },
+    { id: "source-tai-bgm", animeTitle: "感谢对战。～大小姐才不会玩格斗游戏～", label: "Bangumi 条目", sourceType: "bangumi", changeKind: "catalog_metadata", trustLevel: "community", cadenceProfile: "local", url: "https://api.bgm.tv/v0/subjects/325767", itemUrlTemplate: null, enabled: true, nextCheckAt: null, lastCheckedAt: null, failureCount: 0, lastError: null },
+    { id: "source-nanoha-official", animeTitle: "魔法少女奈叶 EXCEEDS", label: "动画公式 NEWS", sourceType: "official_page", changeKind: "feed_candidate", trustLevel: "official", cadenceProfile: "local", url: "https://www.nanoha.com/EXGV/news/", itemUrlTemplate: null, enabled: true, nextCheckAt: null, lastCheckedAt: null, failureCount: 0, lastError: null },
+    { id: "source-azur-official", animeTitle: "碧蓝航线：微速前行！第二季", label: "动画公式 NEWS", sourceType: "official_json", changeKind: "feed_candidate", trustLevel: "official", cadenceProfile: "local", url: "https://www.azurlane-bisoku.jp/api/news/list?index=1&size=20", itemUrlTemplate: null, enabled: true, nextCheckAt: null, lastCheckedAt: null, failureCount: 0, lastError: null },
+  ],
+  recentRuns: [{ id: "run-1", triggerType: "local_skill", status: "completed", sourceCount: 6, observationCount: 2, candidateCount: 1, publishedCount: 0, heldCount: 1, rejectedCount: 0, jobCount: 0, message: null, startedAt: "2026-08-11T10:00:00Z", finishedAt: "2026-08-11T10:01:00Z" }],
+  recentJobs: [{ id: "job-1", jobType: "discover_work", scopeType: "global", scopeId: null, executionTarget: "local", status: "planned", priority: 30, attemptCount: 0, scheduledAt: "2026-08-11T12:00:00Z", lastError: null }],
+  recentPublications: [],
+  recentAudit: [],
+};

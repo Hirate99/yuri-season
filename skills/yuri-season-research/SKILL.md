@@ -99,6 +99,16 @@ Model fanwork as:
 - Fanwork is always `link_only`, `sourceIdentity: community`, and `hold` in phase one—even when the creator identity and post are verified.
 - Deduplicate fanwork in its own lane by stable platform object/original URL. Do not collapse it into cast, creator-art, or official lanes.
 
+## Operational self-iteration
+
+Treat running the 百合季 site as a feedback loop for this skill, not as a sequence of isolated fixes.
+
+1. During every operational run, note any newly discovered rule that would prevent the same class of error, improve traceability, or make a repeatable task safer or more deterministic.
+2. Before finishing the run, decide whether the lesson is reusable. Promote only stable workflow, validation, provenance, safety, or presentation rules; do not embed one-off records, transient URLs, secrets, unverified guesses, or work-specific facts that belong in the database or a research batch.
+3. Update the canonical repository skill at `skills/yuri-season-research/SKILL.md` in the same operational turn. Do not create a second project-local copy; the canonical directory is the publication and maintenance source.
+4. Validate the complete canonical skill after editing and inspect the diff. A skill change is incomplete if validation fails, it contradicts existing safety or publishing boundaries, or it silently broadens authorization.
+5. In the handoff, state the reusable rule learned and how it changed the operation when the change was material. Continue the active research/import workflow after the skill update; do not let skill maintenance replace the requested site work.
+
 ## Other research rules
 
 - Official facts: use the official site/account, publisher, broadcaster, or an API entry cross-checked with an official source.

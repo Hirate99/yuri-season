@@ -1,5 +1,27 @@
 import type { AuditEntry } from "@/domain";
+import { sql } from "drizzle-orm";
+import { database } from "../db/client";
+import { auditLogTable } from "../db/schema";
 import { createId } from "../http";
+
+export function auditInsert(
+  db: D1Database,
+  actorType: AuditEntry["actorType"],
+  action: string,
+  entityType: string,
+  entityId: string,
+  detail: Record<string, unknown> = {},
+) {
+  return database(db).insert(auditLogTable).values({
+    id: createId("audit"),
+    actorType,
+    action,
+    entityType,
+    entityId,
+    detailJson: JSON.stringify(detail),
+    createdAt: sql`CURRENT_TIMESTAMP`,
+  });
+}
 
 export function auditStatement(
   db: D1Database,
@@ -23,5 +45,5 @@ export async function recordAudit(
   entityId: string,
   detail: Record<string, unknown> = {},
 ): Promise<void> {
-  await auditStatement(db, actorType, action, entityType, entityId, detail).run();
+  await auditInsert(db, actorType, action, entityType, entityId, detail).run();
 }

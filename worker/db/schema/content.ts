@@ -34,6 +34,23 @@ export const mediaItemsTable = sqliteTable("media_items", {
   publishedAt: text("published_at").notNull(),
 });
 
+export const feedItemsTable = sqliteTable("feed_items", {
+  id: text("id").primaryKey(),
+  animeId: text("anime_id"),
+  publishedAt: text("published_at").notNull(),
+  withdrawnAt: text("withdrawn_at"),
+});
+
+export const auditLogTable = sqliteTable("audit_log", {
+  id: text("id").primaryKey(),
+  actorType: text("actor_type", { enum: ["system", "llm", "admin", "local_skill"] }).notNull(),
+  action: text("action").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  detailJson: text("detail_json").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
 export const discussionsTable = sqliteTable("discussions", {
   id: text("id").primaryKey(),
   animeId: text("anime_id").notNull(),

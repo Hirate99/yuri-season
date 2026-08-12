@@ -1,0 +1,73 @@
+import { and, asc, desc, eq, getTableColumns, sql, type SQL } from "drizzle-orm";
+import { database } from "../client";
+import {
+  animeTable,
+  broadcastSlotsTable,
+  feedItemsTable,
+  seasonsTable,
+} from "../schema";
+
+const {
+  parentAnimeId: _parentAnimeId,
+  createdAt: _createdAt,
+  updatedAt: _updatedAt,
+  ...publicAnimeColumns
+} = getTableColumns(animeTable);
+
+const animeSummarySelection = {
+  ...publicAnimeColumns,
+  seasonLabel: seasonsTable.label,
+  seasonStartsOn: seasonsTable.startsOn,
+  slotId: broadcastSlotsTable.id,
+  slotLabel: broadcastSlotsTable.label,
+  slotWeekday: broadcastSlotsTable.weekday,
+  slotLocalTime: broadcastSlotsTable.localTime,
+  slotTimezone: broadcastSlotsTable.timezone,
+  slotPlatformUrl: broadcastSlotsTable.platformUrl,
+  latestFeedAt: sql<string | null>`MAX(
+    CASE WHEN ${feedItemsTable.withdrawnAt} IS NULL THEN ${feedItemsTable.publishedAt} END
+  )`.as("latest_feed_at"),
+  feedCount: sql<number>`COUNT(DISTINCT
+    CASE WHEN ${feedItemsTable.withdrawnAt} IS NULL THEN ${feedItemsTable.id} END
+  )`.mapWith(Number).as("feed_count"),
+};
+
+function animeSummaryQuery(db: D1Database, where?: SQL) {
+  const query = database(db).select(animeSummarySelection)
+    .from(animeTable)
+    .innerJoin(seasonsTable, eq(seasonsTable.id, animeTable.seasonId))
+    .leftJoin(broadcastSlotsTable, and(
+      eq(broadcastSlotsTable.animeId, animeTable.id),
+      eq(broadcastSlotsTable.isPrimary, true),
+    ))
+    .leftJoin(feedItemsTable, eq(feedItemsTable.animeId, animeTable.id))
+    .groupBy(animeTable.id, broadcastSlotsTable.id)
+    .$dynamic();
+  return where ? query.where(where) : query;
+}
+
+export type AnimeSummaryRecord = Awaited<ReturnType<typeof readAllAnimeSummaries>>[number];
+
+export function readAnimeSummariesForSeason(db: D1Database, seasonId: string) {
+  return animeSummaryQuery(db, eq(animeTable.seasonId, seasonId)).orderBy(
+    desc(animeTable.featured),
+    asc(broadcastSlotsTable.weekday),
+    asc(broadcastSlotsTable.localTime),
+    asc(animeTable.titleZh),
+  );
+}
+
+export async function readAnimeSummaryBySlug(db: D1Database, slug: string) {
+  const [row] = await animeSummaryQuery(db, eq(animeTable.slug, slug)).limit(1);
+  return row ?? null;
+}
+
+export function readAllAnimeSummaries(db: D1Database) {
+  return animeSummaryQuery(db).orderBy(
+    desc(seasonsTable.startsOn),
+    desc(animeTable.featured),
+    asc(broadcastSlotsTable.weekday),
+    asc(broadcastSlotsTable.localTime),
+    asc(animeTable.titleZh),
+  );
+}

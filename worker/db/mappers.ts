@@ -2,25 +2,17 @@ import type {
   Account,
   AnimeSummary,
   BroadcastSlot,
-  CalendarEvent,
   FeedItem,
   MediaItem,
-  Season,
 } from "@/domain";
 import { resolveCurrentEpisode } from "@/lib/episode-progress";
+import type { AnimeSummaryRecord } from "./read-models/anime";
 import type {
   AccountRow,
-  AnimeRow,
   BroadcastRow,
-  EventRow,
   FeedRow,
   MediaRow,
-  SeasonRow,
 } from "./rows";
-
-export function mapSeason(row: SeasonRow): Season {
-  return { id: row.id, slug: row.slug, label: row.label, startsOn: row.starts_on, endsOn: row.ends_on };
-}
 
 export function mapAccount(row: AccountRow): Account {
   return { id: row.id, platform: row.platform, handle: row.handle, url: row.url, verified: row.verified === 1 };
@@ -38,79 +30,59 @@ export function mapBroadcast(row: BroadcastRow): BroadcastSlot {
   };
 }
 
-export function mapAnime(row: AnimeRow): AnimeSummary {
-  const primarySlot = row.slot_id && row.slot_label && row.slot_weekday !== null && row.slot_local_time && row.slot_timezone
+export function mapAnime(row: AnimeSummaryRecord): AnimeSummary {
+  const primarySlot = row.slotId && row.slotLabel && row.slotWeekday !== null && row.slotLocalTime && row.slotTimezone
     ? {
-        id: row.slot_id,
-        label: row.slot_label,
-        weekday: row.slot_weekday,
-        localTime: row.slot_local_time,
-        timezone: row.slot_timezone,
-        platformUrl: row.slot_platform_url,
+        id: row.slotId,
+        label: row.slotLabel,
+        weekday: row.slotWeekday,
+        localTime: row.slotLocalTime,
+        timezone: row.slotTimezone,
+        platformUrl: row.slotPlatformUrl,
         isPrimary: true,
       }
     : null;
   return {
     id: row.id,
     slug: row.slug,
-    titleZh: row.title_zh,
-    titleZhSourceUrl: row.title_zh_source_url,
-    titleJa: row.title_ja,
-    titleEn: row.title_en,
+    titleZh: row.titleZh,
+    titleZhSourceUrl: row.titleZhSourceUrl,
+    titleJa: row.titleJa,
+    titleEn: row.titleEn,
     synopsis: row.synopsis,
-    editorialNote: row.editorial_note,
-    yuriKind: row.yuri_kind,
-    yuriStatus: row.yuri_status,
+    editorialNote: row.editorialNote,
+    yuriKind: row.yuriKind,
+    yuriStatus: row.yuriStatus,
     status: row.status,
-    premiereAt: row.premiere_at,
-    episodeCount: row.episode_count,
-    episodeDurationMin: row.episode_duration_min,
-    premiereEpisodeCount: row.premiere_episode_count,
-    latestVerifiedEpisode: row.latest_verified_episode,
-    latestEpisodeSourceUrl: row.latest_episode_source_url,
-    latestEpisodeCheckedAt: row.latest_episode_checked_at,
+    premiereAt: row.premiereAt,
+    episodeCount: row.episodeCount,
+    episodeDurationMin: row.episodeDurationMin,
+    premiereEpisodeCount: row.premiereEpisodeCount,
+    latestVerifiedEpisode: row.latestVerifiedEpisode,
+    latestEpisodeSourceUrl: row.latestEpisodeSourceUrl,
+    latestEpisodeCheckedAt: row.latestEpisodeCheckedAt,
     currentEpisode: resolveCurrentEpisode({
       status: row.status,
-      premiereAt: row.premiere_at,
-      episodeCount: row.episode_count,
-      premiereEpisodeCount: row.premiere_episode_count,
-      latestVerifiedEpisode: row.latest_verified_episode,
+      premiereAt: row.premiereAt,
+      episodeCount: row.episodeCount,
+      premiereEpisodeCount: row.premiereEpisodeCount,
+      latestVerifiedEpisode: row.latestVerifiedEpisode,
     }),
     studio: row.studio,
-    sourceMaterial: row.source_material,
-    officialUrl: row.official_url,
-    bangumiUrl: row.bangumi_url,
-    officialXUrl: row.official_x_url,
-    coverUrl: row.cover_url,
-    coverSourceUrl: row.cover_source_url,
-    mainCharacterSourceUrl: row.main_character_source_url,
-    mainCharacterExpectedCount: row.main_character_expected_count,
-    mainCharacterCheckedAt: row.main_character_checked_at,
-    visualTheme: row.visual_theme,
-    featured: row.featured === 1,
+    sourceMaterial: row.sourceMaterial,
+    officialUrl: row.officialUrl,
+    bangumiUrl: row.bangumiUrl,
+    officialXUrl: row.officialXUrl,
+    coverUrl: row.coverUrl,
+    coverSourceUrl: row.coverSourceUrl,
+    mainCharacterSourceUrl: row.mainCharacterSourceUrl,
+    mainCharacterExpectedCount: row.mainCharacterExpectedCount,
+    mainCharacterCheckedAt: row.mainCharacterCheckedAt,
+    visualTheme: row.visualTheme,
+    featured: row.featured,
     primarySlot,
-    latestFeedAt: row.latest_feed_at,
-    feedCount: row.feed_count,
-  };
-}
-
-export function mapEvent(row: EventRow): CalendarEvent {
-  return {
-    id: row.id,
-    animeId: row.anime_id,
-    animeSlug: row.anime_slug,
-    animeTitle: row.anime_title,
-    characterId: row.character_id,
-    characterName: row.character_name,
-    characterPortraitUrl: row.character_portrait_url,
-    characterPortraitSourceUrl: row.character_portrait_source_url,
-    eventType: row.event_type,
-    title: row.title,
-    startsAt: row.starts_at,
-    timezone: row.timezone,
-    recurrenceRule: row.recurrence_rule,
-    sourceUrl: row.source_url,
-    verified: row.verified === 1,
+    latestFeedAt: row.latestFeedAt,
+    feedCount: row.feedCount,
   };
 }
 

@@ -24,23 +24,33 @@ class TestStatement {
     return { results, success: true, meta: { changes: 0 } };
   }
 
-  async run() {
+  async raw<T = unknown[]>(): Promise<T[]> {
+    return this.database.query(this.sql).values(...this.bindings as SQLQueryBindings[]) as T[];
+  }
+
+  run() {
     const result = this.database.query(this.sql).run(...this.bindings as SQLQueryBindings[]);
-    return { success: true, meta: { changes: result.changes } };
+    return Promise.resolve({ success: true, meta: { changes: result.changes } });
   }
 }
 
 export class TestD1 {
   readonly sqlite = new Database(":memory:", { strict: true });
+  preparedStatements = 0;
 
   prepare(sql: string): D1PreparedStatement {
+    this.preparedStatements += 1;
     return new TestStatement(this.sqlite, sql) as unknown as D1PreparedStatement;
   }
 
+  resetMetrics(): void {
+    this.preparedStatements = 0;
+  }
+
   async batch(statements: D1PreparedStatement[]) {
-    const results = [];
-    for (const statement of statements) results.push(await statement.run());
-    return results;
+    const results = this.sqlite.transaction(() => statements.map((statement) =>
+      (statement as unknown as TestStatement).run()))();
+    return Promise.all(results);
   }
 
   exec(sql: string): void {

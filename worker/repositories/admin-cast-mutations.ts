@@ -2,6 +2,7 @@ import type { CastWrite } from "@/domain";
 import { and, eq } from "drizzle-orm";
 import { database } from "../db/client";
 import { castCreditsTable, charactersTable } from "../db/schema";
+import { atomicBatch } from "../db/transaction";
 import { createId, HttpError } from "../http";
 import { birthdayEventStatements } from "./admin-birthday-events";
 import { personForWrite, personInsert } from "./admin-resource-context";
@@ -37,7 +38,7 @@ export async function createCast(db: D1Database, animeId: string, value: CastWri
     `).bind(creditId, animeId, characterId, person.id, value.sortOrder),
   );
   statements.push(...await birthdayEventStatements(db, animeId, characterId, value));
-  await db.batch(statements);
+  await atomicBatch(db, statements);
   return creditId;
 }
 
@@ -45,7 +46,7 @@ export async function updateCast(db: D1Database, animeId: string, id: string, va
   const row = await db.prepare("SELECT character_id, person_id FROM cast_credits WHERE id = ? AND anime_id = ?")
     .bind(id, animeId).first<{ character_id: string; person_id: string }>();
   if (!row) throw new HttpError(404, "没有找到 Cast 项。");
-  await db.batch([
+  await atomicBatch(db, [
     db.prepare("UPDATE people SET name = ?, name_native = ?, primary_kind = 'cast', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
       .bind(value.personName, value.personNameNative, row.person_id),
     db.prepare(`

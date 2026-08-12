@@ -2,6 +2,7 @@ import type { BroadcastWrite } from "@/domain";
 import { and, eq } from "drizzle-orm";
 import { database } from "../db/client";
 import { broadcastSlotsTable } from "../db/schema";
+import { atomicBatch } from "../db/transaction";
 import { createId, HttpError } from "../http";
 
 export async function createBroadcast(db: D1Database, animeId: string, value: BroadcastWrite): Promise<string> {
@@ -12,7 +13,7 @@ export async function createBroadcast(db: D1Database, animeId: string, value: Br
     INSERT INTO broadcast_slots (id, anime_id, label, weekday, local_time, timezone, platform_url, is_primary)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(id, animeId, value.label, value.weekday, value.localTime, value.timezone, value.platformUrl, value.isPrimary ? 1 : 0));
-  await db.batch(statements);
+  await atomicBatch(db, statements);
   return id;
 }
 
@@ -23,7 +24,7 @@ export async function updateBroadcast(db: D1Database, animeId: string, id: strin
     UPDATE broadcast_slots SET label = ?, weekday = ?, local_time = ?, timezone = ?,
       platform_url = ?, is_primary = ? WHERE id = ? AND anime_id = ?
   `).bind(value.label, value.weekday, value.localTime, value.timezone, value.platformUrl, value.isPrimary ? 1 : 0, id, animeId));
-  const results = await db.batch(statements);
+  const results = await atomicBatch(db, statements);
   if ((results.at(-1)?.meta.changes ?? 0) === 0) throw new HttpError(404, "没有找到播出时间。");
 }
 

@@ -1,4 +1,5 @@
 import type { ThemeSongWrite } from "@/domain";
+import { atomicBatch } from "../db/transaction";
 import { createId, HttpError } from "../http";
 
 type ThemeLink = { track_id: string };
@@ -65,7 +66,7 @@ export async function upsertVerifiedThemeSongFromBatch(
   if (existing.title !== value.title || existing.artist !== value.artist) {
     throw new HttpError(409, `${value.songKind.toUpperCase()}${value.sequence} 与现有曲目冲突，需要人工核对。`);
   }
-  await db.batch([
+  await atomicBatch(db, [
     db.prepare(`
       UPDATE music_tracks SET lyricist = COALESCE(lyricist, ?), composer = COALESCE(composer, ?),
         arranger = COALESCE(arranger, ?), official_url = COALESCE(official_url, ?),
@@ -91,7 +92,7 @@ export async function updateThemeSong(db: D1Database, animeId: string, id: strin
   if (!link) throw new HttpError(404, "没有找到主题曲资料。");
   const trackId = value.trackId ?? link.track_id;
   if (trackId !== link.track_id) await resolveTrack(db, { ...value, trackId });
-  const results = await db.batch([
+  const results = await atomicBatch(db, [
     db.prepare(`
       UPDATE anime_theme_songs SET track_id = ?, song_kind = ?, sequence = ?,
         episode_range = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP
@@ -113,7 +114,7 @@ export async function deleteThemeSong(db: D1Database, animeId: string, id: strin
   const link = await db.prepare("SELECT track_id FROM anime_theme_songs WHERE id = ? AND anime_id = ?")
     .bind(id, animeId).first<ThemeLink>();
   if (!link) return db.prepare("DELETE FROM anime_theme_songs WHERE id = ? AND anime_id = ?").bind(id, animeId).run();
-  const [result] = await db.batch([
+  const [result] = await atomicBatch(db, [
     db.prepare("DELETE FROM anime_theme_songs WHERE id = ? AND anime_id = ?").bind(id, animeId),
     db.prepare(`DELETE FROM music_tracks WHERE id = ? AND NOT EXISTS (
       SELECT 1 FROM anime_theme_songs WHERE track_id = ?

@@ -2,6 +2,7 @@ import type { AccountWrite } from "@/domain";
 import { eq, sql } from "drizzle-orm";
 import { database } from "../db/client";
 import { accountsTable } from "../db/schema";
+import { atomicBatch } from "../db/transaction";
 import { createId, HttpError } from "../http";
 import { assertAccountOwner } from "./admin-resource-context";
 
@@ -54,7 +55,7 @@ export async function updateAccount(db: D1Database, animeId: string, id: string,
 
 export async function deleteAccount(db: D1Database, animeId: string, id: string): Promise<D1Result> {
   await assertVisibleAccount(db, animeId, id);
-  const results = await db.batch([
+  const results = await atomicBatch(db, [
     db.prepare("UPDATE research_sources SET account_id = NULL WHERE account_id = ?").bind(id),
     db.prepare("DELETE FROM accounts WHERE id = ?").bind(id),
   ]);

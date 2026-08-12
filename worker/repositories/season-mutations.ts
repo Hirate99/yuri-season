@@ -1,4 +1,5 @@
 import type { SeasonWrite } from "@/domain";
+import { atomicBatch } from "../db/transaction";
 import { createId, HttpError } from "../http";
 import { auditStatement } from "./audit";
 
@@ -12,7 +13,7 @@ export async function createSeason(db: D1Database, value: SeasonWrite): Promise<
   `).bind(id, value.slug, value.label, value.startsOn, value.endsOn, value.isCurrent ? 1 : 0));
   statements.push(auditStatement(db, "admin", "create_season", "season", id, { after: value }));
   try {
-    await db.batch(statements);
+    await atomicBatch(db, statements);
   } catch (error) {
     if (String(error).includes("UNIQUE constraint failed")) throw new HttpError(409, "季度标识已存在。");
     throw error;
@@ -39,7 +40,7 @@ export async function updateSeason(db: D1Database, id: string, value: SeasonWrit
     after: value,
   }));
   try {
-    await db.batch(statements);
+    await atomicBatch(db, statements);
   } catch (error) {
     if (String(error).includes("UNIQUE constraint failed")) throw new HttpError(409, "季度标识已存在。");
     throw error;

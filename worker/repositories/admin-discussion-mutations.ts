@@ -1,4 +1,5 @@
 import type { DiscussionWrite } from "@/domain";
+import { atomicBatch } from "../db/transaction";
 import { createId, HttpError } from "../http";
 
 export async function createDiscussion(db: D1Database, animeId: string, value: DiscussionWrite): Promise<string> {
@@ -10,7 +11,7 @@ export async function createDiscussion(db: D1Database, animeId: string, value: D
     return existing.id;
   }
   const id = createId("discussion");
-  await db.batch([
+  await atomicBatch(db, [
     db.prepare(`
       INSERT INTO discussions (
         id, anime_id, platform, title, url, note, is_active, last_activity_at, last_checked_at
@@ -36,7 +37,7 @@ export async function updateDiscussion(db: D1Database, animeId: string, id: stri
 }
 
 export async function deleteDiscussion(db: D1Database, animeId: string, id: string): Promise<D1Result> {
-  const [result] = await db.batch([
+  const [result] = await atomicBatch(db, [
     db.prepare("DELETE FROM discussion_anime WHERE discussion_id = ? AND anime_id = ?").bind(id, animeId),
     db.prepare(`DELETE FROM discussions WHERE id = ? AND NOT EXISTS (
       SELECT 1 FROM discussion_anime WHERE discussion_id = ?

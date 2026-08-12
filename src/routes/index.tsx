@@ -10,5 +10,12 @@ export const Route = createFileRoute("/")({
 
 function HomeRoute() {
   const data = Route.useLoaderData();
-  return <HomePage catalog={data.catalog} feed={data.feed} />;
+  return (
+    <HomePage
+      catalog={data.catalog}
+      feed={data.feed}
+      viewerTimeZone={data.viewerTimeZone}
+      renderedAt={data.renderedAt}
+    />
+  );
 }

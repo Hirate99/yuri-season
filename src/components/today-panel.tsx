@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import type { CatalogResponse } from "@/domain";
-import { useViewerTimeZone } from "@/hooks/use-viewer-timezone";
 import { eventOccursToday } from "@/lib/calendar-events";
 import { verifiedBirthdayPortrait } from "@/lib/character-portraits";
 import { eventPresentation, eventTitle } from "@/lib/event-presentation";
@@ -11,21 +10,24 @@ import { Badge } from "./badge";
 import { CoverImage } from "./cover-image";
 import { EventTime } from "./event-time";
 
-function todayLabel(timeZone: string): string {
+function todayLabel(timeZone: string, now: Date): string {
   return new Intl.DateTimeFormat("zh-CN", {
     timeZone,
     month: "long",
     day: "numeric",
     weekday: "long",
-  }).format(new Date());
+  }).format(now);
 }
 
-export function TodayPanel({ catalog }: { catalog: CatalogResponse }) {
-  const detectedTimeZone = useViewerTimeZone();
-  const viewerTimeZone = detectedTimeZone ?? "Asia/Tokyo";
+export function TodayPanel({ catalog, viewerTimeZone, renderedAt }: {
+  catalog: CatalogResponse;
+  viewerTimeZone: string;
+  renderedAt: string;
+}) {
+  const now = new Date(renderedAt);
   const broadcasts = catalog.anime.filter((anime) => anime.primarySlot
-    && broadcastInstantOnViewerDate(anime.primarySlot, viewerTimeZone));
-  const events = catalog.events.filter((event) => eventOccursToday(event, viewerTimeZone));
+    && broadcastInstantOnViewerDate(anime.primarySlot, viewerTimeZone, now));
+  const events = catalog.events.filter((event) => eventOccursToday(event, viewerTimeZone, now));
 
   if (broadcasts.length === 0 && events.length === 0) return null;
 
@@ -34,7 +36,7 @@ export function TodayPanel({ catalog }: { catalog: CatalogResponse }) {
       <header className="flex items-center justify-between gap-4">
         <div className="flex items-baseline gap-3">
           <h2 id="today-title" className="flex items-center gap-2 text-lg font-bold tracking-tight md:text-xl"><span className="size-2 rounded-full bg-signal-coral shadow-[0_0_0_4px_rgba(255,90,47,0.12)]" />今天</h2>
-          <p className="text-[10px] text-white/55">{todayLabel(viewerTimeZone)}</p>
+          <p className="text-[10px] text-white/55">{todayLabel(viewerTimeZone, now)}</p>
         </div>
         <Link to="/calendar" className="inline-flex items-center gap-1 text-[10px] font-semibold text-white/70 hover:text-white">日历 <ArrowRight size={13} /></Link>
       </header>
@@ -46,7 +48,7 @@ export function TodayPanel({ catalog }: { catalog: CatalogResponse }) {
             <span className="min-w-0">
               <Badge tone="blue">放送</Badge>
               <strong className="mt-1.5 block truncate text-xs">{anime.titleZh}</strong>
-              {anime.primarySlot && <span className="mt-1.5 block text-white [&_.text-muted]:!text-white/55"><BroadcastTime slot={anime.primarySlot} /></span>}
+              {anime.primarySlot && <span className="mt-1.5 block text-white [&_.text-muted]:!text-white/55"><BroadcastTime slot={anime.primarySlot} viewerTimeZone={viewerTimeZone} now={now} /></span>}
             </span>
           </Link>
         ))}
@@ -58,7 +60,7 @@ export function TodayPanel({ catalog }: { catalog: CatalogResponse }) {
               <span className="flex min-w-0 flex-col justify-between"><Badge tone={presentation.tone}>{presentation.label}</Badge>
                 <span>
                 <strong className="mt-2 block text-xs">{eventTitle(event)}</strong>
-                <span className="mt-1.5 block text-white [&_.text-muted]:!text-white/55"><EventTime event={event} /></span>
+                <span className="mt-1.5 block text-white [&_.text-muted]:!text-white/55"><EventTime event={event} viewerTimeZone={viewerTimeZone} /></span>
                 </span>
               </span>
               {portrait && <CoverImage className="size-14 self-center rounded-full ring-1 ring-white/15" src={portrait.imageUrl} alt={`${event.characterName ?? "角色"}头像`} />}

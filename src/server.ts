@@ -1,6 +1,6 @@
 import startHandler from "@tanstack/react-start/server-entry";
 import { laneForCron, runResearch } from "@worker/research/scheduler";
-import type { ServerRequestContext } from "./server-context";
+import { viewerTimeZoneFromRequest, type ServerRequestContext } from "./server-context";
 import { redirectPublicAdmin } from "./server/admin-boundary";
 import { api } from "./server/api";
 
@@ -13,7 +13,11 @@ export default {
       return api.fetch(request, env, executionContext);
     }
 
-    const context: ServerRequestContext = { env, executionContext };
+    const context: ServerRequestContext = {
+      env,
+      executionContext,
+      viewerTimeZone: viewerTimeZoneFromRequest(request),
+    };
     return startHandler.fetch(request, { context });
   },
 

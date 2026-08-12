@@ -1,20 +1,18 @@
-import { useEffect, useState } from "react";
 import type { BroadcastSlot } from "@/domain";
 import { useViewerTimeZone } from "@/hooks/use-viewer-timezone";
-import { localBroadcastDisplay, timeZoneLabel, type LocalBroadcastDisplay } from "@/lib/timezone";
+import { localBroadcastDisplay, timeZoneLabel } from "@/lib/timezone";
 
-export function BroadcastTime({ slot, align = "start" }: {
+export function BroadcastTime({ slot, align = "start", viewerTimeZone, now }: {
   slot: Pick<BroadcastSlot, "weekday" | "localTime" | "timezone">;
   align?: "start" | "end";
+  viewerTimeZone?: string;
+  now?: Date;
 }) {
-  const viewerTimeZone = useViewerTimeZone();
-  const [local, setLocal] = useState<LocalBroadcastDisplay | null>(null);
-
-  useEffect(() => {
-    setLocal(viewerTimeZone && viewerTimeZone !== slot.timezone
-      ? localBroadcastDisplay(slot, viewerTimeZone)
-      : null);
-  }, [slot.localTime, slot.timezone, slot.weekday, viewerTimeZone]);
+  const detectedTimeZone = useViewerTimeZone();
+  const effectiveTimeZone = viewerTimeZone ?? detectedTimeZone;
+  const local = effectiveTimeZone && effectiveTimeZone !== slot.timezone
+    ? localBroadcastDisplay(slot, effectiveTimeZone, now)
+    : null;
 
   return (
     <span className={align === "end" ? "block text-right" : "block"}>

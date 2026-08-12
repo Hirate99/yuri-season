@@ -11,6 +11,14 @@ import { apiRequest } from "./api";
 
 export type PublicLoadContext = { serverContext?: ServerRequestContext };
 
+function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Tokyo";
+  } catch {
+    return "Asia/Tokyo";
+  }
+}
+
 function database(context: PublicLoadContext) {
   if (!context.serverContext) throw new Error("Server request context is unavailable.");
   return context.serverContext.env.DB;
@@ -18,19 +26,32 @@ function database(context: PublicLoadContext) {
 
 export const loadHomeData = createIsomorphicFn()
   .server(async (input: PublicLoadContext & { seasonSlug?: string }) => {
+    const renderedAt = new Date().toISOString();
     const repository = await import("@worker/repositories/catalog");
     const catalog = input.seasonSlug
       ? await repository.readCatalogForSeason(database(input), input.seasonSlug)
       : await repository.readCatalog(database(input));
-    if (input.seasonSlug) return { catalog, feed: null };
+    if (input.seasonSlug) return {
+      catalog,
+      feed: null,
+      viewerTimeZone: input.serverContext?.viewerTimeZone ?? "Asia/Tokyo",
+      renderedAt,
+    };
     const { readFeed } = await import("@worker/repositories/feed");
-    return { catalog, feed: await readFeed(database(input), { limit: 6 }) };
+    return {
+      catalog,
+      feed: await readFeed(database(input), { limit: 6 }),
+      viewerTimeZone: input.serverContext?.viewerTimeZone ?? "Asia/Tokyo",
+      renderedAt,
+    };
   })
   .client(async (input: PublicLoadContext & { seasonSlug?: string }) => ({
     catalog: await apiRequest<CatalogResponse>(input.seasonSlug
       ? `/api/seasons/${encodeURIComponent(input.seasonSlug)}`
       : "/api/catalog"),
     feed: input.seasonSlug ? null : await apiRequest<FeedResponse>("/api/feed?limit=6"),
+    viewerTimeZone: browserTimeZone(),
+    renderedAt: new Date().toISOString(),
   }));
 
 export const loadCalendarData = createIsomorphicFn()

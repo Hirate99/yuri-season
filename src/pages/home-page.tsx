@@ -8,10 +8,12 @@ import { SeasonHero } from "@/components/season-hero";
 import { TodayPanel } from "@/components/today-panel";
 import { page, textButton } from "@/lib/ui";
 
-export function HomePage({ catalog, feed, seasonSlug }: {
+export function HomePage({ catalog, feed, seasonSlug, viewerTimeZone, renderedAt }: {
   catalog: CatalogResponse;
   feed: FeedResponse | null;
   seasonSlug?: string;
+  viewerTimeZone?: string;
+  renderedAt?: string;
 }) {
   return (
     <div className={page}>
@@ -21,7 +23,13 @@ export function HomePage({ catalog, feed, seasonSlug }: {
         archived={Boolean(seasonSlug)}
       />
 
-      {!seasonSlug && <TodayPanel catalog={catalog} />}
+      {!seasonSlug && (
+        <TodayPanel
+          catalog={catalog}
+          viewerTimeZone={viewerTimeZone ?? "Asia/Tokyo"}
+          renderedAt={renderedAt ?? catalog.generatedAt}
+        />
+      )}
 
       <section className="mt-12 md:mt-16">
         <SectionHeading title="作品" />

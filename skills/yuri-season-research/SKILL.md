@@ -1,6 +1,6 @@
 ---
 name: yuri-season-research
-description: Incrementally research current-season yuri anime, protagonist groups, official character profiles and portraits, traceable Chinese name translations, official/staff/cast SNS, verified voice-actor accounts and work-specific posts, creator art, character birthdays, original fanworks, and community threads; produce traceable local-first updates for the 百合季 Admin. Use for routine seasonal updates, rapid broadcast/event checks, source discovery, and repair of incomplete anime/person/character/account records.
+description: Incrementally research current-season yuri anime and related 2.5D projects, protagonist groups, official character profiles and portraits, traceable Chinese name translations, official/staff/cast SNS, verified voice-actor and project-member accounts, relevant posts and events, creator art, character birthdays, original fanworks, and community threads; produce traceable local-first updates for the 百合季 Admin. Use for routine seasonal updates, rapid broadcast/event checks, source discovery, and repair of incomplete anime/person/character/account records.
 ---
 
 # Yuri Season Research
@@ -84,6 +84,7 @@ Model cast content as:
 - Account discovery is not account verification. Store a proposed `account_identity` claim and an unverified local account; a human or first-party cross-link must verify it later.
 - A `cast_post` observation uses the verified account itself as provenance and supplies `animeId`, `personId`, `accountId`, optional `characterId`, and stable `platformObjectId`.
 - The post must explicitly mention the work, character, episode, or relevant event. A generic actor update is not a candidate.
+- For a 2.5D project, a verified project-member or project-persona account may contribute project-branded live performances, tours, release events, meet-and-greets, rehearsals, or behind-the-scenes posts even when the anime title is absent. Require first-party evidence that maps the account to the project and require the post itself to name the project, unit, project event, or another unambiguous project marker. Exclude the performer's unrelated personal work.
 - The importer validates the cast credit, account ownership, verification state, and post URL. It derives `sourceIdentity: cast`; do not rely on batch text to assert that identity.
 - Keep cast posts in their own deduplication lane: anime + account + platform object ID. Do not merge them with ordinary official updates merely because the URLs or titles look similar.
 

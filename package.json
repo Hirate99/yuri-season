@@ -9,7 +9,7 @@
     "build": "vite build && bun run typecheck",
     "build:admin": "CLOUDFLARE_ENV=admin vite build && bun run typecheck",
     "ci": "bun run cf-typegen && bun test && bun run build && bun run build:admin",
-    "cf-typegen": "wrangler types --env-file .dev.vars.example",
+    "cf-typegen": "wrangler types",
     "db:migrate:local": "wrangler d1 migrations apply yuri-season-radar --local",
     "db:migrate:remote": "wrangler d1 migrations apply yuri-season-radar --remote",
     "deploy": "bun run build && wrangler deploy",

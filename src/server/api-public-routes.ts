@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { readThroughPublicCache } from "@worker/cache/public-cache";
 import { parseWithSchema } from "@worker/api/schema";
 import { HttpError } from "@worker/http";
 import {
@@ -13,7 +12,7 @@ import {
 import { readAnimeDetail } from "@worker/repositories/detail";
 import { readDiscussions, readFeed, readMedia } from "@worker/repositories/feed";
 import type { ApiApp } from "./api-shared";
-import { publicJson } from "./api-shared";
+import { cachedPublicData, cachedPublicJson, publicJson } from "./api-shared";
 
 const cacheKeyPart = (value: string) => encodeURIComponent(value.toLowerCase());
 
@@ -37,29 +36,22 @@ const feedQuerySchema = z.object({
 export function registerPublicRoutes(api: ApiApp): void {
   api.get("/api/health", (context) => context.json({ ok: true, now: new Date().toISOString() }));
 
-  api.get("/api/catalog", async (context) => publicJson(context, await readThroughPublicCache(
-    context.env, "catalog", () => readCatalog(context.env.DB), { ttlSeconds: 300 },
-  )));
-  api.get("/api/calendar", async (context) => publicJson(context, await readThroughPublicCache(
-    context.env, "calendar", () => readCalendar(context.env.DB), { ttlSeconds: 120 },
-  )));
-  api.get("/api/seasons", async (context) => publicJson(context, await readThroughPublicCache(
-    context.env, "seasons", () => readSeasons(context.env.DB), { ttlSeconds: 900 },
-  )));
-  api.get("/api/seasons/:slug", async (context) =>
-    publicJson(context, await readThroughPublicCache(
-      context.env,
-      `season:${cacheKeyPart(context.req.param("slug"))}`,
-      () => readCatalogForSeason(context.env.DB, context.req.param("slug")),
-      { ttlSeconds: 300 },
-    )));
-  api.get("/api/seasons/:slug/calendar", async (context) =>
-    publicJson(context, await readThroughPublicCache(
-      context.env,
-      `season-calendar:${cacheKeyPart(context.req.param("slug"))}`,
-      () => readCalendarForSeason(context.env.DB, context.req.param("slug")),
-      { ttlSeconds: 120 },
-    )));
+  api.get("/api/catalog", (context) =>
+    cachedPublicJson(context, "catalog", 300, () => readCatalog(context.env.DB)));
+  api.get("/api/calendar", (context) =>
+    cachedPublicJson(context, "calendar", 120, () => readCalendar(context.env.DB)));
+  api.get("/api/seasons", (context) =>
+    cachedPublicJson(context, "seasons", 900, () => readSeasons(context.env.DB)));
+  api.get("/api/seasons/:slug", (context) => {
+    const slug = context.req.param("slug");
+    return cachedPublicJson(context, `season:${cacheKeyPart(slug)}`, 300, () =>
+      readCatalogForSeason(context.env.DB, slug));
+  });
+  api.get("/api/seasons/:slug/calendar", (context) => {
+    const slug = context.req.param("slug");
+    return cachedPublicJson(context, `season-calendar:${cacheKeyPart(slug)}`, 120, () =>
+      readCalendarForSeason(context.env.DB, slug));
+  });
 
   api.get("/api/feed", async (context) => {
     const query = parseWithSchema(feedQuerySchema, context.req.query());
@@ -74,7 +66,7 @@ export function registerPublicRoutes(api: ApiApp): void {
 
   api.get("/api/anime/:slug", async (context) => {
     const slug = context.req.param("slug");
-    const detail = await readThroughPublicCache(context.env, `anime:${cacheKeyPart(slug)}`, async () => {
+    const detail = await cachedPublicData(context, `anime:${cacheKeyPart(slug)}`, 180, async () => {
       const anime = await readAnimeDetail(context.env.DB, slug);
       if (!anime) throw new HttpError(404, "没有找到这部动画。");
       const [media, discussions] = await Promise.all([
@@ -82,7 +74,7 @@ export function registerPublicRoutes(api: ApiApp): void {
         readDiscussions(context.env.DB, anime.id),
       ]);
       return { anime, media, discussions };
-    }, { ttlSeconds: 180 });
+    });
     const feed = await readFeed(context.env.DB, { animeId: detail.anime.id, limit: 40 });
     return publicJson(context, {
       anime: detail.anime,

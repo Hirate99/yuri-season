@@ -1,14 +1,13 @@
 export type QueryDefinition<Row> = {
-  readonly name: string;
   readonly text: string;
   readonly row?: Row;
 };
 
-export function defineQuery<Row>(name: string, text: string): QueryDefinition<Row> {
-  return { name, text };
+export function defineQuery<Row>(text: string): QueryDefinition<Row> {
+  return { text };
 }
 
-export function statement<Row>(
+function statement<Row>(
   db: D1Database,
   query: QueryDefinition<Row>,
   bindings: readonly unknown[] = [],
@@ -32,14 +31,6 @@ export async function allRows<Row>(
 ): Promise<Row[]> {
   const result = await statement(db, query, bindings).all<Row>();
   return result.results;
-}
-
-export async function runQuery<Row>(
-  db: D1Database,
-  query: QueryDefinition<Row>,
-  bindings: readonly unknown[] = [],
-): Promise<D1Result<unknown>> {
-  return statement(db, query, bindings).run();
 }
 
 export function placeholders(count: number): string {

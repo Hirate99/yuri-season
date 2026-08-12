@@ -16,7 +16,7 @@ export type DashboardCountsRow = {
   auto_count: number;
 };
 
-export const dashboardCountsQuery = defineQuery<DashboardCountsRow>("admin.dashboard-counts", `
+export const dashboardCountsQuery = defineQuery<DashboardCountsRow>(`
   SELECT
     (SELECT COUNT(*) FROM anime) AS anime_count,
     (SELECT COUNT(*) FROM feed_candidates WHERE status IN ('held', 'pending')) AS held_count,
@@ -25,7 +25,7 @@ export const dashboardCountsQuery = defineQuery<DashboardCountsRow>("admin.dashb
     (SELECT COUNT(*) FROM feed_items WHERE auto_published = 1 AND withdrawn_at IS NULL) AS auto_count
 `);
 
-export const heldCandidatesQuery = defineQuery<CandidateRow>("admin.held-candidates", `
+export const heldCandidatesQuery = defineQuery<CandidateRow>(`
   SELECT fc.*, a.title_zh AS anime_title, p.name AS person_name,
     c.name AS character_name,
     (SELECT COUNT(*) FROM candidate_evidence ce WHERE ce.candidate_id = fc.id) AS evidence_count,
@@ -40,7 +40,7 @@ export const heldCandidatesQuery = defineQuery<CandidateRow>("admin.held-candida
   LIMIT 50
 `);
 
-export const sourcesQuery = defineQuery<SourceRow>("admin.sources", `
+export const sourcesQuery = defineQuery<SourceRow>(`
   SELECT rs.id, a.title_zh AS anime_title, rs.label, rs.source_type, rs.change_kind,
     rs.trust_level, rs.cadence_profile, rs.url, rs.item_url_template, rs.poll_interval_min,
     rs.enabled, rs.next_check_at, rs.last_checked_at,
@@ -50,7 +50,7 @@ export const sourcesQuery = defineQuery<SourceRow>("admin.sources", `
   ORDER BY rs.enabled DESC, rs.failure_count DESC, rs.label
 `);
 
-export const researchRunsQuery = defineQuery<ResearchRunRow>("admin.research-runs", `
+export const researchRunsQuery = defineQuery<ResearchRunRow>(`
   SELECT id, trigger_type, status, source_count, observation_count,
     candidate_count, published_count, held_count, rejected_count, job_count,
     message, started_at, finished_at
@@ -59,7 +59,7 @@ export const researchRunsQuery = defineQuery<ResearchRunRow>("admin.research-run
   LIMIT 12
 `);
 
-export const updateJobsQuery = defineQuery<UpdateJobRow>("admin.update-jobs", `
+export const updateJobsQuery = defineQuery<UpdateJobRow>(`
   SELECT id, job_type, scope_type, scope_id, execution_target, status,
     priority, attempt_count, scheduled_at, lease_owner, lease_until,
     last_heartbeat_at, last_error
@@ -68,7 +68,7 @@ export const updateJobsQuery = defineQuery<UpdateJobRow>("admin.update-jobs", `
   LIMIT 30
 `);
 
-export const publicationsQuery = defineQuery<PublicationRow>("admin.publications", `
+export const publicationsQuery = defineQuery<PublicationRow>(`
   SELECT fi.id, fi.candidate_id, a.title_zh AS anime_title, fi.title, fi.url,
     fi.source_name, fi.published_at, fi.auto_published
   FROM feed_items fi
@@ -78,7 +78,7 @@ export const publicationsQuery = defineQuery<PublicationRow>("admin.publications
   LIMIT 40
 `);
 
-export const auditLogQuery = defineQuery<AuditRow>("admin.audit-log", `
+export const auditLogQuery = defineQuery<AuditRow>(`
   SELECT id, actor_type, action, entity_type, entity_id, detail_json, created_at
   FROM audit_log
   ORDER BY created_at DESC

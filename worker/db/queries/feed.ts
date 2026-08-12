@@ -23,7 +23,7 @@ export const FEED_SELECT = `
 `;
 
 export function feedPageQuery(where: string) {
-  return defineQuery<FeedRow>("feed.page", `
+  return defineQuery<FeedRow>(`
     ${FEED_SELECT}
     WHERE ${where}
     ORDER BY fi.is_pinned DESC, fi.published_at DESC, fi.id DESC
@@ -41,7 +41,7 @@ export type DiscussionRow = {
   last_checked_at: string | null;
 };
 
-export const discussionsQuery = defineQuery<DiscussionRow>("feed.discussions", `
+export const discussionsQuery = defineQuery<DiscussionRow>(`
   SELECT d.id, d.platform, d.title, d.url, d.note, d.last_activity_at, d.last_checked_at
   FROM discussions d
   JOIN discussion_anime da ON da.discussion_id = d.id

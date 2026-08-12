@@ -25,7 +25,7 @@ function allowedMethods(requestPath: string): string[] {
   return [...methods];
 }
 
-function changesPublicData(method: string, path: string): boolean {
+function shouldInvalidatePublicCache(method: string, path: string): boolean {
   if (method === "GET" || method === "HEAD") return false;
   return path === "/api/admin/batches"
     || path.startsWith("/api/admin/anime")
@@ -52,12 +52,8 @@ api.use("/api/admin/*", bodyLimit({
 api.use("/api/admin/*", async (context, next) => {
   await requireAdmin(context.req.raw, context.env);
   await next();
-});
-
-api.use("/api/admin/*", async (context, next) => {
-  await next();
-  if (context.res.ok && changesPublicData(context.req.method, context.req.path)) {
-    await invalidatePublicCache(context.env);
+  if (context.res.ok && shouldInvalidatePublicCache(context.req.method, context.req.path)) {
+    context.executionCtx.waitUntil(invalidatePublicCache(context.env));
   }
 });
 

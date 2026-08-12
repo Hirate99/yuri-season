@@ -3,10 +3,7 @@ import { Redis } from "@upstash/redis";
 const CACHE_NAMESPACE = "yuri:public:v1";
 const CACHE_VERSION_KEY = `${CACHE_NAMESPACE}:version`;
 
-type RedisEnvironment = {
-  UPSTASH_REDIS_REST_URL?: string;
-  UPSTASH_REDIS_REST_TOKEN?: string;
-};
+type RedisEnvironment = Pick<Env, "UPSTASH_REDIS_REST_URL" | "UPSTASH_REDIS_REST_TOKEN">;
 
 export type PublicCacheClient = {
   get<T>(key: string): Promise<T | null>;
@@ -15,21 +12,16 @@ export type PublicCacheClient = {
 };
 
 type CacheOptions = {
-  client?: PublicCacheClient | null;
+  client?: PublicCacheClient;
   ttlSeconds?: number;
 };
 
-function redisClient(env: object): PublicCacheClient | null {
-  const redisEnv = env as RedisEnvironment;
-  if (!redisEnv.UPSTASH_REDIS_REST_URL || !redisEnv.UPSTASH_REDIS_REST_TOKEN) return null;
+function redisClient(env: RedisEnvironment): PublicCacheClient | null {
+  if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) return null;
   return new Redis({
-    url: redisEnv.UPSTASH_REDIS_REST_URL,
-    token: redisEnv.UPSTASH_REDIS_REST_TOKEN,
+    url: env.UPSTASH_REDIS_REST_URL,
+    token: env.UPSTASH_REDIS_REST_TOKEN,
   });
-}
-
-function resolveClient(env: object, options: CacheOptions): PublicCacheClient | null {
-  return Object.hasOwn(options, "client") ? options.client ?? null : redisClient(env);
 }
 
 /**
@@ -37,12 +29,12 @@ function resolveClient(env: object, options: CacheOptions): PublicCacheClient | 
  * best-effort: a missing configuration or cache outage always falls back to D1.
  */
 export async function readThroughPublicCache<T>(
-  env: object,
+  env: RedisEnvironment,
   key: string,
   load: () => Promise<T>,
   options: CacheOptions = {},
 ): Promise<T> {
-  const client = resolveClient(env, options);
+  const client = options.client ?? redisClient(env);
   if (!client) return load();
 
   let cacheKey: string;
@@ -69,10 +61,9 @@ export async function readThroughPublicCache<T>(
  * Existing keys expire naturally, so invalidation never needs a wildcard scan.
  */
 export async function invalidatePublicCache(
-  env: object,
-  options: Pick<CacheOptions, "client"> = {},
+  env: RedisEnvironment,
+  client = redisClient(env),
 ): Promise<void> {
-  const client = resolveClient(env, options);
   if (!client) return;
   try {
     await client.incr(CACHE_VERSION_KEY);

@@ -7,7 +7,11 @@ import { CoverImage } from "./cover-image";
 import { BroadcastTime } from "./broadcast-time";
 import { EpisodeProgressBadge } from "./episode-progress-badge";
 
-export function AnimeCard({ anime }: { anime: AnimeSummary }) {
+export function AnimeCard({ anime, viewerTimeZone, now }: {
+  anime: AnimeSummary;
+  viewerTimeZone?: string;
+  now?: Date;
+}) {
   return (
     <article className="group min-w-0">
       <Link to="/anime/$slug" params={{ slug: anime.slug }} className="block rounded-[8px] shadow-[0_10px_28px_rgba(15,23,42,0.09)] transition duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_38px_rgba(15,23,42,0.13)]">
@@ -26,7 +30,7 @@ export function AnimeCard({ anime }: { anime: AnimeSummary }) {
           <div className="mt-2 flex items-start gap-1.5 text-[11px] text-muted">
             <RadioTower className="mt-0.5 shrink-0" size={13} />
             <span className="pt-px">{weekdayLabel(anime.primarySlot.weekday)}</span>
-            <BroadcastTime slot={anime.primarySlot} />
+            <BroadcastTime slot={anime.primarySlot} viewerTimeZone={viewerTimeZone} now={now} reserveLocalSpace />
           </div>
         )}
       </div>

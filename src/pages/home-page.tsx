@@ -15,6 +15,7 @@ export function HomePage({ catalog, feed, seasonSlug, viewerTimeZone, renderedAt
   viewerTimeZone?: string;
   renderedAt?: string;
 }) {
+  const renderedNow = renderedAt ? new Date(renderedAt) : undefined;
   return (
     <div className={page}>
       <SeasonHero
@@ -34,7 +35,14 @@ export function HomePage({ catalog, feed, seasonSlug, viewerTimeZone, renderedAt
       <section className="mt-12 md:mt-16">
         <SectionHeading title="作品" />
         <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-3 md:gap-x-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-          {catalog.anime.map((anime) => <AnimeCard key={anime.id} anime={anime} />)}
+          {catalog.anime.map((anime) => (
+            <AnimeCard
+              key={anime.id}
+              anime={anime}
+              viewerTimeZone={viewerTimeZone}
+              now={renderedNow}
+            />
+          ))}
         </div>
       </section>
 

@@ -36,6 +36,8 @@ Discovery searches for unknown sources; it is separate from registered-source sy
 6. Record every executed query, including zero-hit and blocked searches, using `references/discovery-results.md`, then run `bun run research:discover:record -- <results.json>`.
 7. Put verified candidates into one traceable batch. Keep extraction and review as separate passes. Import through the normal batch workflow.
 
+For an explicitly requested whole-season social audit, inspect each work's verified official account first. When deduplication leaves no new high-value item, inspect a bounded set of verified original-creator and main-cast accounts before recording a zero-hit result. Do not duplicate an official announcement merely because a creator or cast member quoted it; keep the post only when their own text contributes material firsthand context, such as an interview, production note, episode response, or project activity.
+
 If a leased scope disappears before search, run `bun run research:discover:cancel -- <scope-type> <scope-id> <reason>`. For a full registered-source baseline use `bun run research:sync:full`; this is sync, not discovery.
 
 ## Incremental workflow

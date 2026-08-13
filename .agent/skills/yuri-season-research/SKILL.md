@@ -86,6 +86,17 @@ Use this only for queued `execution_target=local` discovery or repair work.
 
 ## Required data chains
 
+### Official X and tag lane
+
+- Treat every verified current-season work/project X account as a recurring one-day local update target. Inspect the account's complete original-post timeline incrementally from the previous checked time; do not reduce official monitoring to a search-engine query containing one title spelling.
+- In parallel, run one daily newest-first X tag sweep per current-season work that has a verified official X identity. Recover active official work, anime, project, and campaign hashtags from the verified profile and recent official originals, then expand with the work's Chinese/Japanese/English aliases, project nickname, recurring protagonist names, and recognizable protagonist-pair or unit names. Do not hard-code one season's tags into this skill.
+- Account timelines and tag sweeps are complementary discovery surfaces. Before opening a result, merge their database publications and durable `knownHits`; after opening it, persist the stable post ID with `published`, `held`, `rejected`, or `ignored` so the same post is not reconsidered through another tag or account query.
+- Open every tag hit at its original URL and classify it by actual provenance. An official-account post stays official; a verified member/cast/creator original uses that lane; community commentary remains a lead and cannot inherit official trust from the hashtag.
+- When the signed-in Chrome X search surface is unavailable, the public X embedded profile timeline may be used as a read-only fallback for verified official accounts and already-registered verified creator/cast/member accounts. This fallback can recover current tags and stable original-post IDs, but it is not a substitute for the global newest-first tag timeline. Persist the partial hits and registered-account zero hits with an explicit surface note, keep the one-day cadence, and retry the global tag surface later; never report the fallback as an exhaustive all-X zero result.
+- A third-party X metadata adapter such as FxEmbed may be used only after the canonical X original has already been opened or independently recovered from X's public embed data, and only to extract the upstream `pbs.twimg.com` media URL, dimensions, or stable quoted-original relationship. It is a transport aid, never provenance: candidates, creator attribution, text, dates, tags, rights checks, and canonical URLs must remain anchored to the original X post and verified account evidence.
+- One original may produce multiple linked outputs. When an official post announces an event and includes an actual visual, create the feed candidate, the structured event/calendar record, and the media record together when each is supported. A visible image is not decorative evidence to discard.
+- For media reuse, inspect the original post, account profile, and any linked official detail or rights page. If any of them explicitly prohibits reproduction, reposting, mirroring, or embedding, keep the media `link_only` without a cached preview even when the image bytes are technically downloadable.
+
 ### Voice actor lane
 
 Model cast content as:

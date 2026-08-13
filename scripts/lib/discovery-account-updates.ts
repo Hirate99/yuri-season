@@ -11,6 +11,7 @@ export type AccountUpdateTarget = {
   platform: string;
   contentLane: "official" | "cast" | "creator";
   projectPersona: boolean;
+  timelineMode: "official" | "project_persona" | null;
 };
 
 function hasRegisteredSource(resources: AdminAnimeResources, accountId: string) {
@@ -48,6 +49,9 @@ export function accountUpdateTarget(
   if (account.monitorMode !== "local" && hasRegisteredSource(resources, account.id)) return null;
   const cast = resources.cast.filter((item) => item.personId === account.ownerId);
   const projectPersona = isProjectPersonaAccount(resources, account);
+  const timelineMode = account.ownerType === "anime"
+    ? "official" as const
+    : projectPersona ? "project_persona" as const : null;
   const contentLane = account.ownerType === "anime"
     ? "official" as const
     : cast.length > 0 ? "cast" as const : "creator" as const;
@@ -62,10 +66,11 @@ export function accountUpdateTarget(
     platform: account.platform,
     contentLane,
     projectPersona,
+    timelineMode,
   };
 }
 
-function afterDate(searchedAt: string | null, now: Date) {
+export function afterDate(searchedAt: string | null, now: Date) {
   const previous = searchedAt ? Date.parse(searchedAt) : Number.NaN;
   const anchor = Number.isNaN(previous)
     ? now.valueOf() - 30 * 86_400_000
@@ -78,15 +83,18 @@ export function accountUpdateQuery(
   title: string,
   searchedAt: string | null,
   now: Date,
-  projectPersona = false,
+  timelineMode: AccountUpdateTarget["timelineMode"] = null,
 ) {
   const after = afterDate(searchedAt, now);
   const accountName = account.handle?.trim() || account.platform.trim();
   try {
     const parsed = new URL(account.url);
     const pathname = parsed.pathname.replace(/^\/+|\/+$/g, "");
-    if (projectPersona && pathname) {
+    if (timelineMode === "project_persona" && pathname) {
       return `${account.platform} account timeline: ${account.url}; inspect original posts after:${after}; include project/anime posts and public professional or creative activity; exclude private routine, unrelated ads/giveaways, and repost-only items`;
+    }
+    if (timelineMode === "official" && pathname) {
+      return `${account.platform} official account timeline: ${account.url}; inspect every original post after:${after}; extract official news, events, schedules, videos, art, and other visible media; create linked media records for eligible images and preserve stable post IDs`;
     }
     if ((parsed.hostname === "x.com" || parsed.hostname === "twitter.com") && pathname) {
       return `site:x.com/${pathname.split("/")[0]} "${title}" after:${after}`;

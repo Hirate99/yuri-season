@@ -181,8 +181,9 @@ describe("discovery query planning", () => {
     expect(queries.some((query) => query.targetKey === "official:work")).toBe(false);
     expect(queries.some((query) => query.targetKey === "social:work")).toBe(false);
     expect(queries.some((query) => query.targetKey === "updates:anime-1:account-work"
-      && query.queryText === 'site:x.com/work "作品日本語" after:2026-07-12'
-      && query.priority === 5)).toBe(true);
+      && query.queryText.toLowerCase().includes("x official account timeline: https://x.com/work")
+      && query.queryText.includes("after:2026-07-12")
+      && query.priority === 5 && query.cadenceDays === 1)).toBe(true);
     expect(queries.some((query) => query.scopeId === "person-1" && query.searchKind === "social")).toBe(true);
   });
 
@@ -320,7 +321,32 @@ describe("discovery query planning", () => {
       .some((query) => query.targetKey === "updates:anime-1:account-work")).toBe(false);
     expect(buildDiscoveryPlan({ ...input, force: true })
       .some((query) => query.targetKey === "updates:anime-1:account-work"
-        && query.queryText === 'site:x.com/work "作品日本語" after:2026-08-09')).toBe(true);
+        && query.queryText.includes("X official account timeline: https://x.com/work")
+        && query.queryText.includes("after:2026-08-09"))).toBe(true);
+  });
+
+  test("plans daily official X timeline and related-tag monitoring for every current work", () => {
+    const monitoredResources: AdminAnimeResources = {
+      ...resources,
+      accounts: [{
+        id: "account-work-x", ownerType: "anime", ownerId: anime.id, ownerLabel: anime.titleZh,
+        platform: "X", handle: "@work", url: "https://x.com/work", verified: true,
+        monitorMode: "local", verificationSourceUrl: "https://example.com/official", verifiedAt: "2026-08-11T00:00:00Z",
+      }],
+    };
+    const queries = buildDiscoveryPlan({
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime],
+      resources: { "anime-1": monitoredResources }, memory: [], memoryHits: [],
+      now: new Date("2026-08-11T20:00:00Z"), force: false, limit: 100,
+    });
+    const account = queries.find((query) => query.accountId === "account-work-x");
+    expect(account).toMatchObject({ cadenceDays: 1, priority: 5, contentLane: "official" });
+    expect(account?.queryText).toContain("X official account timeline: https://x.com/work");
+    const tags = queries.find((query) => query.targetKey === "updates:anime-1:x-tags");
+    expect(tags).toMatchObject({ cadenceDays: 1, priority: 5, platform: "X", contentLane: "official" });
+    expect(tags?.queryText).toContain("X latest hashtag timelines");
+    expect(tags?.queryText).toContain("verified official profiles");
+    expect(tags?.queryText).toContain("角色");
   });
 
   test("plans Instagram updates separately from X account coverage", () => {

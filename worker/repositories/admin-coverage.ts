@@ -1,4 +1,5 @@
 import type { AdminAnimeCoverage } from "@/domain";
+import { PUBLIC_DISCUSSION_PREDICATE, PUBLIC_MEDIA_PREDICATE } from "../db/queries/public-visibility";
 
 type CoverageRow = {
   anime_id: string;
@@ -52,9 +53,11 @@ export async function readAdminCoverage(db: D1Database): Promise<AdminAnimeCover
       )) AS verified_account_count,
       (SELECT COUNT(*) FROM research_sources rs WHERE rs.anime_id = a.id AND rs.enabled = 1) AS source_count,
       (SELECT COUNT(*) FROM events e WHERE e.anime_id = a.id AND e.verified = 1) AS verified_event_count,
-      (SELECT COUNT(*) FROM media_items mi WHERE mi.anime_id = a.id) AS media_count,
+      (SELECT COUNT(*) FROM media_items m
+        WHERE m.anime_id = a.id AND (${PUBLIC_MEDIA_PREDICATE})) AS media_count,
       (SELECT COUNT(*) FROM discussion_anime da JOIN discussions d ON d.id = da.discussion_id
-        WHERE da.anime_id = a.id AND d.is_active = 1) AS discussion_count,
+        WHERE da.anime_id = a.id AND d.is_active = 1
+          AND (${PUBLIC_DISCUSSION_PREDICATE})) AS discussion_count,
       (SELECT COUNT(*) FROM anime_theme_songs ats JOIN music_tracks mt ON mt.id = ats.track_id
         WHERE ats.anime_id = a.id AND mt.verified = 1) AS theme_song_count,
       (SELECT COUNT(*) FROM anime_theme_songs ats JOIN music_tracks mt ON mt.id = ats.track_id

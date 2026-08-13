@@ -4,7 +4,7 @@ import { applyCandidateDecision, createCandidate } from "../worker/repositories/
 import { rememberSearch } from "../worker/repositories/search-memory";
 import { TestD1 } from "./support/d1-adapter";
 import { readAdminDashboard } from "../worker/repositories/admin";
-import { readFeed } from "../worker/repositories/feed";
+import { readDiscussions, readFeed, readMedia } from "../worker/repositories/feed";
 
 let database: TestD1;
 
@@ -454,5 +454,82 @@ describe("local research batch", () => {
     expect(database.sqlite.query(`
       SELECT action FROM audit_log WHERE entity_id = ? ORDER BY created_at DESC LIMIT 1
     `).get(id)).toEqual({ action: "review_candidate" });
+  });
+
+  test("only exposes candidate projections while their status is published", async () => {
+    const mediaCandidateId = await createCandidate(database.binding(), {
+      animeId: "anime-kimishinu",
+      contentClass: "official_art",
+      sourceIdentity: "official",
+      title: "Rejected visual",
+      summary: "This visual must disappear after rejection.",
+      url: "https://example.com/rejected-visual",
+      sourceName: "Official site",
+      publishedAt: "2026-08-11T12:00:00+09:00",
+      presentationMode: "link_only",
+      safetyRating: "safe",
+      spoilerLevel: "none",
+      confidence: 1,
+      media: {
+        contentClass: "official_art",
+        title: "Rejected visual",
+        creatorName: "Official site",
+        originalUrl: "https://example.com/rejected-visual",
+        presentationMode: "link_only",
+        safetyRating: "safe",
+        spoilerLevel: "none",
+      },
+    });
+    const discussionCandidateId = await createCandidate(database.binding(), {
+      animeId: "anime-kimishinu",
+      contentClass: "community_thread",
+      sourceIdentity: "community",
+      title: "Rejected discussion",
+      summary: "This discussion must disappear after rejection.",
+      url: "https://example.com/rejected-discussion",
+      sourceName: "Community",
+      publishedAt: "2026-08-11T12:00:00+09:00",
+      presentationMode: "link_only",
+      safetyRating: "safe",
+      spoilerLevel: "none",
+      confidence: 1,
+    });
+
+    expect((await readFeed(database.binding())).items.some((item) =>
+      item.url === "https://example.com/rejected-visual"
+      || item.url === "https://example.com/rejected-discussion")).toBe(false);
+    expect((await readMedia(database.binding(), "anime-kimishinu")).some(
+      (item) => item.originalUrl === "https://example.com/rejected-visual",
+    )).toBe(false);
+    expect((await readDiscussions(database.binding(), "anime-kimishinu")).some(
+      (item) => item.url === "https://example.com/rejected-discussion",
+    )).toBe(false);
+
+    await applyCandidateDecision(database.binding(), mediaCandidateId, "publish", { reviewerType: "admin" });
+    await applyCandidateDecision(database.binding(), discussionCandidateId, "publish", { reviewerType: "admin" });
+    const publishedUrls = (await readFeed(database.binding())).items.map((item) => item.url);
+    expect(publishedUrls).toContain("https://example.com/rejected-visual");
+    expect(publishedUrls).toContain("https://example.com/rejected-discussion");
+    expect((await readMedia(database.binding(), "anime-kimishinu")).map((item) => item.originalUrl))
+      .toContain("https://example.com/rejected-visual");
+    expect((await readDiscussions(database.binding(), "anime-kimishinu")).map((item) => item.url))
+      .toContain("https://example.com/rejected-discussion");
+
+    await applyCandidateDecision(database.binding(), mediaCandidateId, "reject", { reviewerType: "admin" });
+    await applyCandidateDecision(database.binding(), discussionCandidateId, "reject", { reviewerType: "admin" });
+
+    const feed = await readFeed(database.binding());
+    expect(feed.items.some((item) => item.url === "https://example.com/rejected-visual")).toBe(false);
+    expect(feed.items.some((item) => item.url === "https://example.com/rejected-discussion")).toBe(false);
+    expect((await readMedia(database.binding(), "anime-kimishinu")).some(
+      (item) => item.originalUrl === "https://example.com/rejected-visual",
+    )).toBe(false);
+    expect((await readDiscussions(database.binding(), "anime-kimishinu")).some(
+      (item) => item.url === "https://example.com/rejected-discussion",
+    )).toBe(false);
+
+    const dashboard = await readAdminDashboard(database.binding());
+    expect(dashboard.recentPublications.some((item) =>
+      item.candidateId === mediaCandidateId || item.candidateId === discussionCandidateId)).toBe(false);
   });
 });

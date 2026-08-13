@@ -1,10 +1,8 @@
 import type { ContentClass, Discussion, FeedResponse, MediaItem } from "@/domain";
-import { and, desc, eq, inArray } from "drizzle-orm";
-import { database } from "../db/client";
-import { mapFeed } from "../db/mappers";
+import { mapFeed, mapMedia } from "../db/mappers";
 import { allRows, placeholders } from "../db/query";
-import { discussionsQuery, feedPageQuery, mapDiscussion } from "../db/queries/feed";
-import { mediaItemsTable } from "../db/schema";
+import { discussionsQuery, feedPageQuery, mapDiscussion, mediaQuery } from "../db/queries/feed";
+import { PUBLIC_FEED_ITEM_PREDICATE } from "../db/queries/public-visibility";
 import { decodeFeedCursor, encodeFeedCursor } from "./feed-cursor";
 
 type FeedOptions = {
@@ -33,7 +31,7 @@ const SEARCH_TEXT = `LOWER(
 
 function buildFeedFilter(options: FeedOptions): { where: string; bindings: Array<string | number> } {
   const clauses = [
-    "fi.withdrawn_at IS NULL",
+    `(${PUBLIC_FEED_ITEM_PREDICATE})`,
     "fi.safety_rating != 'adult'",
     "fi.content_class != 'editorial'",
   ];
@@ -103,23 +101,7 @@ export async function readFeed(db: D1Database, options: FeedOptions = {}): Promi
 }
 
 export async function readMedia(db: D1Database, animeId: string): Promise<MediaItem[]> {
-  return database(db).select({
-    id: mediaItemsTable.id,
-    contentClass: mediaItemsTable.contentClass,
-    title: mediaItemsTable.title,
-    creatorName: mediaItemsTable.creatorName,
-    creatorUrl: mediaItemsTable.creatorUrl,
-    originalUrl: mediaItemsTable.originalUrl,
-    previewUrl: mediaItemsTable.previewUrl,
-    presentationMode: mediaItemsTable.presentationMode,
-    safetyRating: mediaItemsTable.safetyRating,
-    spoilerLevel: mediaItemsTable.spoilerLevel,
-    rightsNote: mediaItemsTable.rightsNote,
-    publishedAt: mediaItemsTable.publishedAt,
-  }).from(mediaItemsTable).where(and(
-    eq(mediaItemsTable.animeId, animeId),
-    inArray(mediaItemsTable.safetyRating, ["safe", "suggestive"]),
-  )).orderBy(desc(mediaItemsTable.publishedAt));
+  return (await allRows(db, mediaQuery, [animeId])).map(mapMedia);
 }
 
 export async function readDiscussions(db: D1Database, animeId: string): Promise<Discussion[]> {

@@ -227,7 +227,7 @@ describe("discovery query planning", () => {
       && query.targetKey === "account:official-instagram")).toBe(true);
   });
 
-  test("plans a low-frequency official jacket lookup for verified songs missing artwork", () => {
+  test("plans projection reconciliation for verified songs missing Apple action or artwork", () => {
     const resourcesWithMusic: AdminAnimeResources = {
       ...resources,
       themeSongs: [{
@@ -243,14 +243,15 @@ describe("discovery query planning", () => {
       resources: { "anime-1": resourcesWithMusic }, memory: [], memoryHits: [],
       now: new Date("2026-08-11T20:00:00Z"), force: false, limit: 100,
     });
-    const jacket = queries.find((query) => query.targetKey === "music:theme-song-jackets");
+    const reconciliation = queries.find((query) => query.targetKey === "music:theme-song-projection");
 
     expect(queries.some((query) => query.targetKey === "music:theme-songs")).toBe(false);
-    expect(jacket).toMatchObject({ searchKind: "official_news", priority: 3, cadenceDays: 30 });
-    expect(jacket?.queryText).toContain('"Blue Hour"');
+    expect(reconciliation).toMatchObject({ searchKind: "official_news", priority: 4, cadenceDays: 7 });
+    expect(reconciliation?.queryText).toContain('"Blue Hour / Example Artist"');
+    expect(reconciliation?.queryText).toContain("Apple Music");
   });
 
-  test("does not search again when every verified song already has an official jacket", () => {
+  test("still reconciles a verified song with artwork but no Apple action", () => {
     const completeMusic: AdminAnimeResources = {
       ...resources,
       themeSongs: [{
@@ -259,6 +260,28 @@ describe("discovery query planning", () => {
         episodeRange: null, sortOrder: 0, officialUrl: null,
         coverUrl: "https://music.example.test/afterglow.jpg",
         coverSourceUrl: "https://music.example.test/releases/afterglow",
+        sourceUrl: "https://anime.example.test/music", verified: true, sharedAnimeCount: 1,
+      }],
+    };
+    const queries = buildDiscoveryPlan({
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime],
+      resources: { "anime-1": completeMusic }, memory: [], memoryHits: [],
+      now: new Date("2026-08-11T20:00:00Z"), force: false, limit: 100,
+    });
+
+    expect(queries.some((query) => query.targetKey === "music:theme-song-projection")).toBe(true);
+  });
+
+  test("does not search again when every verified song has a complete Apple projection", () => {
+    const completeMusic: AdminAnimeResources = {
+      ...resources,
+      themeSongs: [{
+        id: "theme-song-ending", trackId: "track-ending", songKind: "ending", sequence: 1, title: "Afterglow",
+        artist: "Example Artist", lyricist: null, composer: null, arranger: null,
+        episodeRange: null, sortOrder: 0,
+        officialUrl: "https://music.apple.com/jp/album/afterglow/123?i=456",
+        coverUrl: "https://is1-ssl.mzstatic.com/afterglow.jpg",
+        coverSourceUrl: "https://music.apple.com/jp/album/afterglow/123?i=456",
         sourceUrl: "https://anime.example.test/music", verified: true, sharedAnimeCount: 1,
       }],
     };

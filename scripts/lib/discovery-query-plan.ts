@@ -73,6 +73,17 @@ function hasRegisteredOfficialSource(resources: AdminAnimeResources) {
     && source.changeKind === "feed_candidate");
 }
 
+function hasAppleMusicTrackUrl(value: string | null): boolean {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.hostname === "music.apple.com"
+      && (Boolean(url.searchParams.get("i")) || /\/(?:album|song)\/[^/]+\/\d+$/.test(url.pathname));
+  } catch {
+    return false;
+  }
+}
+
 function hasWorkAccount(resources: AdminAnimeResources, animeId: string) {
   return resources.accounts.some((account) => account.ownerType === "anime"
     && account.ownerId === animeId);
@@ -160,15 +171,19 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
         queryText: `"${titleJa}" OP ED 主題歌 オープニング エンディング 公式`, priority: 5, cadenceDays: 14,
         reason: "从动画官网、唱片公司或官方音乐页面补齐主题曲、制作名单与页面已有的唱片封面；只接收明确字段" });
     } else {
-      const songsWithoutJackets = resources.themeSongs.filter((song) => song.verified && !song.coverUrl);
-      if (songsWithoutJackets.length > 0) {
-        const titles = [...new Set(songsWithoutJackets.map((song) => song.title))]
+      const incompleteSongs = resources.themeSongs.filter((song) => song.verified
+        && (!hasAppleMusicTrackUrl(song.officialUrl)
+          || !song.coverUrl
+          || song.coverSourceUrl !== song.officialUrl));
+      if (incompleteSongs.length > 0) {
+        const titles = [...new Set(incompleteSongs.map((song) => `${song.title} / ${song.artist}`))]
           .slice(0, 3)
           .map((title) => `"${title}"`)
           .join(" ");
-        add({ ...common, searchKind: "official_news", targetKey: "music:theme-song-jackets",
-          queryText: `"${titleJa}" ${titles} ジャケット 公式`, priority: 3, cadenceDays: 30,
-          reason: "已验证主题曲缺少封面；只从动画官网、唱片公司或官方发行页补图片 URL 与来源页" });
+        add({ ...common, searchKind: "official_news", targetKey: "music:theme-song-projection",
+          queryText: `reconcile verified theme songs for "${titleJa}": ${titles}; resolve an exact title+artist Apple Music track through the official Apple search/lookup API and fill the public action plus Apple artwork; if no exact Apple track exists, preserve first-party identity evidence and leave unsupported fields empty`,
+          priority: 4, cadenceDays: 7,
+          reason: "对账已验证主题曲的完整用户投影：曲目身份仍由第一方来源证明，精确 Apple Music 曲目补试听入口与封面；不存在或歧义时不猜测" });
       }
     }
 

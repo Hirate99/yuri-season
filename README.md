@@ -24,7 +24,7 @@ $env:YURI_ADMIN_TOKEN="your-admin-token"
 bun run research:diff
 ```
 
-只有条目级内容发生变化时，`.research-cache/pending-diff.json` 才会出现。首次检查只建立基线，相同状态复检也不会调用模型。差异分成 `catalogChanges` 与 `feedChanges`：Bangumi 元数据只更新资料，不进入情报流；只有真正的动态才进入提取与审核。官网采用 JSON 时可配置 `item_url_template`，避免前端渲染造成漏抓。使用 `skills/yuri-season-research` 核验变化并生成一个合并批次，导入成功后再执行 `bun run research:commit`。
+只有条目级内容发生变化时，`.research-cache/pending-diff.json` 才会出现。首次检查只建立基线，相同状态复检也不会调用模型。差异分成 `catalogChanges` 与 `feedChanges`：Bangumi 元数据只更新资料，不进入情报流；只有真正的动态才进入提取与审核。官网采用 JSON 时可配置 `item_url_template`，避免前端渲染造成漏抓。使用 `.agent/skills/yuri-season-research` 核验变化并生成一个合并批次，导入成功后再执行 `bun run research:commit`。
 
 如果生产 Admin 同时受 Access 保护，为本地 agent 配置 Access Service Token，并设置 `YURI_ACCESS_CLIENT_ID` 与 `YURI_ACCESS_CLIENT_SECRET`；脚本仍会在 Worker 层使用独立的 `YURI_ADMIN_TOKEN`，两层凭证缺一不可。
 

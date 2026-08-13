@@ -22,7 +22,7 @@ Read `references/batch-schema.md` before creating a batch and `references/discov
 
 When one wake can run sync and discovery, run `incremental` first. If there is a pending diff, source error, or changed item, finish only that work and end the wake. Lease discovery only after a clean `0 changes / 0 source errors`. Never spend both budgets in one scheduled run.
 
-Default limits are 20 registered sources for incremental sync or 4 leased discovery queries. Queue overflow for a later run. Never lease more than 12 queries.
+Incremental sync checks every enabled registered source each run; no per-run source rotation. Override with `YURI_SOURCE_LIMIT` only to throttle an emergency or rate-limited window. Discovery stays capped at 4 leased queries; queue overflow for a later run. Never lease more than 12 queries.
 
 ## Discovery workflow
 
@@ -108,7 +108,7 @@ Treat running the 百合季 site as a feedback loop for this skill, not as a seq
 
 1. During every operational run, note any newly discovered rule that would prevent the same class of error, improve traceability, or make a repeatable task safer or more deterministic.
 2. Before finishing the run, decide whether the lesson is reusable. Promote only stable workflow, validation, provenance, safety, or presentation rules; do not embed one-off records, transient URLs, secrets, unverified guesses, or work-specific facts that belong in the database or a research batch.
-3. Update the canonical repository skill at `skills/yuri-season-research/SKILL.md` in the same operational turn. Do not create a second project-local copy; the canonical directory is the publication and maintenance source.
+3. Update the canonical repository skill at `.agent/skills/yuri-season-research/SKILL.md` in the same operational turn. Do not create a second project-local copy; the canonical directory is the publication and maintenance source.
 4. Validate the complete canonical skill after editing and inspect the diff. A skill change is incomplete if validation fails, it contradicts existing safety or publishing boundaries, or it silently broadens authorization.
 5. In the handoff, state the reusable rule learned and how it changed the operation when the change was material. Continue the active research/import workflow after the skill update; do not let skill maintenance replace the requested site work.
 

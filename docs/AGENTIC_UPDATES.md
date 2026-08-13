@@ -142,7 +142,7 @@ Dispatcher 保留三种增量通道，但第一阶段采用 `local-first`：Clou
 
 Admin、本地 skill 与可信 webhook 可以直接写入 observation batch 并排入 `review_candidate`。如果以后启用 Worker 调度，在首播、最终话、直播或线下活动前后才允许对指定来源临时加速，并设置自动失效时间。
 
-本地一轮默认最多检查 20 个来源；只有存在条目级 diff 时才调用 LLM，并把多个变化合并审核。每批默认最多 4 次 LLM 调用、每来源 128 KiB、单请求 15 秒。额度写在任务或 batch 上，可按平台覆盖。
+本地一轮默认检查全部已登记来源，不做每轮轮转；仅在紧急限流或命中平台限流窗口时用 `YURI_SOURCE_LIMIT` 临时缩量。只有存在条目级 diff 时才调用 LLM，并把多个变化合并审核。抓取层硬限制为单请求 15 秒超时、每来源最多读取 256 KiB（`MAX_SOURCE_BYTES`）；LLM 调用次数在本阶段不做脚本化硬上限，`budget_json` 字段已预留但尚未强制执行。
 
 定时任务不会在同一轮同时消费增量和发现预算。每轮先检查已登记来源；只要存在 pending diff、来源错误或条目变化，本轮仅完成对应导入、提交或局部修复后结束。只有 `0 changes / 0 source errors` 的干净轮次才允许领取最多 4 条 discovery query。
 

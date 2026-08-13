@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-const skillPaths = ["skills/yuri-season-research/SKILL.md"] as const;
+const skillPaths = [".agent/skills/yuri-season-research/SKILL.md"] as const;
 
 describe("research skill policy", () => {
   for (const path of skillPaths) {

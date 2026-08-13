@@ -43,7 +43,7 @@ async function check(): Promise<void> {
   const changes: SourceChange[] = [];
   const errors: Array<{ sourceId: string; message: string }> = [];
 
-  const budget = Math.min(20, Math.max(1, Number(process.env.YURI_SOURCE_LIMIT ?? 20) || 20));
+  const budget = Number(process.env.YURI_SOURCE_LIMIT ?? "") || Infinity;
   const selection = rotatingSourceSelection(data.sources.filter((item) => item.enabled), current.sourceCursor, budget);
   next.sourceCursor = selection.cursor;
   for (const source of selection.selected) {

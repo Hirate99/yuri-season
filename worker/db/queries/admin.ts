@@ -7,6 +7,7 @@ import type {
   UpdateJobRow,
 } from "../admin-rows";
 import { defineQuery } from "../query";
+import { PUBLIC_DISCUSSION_PREDICATE, PUBLIC_FEED_ITEM_PREDICATE } from "./public-visibility";
 
 export type DashboardCountsRow = {
   anime_count: number;
@@ -21,8 +22,11 @@ export const dashboardCountsQuery = defineQuery<DashboardCountsRow>(`
     (SELECT COUNT(*) FROM anime) AS anime_count,
     (SELECT COUNT(*) FROM feed_candidates WHERE status IN ('held', 'pending')) AS held_count,
     (SELECT COUNT(*) FROM research_sources WHERE enabled = 1) AS source_count,
-    (SELECT COUNT(*) FROM discussions WHERE is_active = 1) AS discussion_count,
-    (SELECT COUNT(*) FROM feed_items WHERE auto_published = 1 AND withdrawn_at IS NULL) AS auto_count
+    (SELECT COUNT(*) FROM discussions d
+      WHERE d.is_active = 1 AND (${PUBLIC_DISCUSSION_PREDICATE})) AS discussion_count,
+    (SELECT COUNT(*) FROM feed_items fi
+      LEFT JOIN feed_candidates fc ON fc.id = fi.candidate_id
+      WHERE fi.auto_published = 1 AND (${PUBLIC_FEED_ITEM_PREDICATE})) AS auto_count
 `);
 
 export const heldCandidatesQuery = defineQuery<CandidateRow>(`
@@ -72,8 +76,9 @@ export const publicationsQuery = defineQuery<PublicationRow>(`
   SELECT fi.id, fi.candidate_id, a.title_zh AS anime_title, fi.title, fi.url,
     fi.source_name, fi.published_at, fi.auto_published
   FROM feed_items fi
+  JOIN feed_candidates fc ON fc.id = fi.candidate_id
   LEFT JOIN anime a ON a.id = fi.anime_id
-  WHERE fi.withdrawn_at IS NULL AND fi.candidate_id IS NOT NULL
+  WHERE ${PUBLIC_FEED_ITEM_PREDICATE}
   ORDER BY fi.created_at DESC
   LIMIT 40
 `);

@@ -1,6 +1,7 @@
 import type { Discussion } from "@/domain";
-import type { FeedRow } from "../rows";
+import type { FeedRow, MediaRow } from "../rows";
 import { defineQuery } from "../query";
+import { PUBLIC_DISCUSSION_PREDICATE, PUBLIC_MEDIA_PREDICATE } from "./public-visibility";
 
 export const FEED_SELECT = `
   SELECT fi.id, fi.anime_id, a.slug AS anime_slug, a.title_zh AS anime_title,
@@ -29,6 +30,7 @@ export const FEED_SELECT = `
   LEFT JOIN people p ON p.id = fi.person_id
   LEFT JOIN characters c ON c.id = fi.character_id
   LEFT JOIN media_items m ON m.id = fi.media_id
+  LEFT JOIN feed_candidates fc ON fc.id = fi.candidate_id
 `;
 
 export function feedPageQuery(where: string) {
@@ -50,11 +52,23 @@ export type DiscussionRow = {
   last_checked_at: string | null;
 };
 
+export const mediaQuery = defineQuery<MediaRow>(`
+  SELECT m.id, m.content_class, m.title, m.creator_name, m.creator_url,
+    m.original_url, m.preview_url, m.presentation_mode, m.safety_rating,
+    m.spoiler_level, m.rights_note, m.published_at
+  FROM media_items m
+  WHERE m.anime_id = ?
+    AND m.safety_rating IN ('safe', 'suggestive')
+    AND (${PUBLIC_MEDIA_PREDICATE})
+  ORDER BY m.published_at DESC
+`);
+
 export const discussionsQuery = defineQuery<DiscussionRow>(`
   SELECT d.id, d.platform, d.title, d.url, d.note, d.last_activity_at, d.last_checked_at
   FROM discussions d
   JOIN discussion_anime da ON da.discussion_id = d.id
   WHERE da.anime_id = ? AND d.is_active = 1
+    AND (${PUBLIC_DISCUSSION_PREDICATE})
   ORDER BY COALESCE(d.last_activity_at, d.last_checked_at) DESC
 `);
 

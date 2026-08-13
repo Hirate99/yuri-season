@@ -12,12 +12,13 @@ const anime = [{
 }] as CatalogResponse["anime"];
 
 describe("anime combobox", () => {
-  test("renders a searchable accessible control with the current selection", () => {
+  test("renders a button-triggered selector showing the current selection", () => {
     const html = renderToStaticMarkup(<AnimeCombobox anime={anime} value="example" onChange={() => {}} />);
 
     expect(html).toContain('role="combobox"');
     expect(html).toContain('aria-label="按作品筛选"');
-    expect(html).toContain('value="示例作品"');
+    expect(html).toContain("示例作品");
     expect(html).not.toContain("<select");
+    expect(html).not.toContain("<input");
   });
 });

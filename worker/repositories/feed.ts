@@ -22,6 +22,13 @@ const SEARCH_TEXT = `LOWER(
   COALESCE(a.title_zh, '') || ' ' || COALESCE(a.title_ja, '') || ' ' || COALESCE(a.title_en, '') || ' ' ||
   COALESCE(p.name, '') || ' ' || COALESCE(p.name_native, '') || ' ' ||
   COALESCE(c.name, '') || ' ' || COALESCE(c.name_native, '')
+  || ' ' || COALESCE((
+    SELECT GROUP_CONCAT(related.title_zh || ' ' || related.title_ja || ' ' || COALESCE(related.title_en, ''), ' ')
+    FROM discussions d
+    JOIN discussion_anime da ON da.discussion_id = d.id
+    JOIN anime related ON related.id = da.anime_id
+    WHERE fi.content_class = 'community_thread' AND d.url = fi.url
+  ), '')
 )`;
 
 function buildFeedFilter(options: FeedOptions): { where: string; bindings: Array<string | number> } {
@@ -33,11 +40,26 @@ function buildFeedFilter(options: FeedOptions): { where: string; bindings: Array
   const bindings: Array<string | number> = [];
 
   if (options.animeId) {
-    clauses.push("fi.anime_id = ?");
+    clauses.push(`(fi.anime_id = ? OR (
+      fi.content_class = 'community_thread' AND EXISTS (
+        SELECT 1 FROM discussions d
+        JOIN discussion_anime da ON da.discussion_id = d.id
+        WHERE d.url = fi.url AND da.anime_id = ?
+      )
+    ))`);
+    bindings.push(options.animeId);
     bindings.push(options.animeId);
   }
   if (options.animeSlug) {
-    clauses.push("a.slug = ?");
+    clauses.push(`(a.slug = ? OR (
+      fi.content_class = 'community_thread' AND EXISTS (
+        SELECT 1 FROM discussions d
+        JOIN discussion_anime da ON da.discussion_id = d.id
+        JOIN anime related ON related.id = da.anime_id
+        WHERE d.url = fi.url AND related.slug = ?
+      )
+    ))`);
+    bindings.push(options.animeSlug);
     bindings.push(options.animeSlug);
   }
   if (options.contentClasses?.length) {

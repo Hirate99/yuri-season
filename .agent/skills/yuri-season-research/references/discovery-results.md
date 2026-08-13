@@ -55,6 +55,14 @@ For fanwork results preserve:
 - `creatorName`, optional `creatorUrl`
 - `verifiedOriginal: true` only after confirming this is the creator's original post
 
+For community-thread results preserve:
+
+- `contentLane: community`
+- `animeId` for a work-specific thread
+- `animeIds` for a cross-work thread; include every materially covered work once
+- `platform` and the canonical original thread URL
+- `verifiedOriginal: true` only after opening the original thread
+
 ## Rules
 
 - Use `active` when the target should be searched again, `exhausted` after repeated targeted searches find no credible lead, and `blocked` for login, CAPTCHA, or inaccessible sources.
@@ -63,4 +71,4 @@ For fanwork results preserve:
 - Existing published, held, rejected, or ignored URLs are not new discoveries unless the original page materially changed.
 - For account discovery, identity evidence and content evidence are separate. A credible account lead is still unverified until the account record is reviewed.
 - For fanwork, aggregators, mirrors, reposts, and quote-posts are `ignored` or `rejected`, not candidates.
-- Keep at most 12 results in one file. The recorder derives hashes, counts, next-search time, and durable memory.
+- Record completed results promptly in any convenient chunk. The recorder derives hashes, counts, next-search time, and durable memory. Chunk size is an implementation detail, never a reason to stop while relevant due work remains.

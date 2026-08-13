@@ -126,6 +126,7 @@ export function mapFeed(row: FeedRow): FeedItem {
     animeSlug: row.anime_slug,
     animeTitle: row.anime_title,
     animeCoverUrl: row.anime_cover_url,
+    relatedAnime: JSON.parse(row.related_anime_json) as FeedItem["relatedAnime"],
     personId: row.person_id,
     personName: row.person_name,
     characterId: row.character_id,

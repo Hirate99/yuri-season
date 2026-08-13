@@ -4,6 +4,7 @@ import { applyCandidateDecision, createCandidate } from "../worker/repositories/
 import { rememberSearch } from "../worker/repositories/search-memory";
 import { TestD1 } from "./support/d1-adapter";
 import { readAdminDashboard } from "../worker/repositories/admin";
+import { readFeed } from "../worker/repositories/feed";
 
 let database: TestD1;
 
@@ -169,9 +170,10 @@ describe("local research batch", () => {
     `).get(candidate.id)).toEqual({ count: 0 });
   });
 
-  test("registers an approved community thread for the anime detail page", async () => {
+  test("registers one approved community thread across all linked anime pages", async () => {
     const id = await createCandidate(database.binding(), {
       animeId: "anime-kimishinu",
+      animeIds: ["anime-taiari", "anime-nanoha-exceeds", "anime-azurlane-bisoku-2"],
       contentClass: "community_thread",
       sourceIdentity: "community",
       title: "集中讨论串",
@@ -197,6 +199,22 @@ describe("local research batch", () => {
       platform: "百合会",
       title: "集中讨论串",
       url: "https://bbs.example.test/thread-1",
+    });
+    expect(database.sqlite.query(`
+      SELECT COUNT(*) AS count FROM discussion_anime
+      WHERE discussion_id = (SELECT id FROM discussions WHERE url = ?)
+    `).get("https://bbs.example.test/thread-1")).toEqual({ count: 4 });
+
+    const secondaryFeed = await readFeed(database.binding(), {
+      animeId: "anime-azurlane-bisoku-2",
+      contentClasses: ["community_thread"],
+    });
+    expect(secondaryFeed.items[0]).toMatchObject({
+      id: expect.any(String),
+      relatedAnime: expect.arrayContaining([
+        expect.objectContaining({ id: "anime-kimishinu" }),
+        expect.objectContaining({ id: "anime-azurlane-bisoku-2" }),
+      ]),
     });
   });
 

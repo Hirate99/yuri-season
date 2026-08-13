@@ -36,6 +36,12 @@ export type FeedItem = {
   animeSlug: string | null;
   animeTitle: string | null;
   animeCoverUrl: string | null;
+  relatedAnime?: Array<{
+    id: string;
+    slug: string;
+    title: string;
+    coverUrl: string | null;
+  }>;
   personId: string | null;
   personName: string | null;
   characterId: string | null;

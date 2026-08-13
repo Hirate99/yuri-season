@@ -5,6 +5,15 @@ import { defineQuery } from "../query";
 export const FEED_SELECT = `
   SELECT fi.id, fi.anime_id, a.slug AS anime_slug, a.title_zh AS anime_title,
     a.cover_url AS anime_cover_url,
+    CASE WHEN fi.content_class = 'community_thread' THEN COALESCE((
+      SELECT json_group_array(json_object(
+        'id', related.id, 'slug', related.slug, 'title', related.title_zh, 'coverUrl', related.cover_url
+      ))
+      FROM discussions d
+      JOIN discussion_anime da ON da.discussion_id = d.id
+      JOIN anime related ON related.id = da.anime_id
+      WHERE d.url = fi.url
+    ), '[]') ELSE '[]' END AS related_anime_json,
     fi.person_id, p.name AS person_name, fi.character_id, c.name AS character_name,
     fi.account_id, fi.platform_object_id,
     fi.content_class, fi.source_identity, fi.title, fi.summary, fi.url,

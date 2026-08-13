@@ -30,6 +30,26 @@ describe("resumable discovery campaigns", () => {
     expect(campaign.queries[0].attemptCount).toBe(2);
   });
 
+  test("prioritizes explicitly requested platforms without consuming unrelated work", () => {
+    const campaign = createCampaign({
+      createdAt: "2026-08-11T20:00:00Z", force: false,
+      season: { id: "season-1", slug: "2026-summer", label: "2026 summer" },
+      queryBudget: 3,
+      queries: [
+        query("birthday"),
+        { ...query("x"), platform: "X", searchKind: "social" },
+        { ...query("instagram"), platform: "Instagram", searchKind: "social" },
+      ],
+    });
+    const platforms = new Set(["x", "instagram"]);
+    expect(leaseCampaignQueries(
+      campaign,
+      500,
+      new Date("2026-08-11T20:00:00Z"),
+      (item) => Boolean(item.platform && platforms.has(item.platform.toLowerCase())),
+    ).map((item) => item.id)).toEqual(["x", "instagram"]);
+    expect(campaign.queries[0].state).toBe("pending");
+  });
   test("derives memory and completes only recorded work", async () => {
     const campaign = createCampaign({
       createdAt: "2026-08-11T20:00:00Z", force: false,

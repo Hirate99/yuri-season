@@ -3,6 +3,20 @@ import { atomicBatch } from "../db/transaction";
 import { createId } from "../http";
 import { stableFingerprint } from "../lib/fingerprint";
 
+function candidateAnimeIds(draft: CandidateDraft): string[] {
+  return [...new Set([draft.animeId, ...(draft.animeIds ?? [])].filter((id): id is string => Boolean(id)))];
+}
+
+function candidateAnimeStatements(
+  db: D1Database,
+  candidateId: string,
+  draft: CandidateDraft,
+): D1PreparedStatement[] {
+  return candidateAnimeIds(draft).map((animeId) => db.prepare(`
+    INSERT OR IGNORE INTO candidate_anime (candidate_id, anime_id) VALUES (?, ?)
+  `).bind(candidateId, animeId));
+}
+
 async function existingCandidateId(
   db: D1Database,
   draft: CandidateDraft,
@@ -77,7 +91,9 @@ export async function createCandidate(db: D1Database, draft: CandidateDraft): Pr
   const existingId = await existingCandidateId(db, draft, fingerprint);
   if (existingId) {
     const evidence = evidenceStatement(db, existingId, draft);
-    if (evidence) await evidence.run();
+    const statements = candidateAnimeStatements(db, existingId, draft);
+    if (evidence) statements.push(evidence);
+    if (statements.length) await atomicBatch(db, statements);
     return existingId;
   }
 
@@ -97,7 +113,7 @@ export async function createCandidate(db: D1Database, draft: CandidateDraft): Pr
   `).bind(
     id,
     draft.observationId ?? null,
-    draft.animeId ?? null,
+    draft.animeId ?? draft.animeIds?.[0] ?? null,
     draft.personId ?? null,
     draft.characterId ?? null,
     draft.accountId ?? null,
@@ -124,6 +140,7 @@ export async function createCandidate(db: D1Database, draft: CandidateDraft): Pr
   ));
   const evidence = evidenceStatement(db, id, draft);
   if (evidence) statements.push(evidence);
+  statements.push(...candidateAnimeStatements(db, id, draft));
   await atomicBatch(db, statements);
   return id;
 }

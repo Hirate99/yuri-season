@@ -33,7 +33,7 @@ Agentic Update 的目标是让站点在低人工维护下持续获得高精度�
 - 播出、配信、Staff / Cast、活动和已知串状态变更。
 - 已验证账号的新贺图、Staff / Cast 动态。
 
-若已验证账号暂时没有可登记的 API、RSS 或稳定页面来源，则不把账号主页交给通用抓取器。Discovery 计划为该账号生成每周一次的本地作品关联查询，并继续受每日 4 条总限额、`nextSearchAt` 和历史命中去重约束；找到的内容必须回到原始帖核验。仅当账号接入可实际同步的 API、RSS 或稳定页面 `feed_candidate` 来源时，本地查询才停止；验证证据页和禁用的本地 provenance source 不算账号 Feed。
+若已验证账号暂时没有可登记的 API、RSS 或稳定页面来源，则不把账号主页交给通用抓取器。Discovery 计划由无人值守 agentic cycle 按 `nextSearchAt`、历史命中和平台登录态持续处理；不存在每次唤醒的全局条数上限，明确请求的平台优先。找到的内容必须回到原始帖核验。仅当账号接入可实际同步的 API、RSS 或稳定页面 `feed_candidate` 来源时，本地查询才停止；验证证据页和禁用的本地 provenance source 不算账号 Feed。
 
 ### 2.2 Discovery agent
 
@@ -131,20 +131,19 @@ Worker 只执行支持公共 API 或允许域名的发现任务。依赖搜索�
 
 ### 5.1 计划
 
-Dispatcher 保留三种增量通道，但第一阶段采用 `local-first`：Cloudflare 不配置主动 Cron，Worker 只接收本地 Codex 生成的可追溯批次。来源与误报率稳定后，才按来源逐个启用 Worker cadence：
+Dispatcher 保留三种增量通道，但第一阶段采用 `local-first`：Cloudflare 不配置主动 Cron，Worker 只接收本地 Codex 生成的可追溯批次。Codex recurring task 每 6 小时启动一次无人值守 agentic cycle；来源与误报率稳定后，才按来源逐个启用 Worker cadence：
 
 - 快速增量（按需）：首播、最终话或活动窗口由本地 Codex 临时执行；完成后即停止，不做永久 5 分钟轮询。
-- 常规增量（建议每 6–12 小时或手动）：本地先做 ETag、cursor 与条目级 hash 比较，把真正变化合成一个 batch，再进行一次提取和审核。
-- 深度发现（每天）：补齐新来源、作者贺图、同人和社区关系；逐条按周期与搜索记忆领取，复杂搜索始终标记为 `execution_target=local`。
-- 生日事件生成：每天一次，查看未来 30 天。
-- 作品完整性扫描：每天一次，只为缺失字段创建任务。
-- 全季未知来源发现：每天一次，本地优先。
+- 无人值守 cycle（每 6 小时）：先完成 pending diff 或全量已登记来源增量同步，导入并提交真实变化，再在同一次唤醒中继续所有当前到期的 discovery。
+- 深度发现：由 durable search memory 的 `nextSearchAt` 决定单个查询是否到期；租约只防重入和崩溃接管，不是业务额度。显式请求的 X、Instagram 等平台或范围优先。
+- 生日事件和作品完整性：每天生成或刷新未来 30 天与缺失字段任务，但由同一 cycle 持续消费，无需人工领取下一批。
+- 全季未知来源发现：并入同一 cycle；只有显式全季审计才使用 `--force`。
 
 Admin、本地 skill 与可信 webhook 可以直接写入 observation batch 并排入 `review_candidate`。如果以后启用 Worker 调度，在首播、最终话、直播或线下活动前后才允许对指定来源临时加速，并设置自动失效时间。
 
 本地一轮默认检查全部已登记来源，不做每轮轮转；仅在紧急限流或命中平台限流窗口时用 `YURI_SOURCE_LIMIT` 临时缩量。只有存在条目级 diff 时才调用 LLM，并把多个变化合并审核。抓取层硬限制为单请求 15 秒超时、每来源最多读取 256 KiB（`MAX_SOURCE_BYTES`）；LLM 调用次数在本阶段不做脚本化硬上限，`budget_json` 字段已预留但尚未强制执行。
 
-定时任务不会在同一轮同时消费增量和发现预算。每轮先检查已登记来源；只要存在 pending diff、来源错误或条目变化，本轮仅完成对应导入、提交或局部修复后结束。只有 `0 changes / 0 source errors` 的干净轮次才允许领取最多 4 条 discovery query。
+定时任务在同一次 cycle 连续完成增量和发现：先完成 pending diff 或来源同步，再处理所有当前到期且相关的 discovery。单个来源或平台错误只阻塞对应范围，其他工作继续。查询租约和结果文件分块只用于并发、崩溃恢复与及时落盘，不是停止条件；cycle 持续到本轮到期工作收敛、遇到真正的全局认证/配置阻塞，或运行窗口结束并已保存可恢复状态。正常的零变化和零命中不通知。
 
 ### 5.2 抓取
 

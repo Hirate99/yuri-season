@@ -52,7 +52,7 @@ export function WorksPanel({ anime, seasons, busyId, onPatch, onCreate, onChange
 
       <section className="min-w-0">
         {creating ? <NewWorkEditor seasons={seasons} busy={busyId === "new-work"} onCreate={async (value) => { await onCreate(value); setCreating(false); }} open />
-          : selected ? <WorkEditor key={selected.id} item={selected} busy={busyId === selected.id} onSave={onPatch} onResourcesChanged={onChanged} />
+          : selected ? <WorkEditor key={selected.id} item={selected} anime={anime} busy={busyId === selected.id} onSave={onPatch} onResourcesChanged={onChanged} />
             : <div className="rounded-3xl bg-white p-8 text-sm text-muted">请选择一部作品</div>}
       </section>
     </div>

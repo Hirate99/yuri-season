@@ -33,7 +33,9 @@ export async function readAdminContentResources(db: D1Database, animeId: string)
     db.prepare(`
       SELECT d.id, d.platform, d.title, d.url, d.note, d.is_active,
         d.last_activity_at, d.last_checked_at,
-        (SELECT COUNT(*) FROM discussion_anime linked WHERE linked.discussion_id = d.id) AS shared_anime_count
+        (SELECT COUNT(*) FROM discussion_anime linked WHERE linked.discussion_id = d.id) AS shared_anime_count,
+        (SELECT GROUP_CONCAT(linked.anime_id, ',') FROM discussion_anime linked
+          WHERE linked.discussion_id = d.id) AS anime_ids
       FROM discussions d
       JOIN discussion_anime da ON da.discussion_id = d.id
       WHERE da.anime_id = ?
@@ -41,7 +43,7 @@ export async function readAdminContentResources(db: D1Database, animeId: string)
     `).bind(animeId).all<{
       id: string; platform: string; title: string; url: string; note: string | null;
       is_active: number; last_activity_at: string | null; last_checked_at: string | null;
-      shared_anime_count: number;
+      shared_anime_count: number; anime_ids: string | null;
     }>(),
     db.prepare(`
       SELECT ats.id, ats.track_id, ats.song_kind, ats.sequence, mt.title, mt.artist,
@@ -101,6 +103,7 @@ export async function readAdminContentResources(db: D1Database, animeId: string)
       lastActivityAt: row.last_activity_at,
       lastCheckedAt: row.last_checked_at,
       sharedAnimeCount: row.shared_anime_count,
+      animeIds: row.anime_ids?.split(",").filter(Boolean) ?? [],
     })),
     themeSongs: themeSongs.results.map((row) => ({
       id: row.id,

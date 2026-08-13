@@ -5,6 +5,8 @@ import { rememberSearch } from "../worker/repositories/search-memory";
 import { TestD1 } from "./support/d1-adapter";
 import { readAdminDashboard } from "../worker/repositories/admin";
 import { readDiscussions, readFeed, readMedia } from "../worker/repositories/feed";
+import { deleteDiscussionEverywhere } from "../worker/repositories/admin-discussion-mutations";
+import type { ResearchBatch } from "@/domain";
 
 let database: TestD1;
 
@@ -15,7 +17,7 @@ async function setupDatabase() {
   }
 }
 
-function batch(sourceId = "source-kimi-news", batchId = "batch-integration-1") {
+function batch(sourceId = "source-kimi-news", batchId = "batch-integration-1"): ResearchBatch {
   return {
     schemaVersion: "1",
     batchId,
@@ -101,6 +103,53 @@ describe("local research batch", () => {
     expect(decision).toEqual({ decision: "hold", reviewer_type: "local_skill" });
   });
 
+  test("auto-publishes a deterministic popular link-only community thread", async () => {
+    const value = batch("source-kimi-bgm", "batch-community-popular-1");
+    value.observations[0].sourceItemId = "574837";
+    value.observations[0].canonicalUrl = "https://bbs.yamibo.com/thread-574837-1-1.html";
+    value.observations[0].metadata = {
+      originalOpened: true,
+      bodyCopied: false,
+      repliesObserved: 19,
+      viewsObserved: 503,
+    };
+    value.observations[0].candidates[0] = {
+      ...value.observations[0].candidates[0],
+      platformObjectId: "574837",
+      contentClass: "community_thread",
+      sourceIdentity: "community",
+      title: "百合会热门作品讨论",
+      summary: "已打开原帖并核对作品关联的活跃讨论入口。",
+      url: value.observations[0].canonicalUrl,
+      sourceName: "百合会动漫区",
+      presentationMode: "link_only",
+      safetyRating: "safe",
+      spoilerLevel: "mild",
+      confidence: 0.97,
+      review: { decision: "publish", confidence: 0.97, reasons: ["原帖、关联和热度均已确定"] },
+    };
+
+    const oldHeldValue = structuredClone(value);
+    oldHeldValue.batchId = "batch-community-popular-old-held";
+    oldHeldValue.observations[0].metadata = { originalOpened: false, bodyCopied: false };
+    oldHeldValue.observations[0].candidates[0].safetyRating = "unknown";
+    oldHeldValue.observations[0].candidates[0].review = {
+      decision: "hold", confidence: 0.9, reasons: ["旧规则等待人工复核"],
+    };
+    expect(await ingestResearchBatch(database.binding(), oldHeldValue as never))
+      .toMatchObject({ published: 0, held: 1 });
+
+    const result = await ingestResearchBatch(database.binding(), value as never);
+    expect(result).toMatchObject({ published: 1, held: 0 });
+    expect((await readDiscussions(database.binding(), "anime-kimishinu"))
+      .some((item) => item.url === value.observations[0].canonicalUrl)).toBe(true);
+    expect(database.sqlite.query(`
+      SELECT safety_rating, spoiler_level, status FROM feed_candidates WHERE url = ?
+    `).get(value.observations[0].canonicalUrl)).toEqual({
+      safety_rating: "safe", spoiler_level: "mild", status: "published",
+    });
+  });
+
   test("shows review context and policy reasons on the Admin dashboard", async () => {
     const value = batch("source-kimi-bgm", "batch-admin-review-context");
     const result = await ingestResearchBatch(database.binding(), value as never);
@@ -170,7 +219,7 @@ describe("local research batch", () => {
     `).get(candidate.id)).toEqual({ count: 0 });
   });
 
-  test("registers one approved community thread across all linked anime pages", async () => {
+  test("registers and globally removes one community thread across all linked anime pages", async () => {
     const id = await createCandidate(database.binding(), {
       animeId: "anime-kimishinu",
       animeIds: ["anime-taiari", "anime-nanoha-exceeds", "anime-azurlane-bisoku-2"],
@@ -192,9 +241,16 @@ describe("local research batch", () => {
     await applyCandidateDecision(database.binding(), id, "publish", { reviewerType: "admin" });
 
     const discussion = database.sqlite.query(`
-      SELECT anime_id, platform, title, url FROM discussions WHERE url = ?
-    `).get("https://bbs.example.test/thread-1");
+      SELECT id, anime_id, platform, title, url FROM discussions WHERE url = ?
+    `).get("https://bbs.example.test/thread-1") as {
+      id: string;
+      anime_id: string;
+      platform: string;
+      title: string;
+      url: string;
+    };
     expect(discussion).toEqual({
+      id: expect.any(String),
       anime_id: "anime-kimishinu",
       platform: "百合会",
       title: "集中讨论串",
@@ -216,6 +272,36 @@ describe("local research batch", () => {
         expect.objectContaining({ id: "anime-azurlane-bisoku-2" }),
       ]),
     });
+    expect(database.sqlite.query(`
+      SELECT discussion_id FROM feed_items WHERE candidate_id = ?
+    `).get(id)).toEqual({ discussion_id: discussion.id });
+
+    database.sqlite.query(`
+      UPDATE discussions SET title = ?, url = ? WHERE id = ?
+    `).run("更新后的集中讨论串", "https://bbs.example.test/thread-1-updated", discussion.id);
+    expect((await readFeed(database.binding(), {
+      animeId: "anime-azurlane-bisoku-2",
+      contentClasses: ["community_thread"],
+    })).items[0]).toMatchObject({
+      title: "更新后的集中讨论串",
+      url: "https://bbs.example.test/thread-1-updated",
+    });
+
+    await deleteDiscussionEverywhere(database.binding(), discussion.id, "不再收录这个讨论串");
+
+    expect((await readFeed(database.binding(), {
+      animeId: "anime-azurlane-bisoku-2",
+      contentClasses: ["community_thread"],
+    })).items).toHaveLength(0);
+    expect(database.sqlite.query("SELECT COUNT(*) AS count FROM discussions WHERE id = ?")
+      .get(discussion.id)).toEqual({ count: 0 });
+    expect(database.sqlite.query(`
+      SELECT correction_type, reason FROM corrections
+      WHERE feed_item_id = (SELECT id FROM feed_items WHERE candidate_id = ?)
+    `).get(id)).toEqual({ correction_type: "withdraw", reason: "不再收录这个讨论串" });
+    expect(database.sqlite.query(`
+      SELECT action FROM audit_log WHERE entity_id = ? ORDER BY created_at DESC LIMIT 1
+    `).get(discussion.id)).toEqual({ action: "delete_discussion" });
   });
 
   test("writes high-confidence official theme songs and preserves jacket provenance", async () => {
@@ -456,7 +542,7 @@ describe("local research batch", () => {
     `).get(id)).toEqual({ action: "review_candidate" });
   });
 
-  test("only exposes candidate projections while their status is published", async () => {
+  test("only exposes candidate projections while their publication is active", async () => {
     const mediaCandidateId = await createCandidate(database.binding(), {
       animeId: "anime-kimishinu",
       contentClass: "official_art",
@@ -515,8 +601,16 @@ describe("local research batch", () => {
     expect((await readDiscussions(database.binding(), "anime-kimishinu")).map((item) => item.url))
       .toContain("https://example.com/rejected-discussion");
 
-    await applyCandidateDecision(database.binding(), mediaCandidateId, "reject", { reviewerType: "admin" });
-    await applyCandidateDecision(database.binding(), discussionCandidateId, "reject", { reviewerType: "admin" });
+    await expect(applyCandidateDecision(database.binding(), mediaCandidateId, "reject", { reviewerType: "admin" }))
+      .rejects.toThrow("已发布动态不能改为暂存或拒绝");
+    await applyCandidateDecision(database.binding(), mediaCandidateId, "withdraw", {
+      reviewerType: "admin",
+      reasons: ["测试撤回"],
+    });
+    await applyCandidateDecision(database.binding(), discussionCandidateId, "withdraw", {
+      reviewerType: "admin",
+      reasons: ["测试撤回"],
+    });
 
     const feed = await readFeed(database.binding());
     expect(feed.items.some((item) => item.url === "https://example.com/rejected-visual")).toBe(false);

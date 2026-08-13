@@ -18,7 +18,18 @@ import { rememberSearch, resolveSearchHit } from "../repositories/search-memory"
 import type { SourceRecord } from "./types";
 import { readBatchSource } from "./sources";
 
-function localPolicy(candidate: BatchCandidate, source: SourceRecord) {
+function isDeterministicCommunityCandidate(candidate: BatchCandidate, observation: BatchObservation) {
+  if (candidate.contentClass !== "community_thread" || candidate.sourceIdentity !== "community") return false;
+  if (observation.metadata?.bodyCopied !== false || observation.metadata?.originalOpened !== true) return false;
+  const replies = Number(observation.metadata?.repliesObserved ?? 0);
+  const views = Number(observation.metadata?.viewsObserved ?? 0);
+  return observation.metadata?.hotMarker === true
+    || observation.metadata?.sustainedRecentActivity === true
+    || replies >= 10
+    || views >= 500;
+}
+
+function localPolicy(candidate: BatchCandidate, source: SourceRecord, observation: BatchObservation) {
   const reasons = [...candidate.review.reasons];
   if (candidate.contentClass === "editorial") {
     return { decision: "reject" as const, reasons: [...reasons, "站点编辑、抓取差异与运维信息不进入公开情报流或待复核队列"] };
@@ -30,7 +41,11 @@ function localPolicy(candidate: BatchCandidate, source: SourceRecord) {
   if ((candidate.safetyRating ?? "unknown") !== "safe") return { decision: "hold" as const, reasons: [...reasons, "安全分级未达到自动发布条件"] };
   if ((candidate.spoilerLevel ?? "none") === "major") return { decision: "hold" as const, reasons: [...reasons, "重大剧透不自动发布"] };
   if ((candidate.presentationMode ?? "link_only") !== "link_only") return { decision: "hold" as const, reasons: [...reasons, "本地批次首阶段只允许原链展示"] };
-  if (["community", "unverified"].includes(source.trust_level)) return { decision: "hold" as const, reasons: [...reasons, "社区与未验证来源需要人工复核"] };
+  const deterministicCommunity = source.trust_level === "community"
+    && isDeterministicCommunityCandidate(candidate, observation);
+  if (["community", "unverified"].includes(source.trust_level) && !deterministicCommunity) {
+    return { decision: "hold" as const, reasons: [...reasons, "社区与未验证来源需要人工复核"] };
+  }
   const threshold = source.trust_level === "official" ? 0.88 : 0.92;
   if (candidate.review.confidence < threshold) return { decision: "hold" as const, reasons: [...reasons, `置信度低于 ${threshold}`] };
   return { decision: "publish" as const, reasons };
@@ -428,7 +443,7 @@ export async function ingestResearchBatch(db: D1Database, input: unknown): Promi
         for (const url of evidenceUrls) {
           await resolveSearchHit(db, url, "candidate", { observationId, candidateId });
         }
-        const policy = localPolicy(candidate, source);
+        const policy = localPolicy(candidate, source, observation);
         await applyCandidateDecision(db, candidateId, policy.decision, {
           reviewerType: "local_skill",
           confidence: candidate.review.confidence,

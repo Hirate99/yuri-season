@@ -13,12 +13,16 @@ export const FEED_SELECT = `
       FROM discussions d
       JOIN discussion_anime da ON da.discussion_id = d.id
       JOIN anime related ON related.id = da.anime_id
-      WHERE d.url = fi.url
+      WHERE d.id = fi.discussion_id
     ), '[]') ELSE '[]' END AS related_anime_json,
     fi.person_id, p.name AS person_name, fi.character_id, c.name AS character_name,
     fi.account_id, fi.platform_object_id,
-    fi.content_class, fi.source_identity, fi.title, fi.summary, fi.url,
-    fi.source_name, fi.source_account, fi.importance, fi.published_at,
+    fi.content_class, fi.source_identity,
+    CASE WHEN fi.content_class = 'community_thread' THEN COALESCE(thread.title, fi.title) ELSE fi.title END AS title,
+    fi.summary,
+    CASE WHEN fi.content_class = 'community_thread' THEN COALESCE(thread.url, fi.url) ELSE fi.url END AS url,
+    CASE WHEN fi.content_class = 'community_thread' THEN COALESCE(thread.platform, fi.source_name) ELSE fi.source_name END AS source_name,
+    fi.source_account, fi.importance, fi.published_at,
     fi.safety_rating, fi.spoiler_level, fi.auto_published, fi.is_pinned,
     m.id AS media_id, m.content_class AS media_content_class, m.title AS media_title,
     m.creator_name, m.creator_url, m.original_url, m.preview_url,
@@ -30,7 +34,7 @@ export const FEED_SELECT = `
   LEFT JOIN people p ON p.id = fi.person_id
   LEFT JOIN characters c ON c.id = fi.character_id
   LEFT JOIN media_items m ON m.id = fi.media_id
-  LEFT JOIN feed_candidates fc ON fc.id = fi.candidate_id
+  LEFT JOIN discussions thread ON thread.id = fi.discussion_id
 `;
 
 export function feedPageQuery(where: string) {

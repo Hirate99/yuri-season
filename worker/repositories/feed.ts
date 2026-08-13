@@ -15,8 +15,8 @@ type FeedOptions = {
 };
 
 const SEARCH_TEXT = `LOWER(
-  COALESCE(fi.title, '') || ' ' || COALESCE(fi.summary, '') || ' ' ||
-  COALESCE(fi.source_name, '') || ' ' || COALESCE(fi.source_account, '') || ' ' ||
+  COALESCE(thread.title, fi.title, '') || ' ' || COALESCE(fi.summary, '') || ' ' ||
+  COALESCE(thread.platform, fi.source_name, '') || ' ' || COALESCE(fi.source_account, '') || ' ' ||
   COALESCE(a.title_zh, '') || ' ' || COALESCE(a.title_ja, '') || ' ' || COALESCE(a.title_en, '') || ' ' ||
   COALESCE(p.name, '') || ' ' || COALESCE(p.name_native, '') || ' ' ||
   COALESCE(c.name, '') || ' ' || COALESCE(c.name_native, '')
@@ -25,7 +25,7 @@ const SEARCH_TEXT = `LOWER(
     FROM discussions d
     JOIN discussion_anime da ON da.discussion_id = d.id
     JOIN anime related ON related.id = da.anime_id
-    WHERE fi.content_class = 'community_thread' AND d.url = fi.url
+    WHERE fi.content_class = 'community_thread' AND d.id = fi.discussion_id
   ), '')
 )`;
 
@@ -40,9 +40,8 @@ function buildFeedFilter(options: FeedOptions): { where: string; bindings: Array
   if (options.animeId) {
     clauses.push(`(fi.anime_id = ? OR (
       fi.content_class = 'community_thread' AND EXISTS (
-        SELECT 1 FROM discussions d
-        JOIN discussion_anime da ON da.discussion_id = d.id
-        WHERE d.url = fi.url AND da.anime_id = ?
+        SELECT 1 FROM discussion_anime da
+        WHERE da.discussion_id = fi.discussion_id AND da.anime_id = ?
       )
     ))`);
     bindings.push(options.animeId);
@@ -51,10 +50,9 @@ function buildFeedFilter(options: FeedOptions): { where: string; bindings: Array
   if (options.animeSlug) {
     clauses.push(`(a.slug = ? OR (
       fi.content_class = 'community_thread' AND EXISTS (
-        SELECT 1 FROM discussions d
-        JOIN discussion_anime da ON da.discussion_id = d.id
+        SELECT 1 FROM discussion_anime da
         JOIN anime related ON related.id = da.anime_id
-        WHERE d.url = fi.url AND related.slug = ?
+        WHERE da.discussion_id = fi.discussion_id AND related.slug = ?
       )
     ))`);
     bindings.push(options.animeSlug);

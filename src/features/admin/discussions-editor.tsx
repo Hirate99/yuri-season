@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Search } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import type { AdminAnimeSummary, AdminDiscussion, DiscussionWrite } from "@/domain";
 import type { ResourceSave } from "./anime-resources-editor";
 import { AdminField, adminInput, formText, ResourceActions, ResourceDetails } from "./resource-form";
@@ -63,10 +63,12 @@ function WorkLinks({ anime, currentAnimeId, selectedIds }: {
   );
 }
 
-function DiscussionForm({ item, anime, currentAnimeId, busy, onSave, onDelete }: {
+function DiscussionForm({ item, anime, currentAnimeId, busy, onSave, onUnlink, onDeleteEverywhere }: {
   item?: AdminDiscussion; anime: AdminAnimeSummary[]; currentAnimeId: string;
-  busy: boolean; onSave: ResourceSave; onDelete?: () => void;
+  busy: boolean; onSave: ResourceSave; onUnlink?: () => void;
+  onDeleteEverywhere?: (reason: string) => Promise<void>;
 }) {
+  const [deleteReason, setDeleteReason] = useState("");
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try { await onSave("discussion", write(new FormData(event.currentTarget)), item?.id); } catch { /* parent shows error */ }
@@ -80,20 +82,43 @@ function DiscussionForm({ item, anime, currentAnimeId, busy, onSave, onDelete }:
       <AdminField label="备注" wide><textarea className={adminInput} name="note" defaultValue={item?.note ?? ""} rows={2} /></AdminField>
       <WorkLinks anime={anime} currentAnimeId={currentAnimeId} selectedIds={item?.animeIds ?? []} />
       <label className="inline-flex items-center gap-2 text-[10px] md:col-span-2"><input name="isActive" type="checkbox" defaultChecked={item?.isActive ?? true} />启用</label>
-      <ResourceActions busy={busy} onDelete={onDelete} />
+      {item && onDeleteEverywhere && (
+        <div className="grid gap-2 rounded-xl border border-[#8b3048]/15 bg-[#fff7f9] p-3 md:col-span-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <input
+            className={adminInput}
+            maxLength={300}
+            placeholder={`彻底删除原因（将从 ${item.sharedAnimeCount} 部作品及 Feed 撤下）`}
+            value={deleteReason}
+            onChange={(event) => setDeleteReason(event.target.value)}
+          />
+          <button
+            className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl bg-[#8b3048] px-4 text-xs font-bold text-white disabled:opacity-40"
+            disabled={busy || !deleteReason.trim()}
+            onClick={() => {
+              if (!window.confirm(`确认彻底删除这条讨论？它将从 ${item.sharedAnimeCount} 部作品及 Feed 撤下。`)) return;
+              void onDeleteEverywhere(deleteReason.trim())
+                .then(() => setDeleteReason(""))
+                .catch(() => { /* parent shows the API error */ });
+            }}
+            type="button"
+          ><Trash2 size={13} />彻底删除</button>
+        </div>
+      )}
+      <ResourceActions busy={busy} deleteLabel="从本作移除" onDelete={item && item.sharedAnimeCount > 1 ? onUnlink : undefined} />
     </form>
   );
 }
 
-export function DiscussionsEditor({ items, anime, currentAnimeId, busyKey, onSave, onDelete }: {
+export function DiscussionsEditor({ items, anime, currentAnimeId, busyKey, onSave, onUnlink, onDeleteEverywhere }: {
   items: AdminDiscussion[]; anime: AdminAnimeSummary[]; currentAnimeId: string;
   busyKey: string | null; onSave: ResourceSave;
-  onDelete: (kind: "discussion", id: string) => Promise<void>;
+  onUnlink: (kind: "discussion", id: string) => Promise<void>;
+  onDeleteEverywhere: (id: string, reason: string) => Promise<void>;
 }) {
   return (
     <section className="border border-line bg-raised px-4 xl:col-span-2">
       <div className="flex flex-wrap items-end justify-between gap-2 pt-4"><div><h4 className="text-sm font-bold">集中讨论</h4><p className="mt-1 text-[10px] text-muted">综合串只保存一份，可同时出现在多部作品页。</p></div></div>
-      {items.map((item) => <ResourceDetails key={item.id} title={item.title} meta={`${item.isActive ? item.platform : "停用"}${item.sharedAnimeCount > 1 ? ` · 跨 ${item.sharedAnimeCount} 部作品` : ""}`}><DiscussionForm item={item} anime={anime} currentAnimeId={currentAnimeId} busy={busyKey === `discussion:${item.id}`} onSave={onSave} onDelete={() => void onDelete("discussion", item.id)} /></ResourceDetails>)}
+      {items.map((item) => <ResourceDetails key={item.id} title={item.title} meta={`${item.isActive ? item.platform : "停用"}${item.sharedAnimeCount > 1 ? ` · 跨 ${item.sharedAnimeCount} 部作品` : ""}`}><DiscussionForm item={item} anime={anime} currentAnimeId={currentAnimeId} busy={busyKey === `discussion:${item.id}`} onSave={onSave} onUnlink={() => void onUnlink("discussion", item.id)} onDeleteEverywhere={(reason) => onDeleteEverywhere(item.id, reason)} /></ResourceDetails>)}
       <ResourceDetails title="新增讨论串" meta="＋"><DiscussionForm anime={anime} currentAnimeId={currentAnimeId} busy={busyKey === "discussion:new"} onSave={onSave} /></ResourceDetails>
     </section>
   );

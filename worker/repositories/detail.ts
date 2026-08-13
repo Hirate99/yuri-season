@@ -1,4 +1,4 @@
-import type { Account, AnimeDetail, CharacterCredit, PersonCredit } from "@/domain";
+import type { Account, AnimeDetail, AnimePageResponse, CharacterCredit, PersonCredit } from "@/domain";
 import { mapAccount, mapAnime } from "../db/mappers";
 import { allRows } from "../db/query";
 import { readAnimeSummaryBySlug } from "../db/read-models/anime";
@@ -6,6 +6,7 @@ import { readEventsForAnime } from "../db/read-models/catalog";
 import { readBroadcasts, readCast, readSources, readStaff, readThemeSongs } from "../db/read-models/detail";
 import { accountsQuery } from "../db/queries/detail";
 import type { AccountRow } from "../db/rows";
+import { readDiscussions, readFeed, readMedia } from "./feed";
 
 function groupAccounts(rows: AccountRow[]): Map<string, Account[]> {
   const grouped = new Map<string, Account[]>();
@@ -86,4 +87,19 @@ export async function readAnimeDetail(db: D1Database, slug: string): Promise<Ani
     sources: sourceRows,
     lastCheckedAt,
   };
+}
+
+/** The single application read model used by both SSR and the public API. */
+export async function readAnimePage(
+  db: D1Database,
+  slug: string,
+): Promise<AnimePageResponse | null> {
+  const anime = await readAnimeDetail(db, slug);
+  if (!anime) return null;
+  const [feed, media, discussions] = await Promise.all([
+    readFeed(db, { animeId: anime.id, limit: 40 }),
+    readMedia(db, anime.id),
+    readDiscussions(db, anime.id),
+  ]);
+  return { anime, feed: feed.items, media, discussions };
 }

@@ -52,6 +52,25 @@ export function AnimeResourcesEditor({ animeId, anime, group, onChanged }: {
     }
   };
 
+  const deleteDiscussionEverywhere = async (id: string, reason: string) => {
+    const key = `discussion:${id}`;
+    setBusyKey(key);
+    setError(null);
+    try {
+      await apiRequest(`/api/admin/discussions/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        body: { reason },
+      });
+      resources.reload();
+      onChanged();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+      throw cause;
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
   const remove = async (kind: Exclude<AdminResourceKind, "source">, id: string) => {
     const message = kind === "discussion"
       ? "确认从当前作品移除这个讨论串？若它还关联其他作品，讨论串本身会保留。"
@@ -86,7 +105,7 @@ export function AnimeResourcesEditor({ animeId, anime, group, onChanged }: {
           {group === "content" && <>
             <EventsEditor resources={resources.data} busyKey={busyKey} onSave={save} onDelete={remove} />
             <ThemeSongsEditor items={resources.data.themeSongs} busyKey={busyKey} onSave={save} onDelete={remove} />
-            <DiscussionsEditor items={resources.data.discussions} anime={anime} currentAnimeId={animeId} busyKey={busyKey} onSave={save} onDelete={remove} />
+            <DiscussionsEditor items={resources.data.discussions} anime={anime} currentAnimeId={animeId} busyKey={busyKey} onSave={save} onUnlink={remove} onDeleteEverywhere={deleteDiscussionEverywhere} />
             <MediaEditor resources={resources.data} busyKey={busyKey} onSave={save} onDelete={remove} />
           </>}
           {group === "monitoring" && <>

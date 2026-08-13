@@ -3,6 +3,7 @@ import { parseResourceWrite } from "../worker/api/resource-input";
 import { createAdminResource, deleteAdminResource, updateAdminResource } from "../worker/repositories/admin-resource-mutations";
 import { readAdminAnimeResources } from "../worker/repositories/admin-resources";
 import { readDiscussions, readMedia } from "../worker/repositories/feed";
+import { deleteDiscussionEverywhere } from "../worker/repositories/admin-discussion-mutations";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;
@@ -55,7 +56,7 @@ describe("Admin related content", () => {
 
     await deleteAdminResource(database.binding(), animeId, "event", eventId);
     await deleteAdminResource(database.binding(), animeId, "media", mediaId);
-    await deleteAdminResource(database.binding(), animeId, "discussion", discussionId);
+    await deleteDiscussionEverywhere(database.binding(), discussionId, "测试清理");
     resources = await readAdminAnimeResources(database.binding(), animeId);
     expect(resources.events.some((item) => item.id === eventId)).toBe(false);
     expect(resources.media.some((item) => item.id === mediaId)).toBe(false);
@@ -94,6 +95,8 @@ describe("Admin related content", () => {
       .some((item) => item.id === firstId)).toBe(true);
     expect(database.sqlite.query("SELECT COUNT(*) AS count FROM discussions WHERE id = ?").get(firstId))
       .toEqual({ count: 1 });
+    await expect(deleteAdminResource(database.binding(), "anime-taiari", "discussion", firstId))
+      .rejects.toThrow("最后一个作品关联");
   });
 
   test("shares verified music tracks while keeping per-work OP and ED usage", async () => {

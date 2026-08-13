@@ -16,6 +16,7 @@ function integerArgument(name: string, fallback: number) {
 const outputPath = ".research-cache/discovery-plan.json";
 const force = process.argv.includes("--force");
 const replace = process.argv.includes("--replace");
+const includeBirthdays = process.argv.includes("--audit-birthdays");
 const limit = integerArgument("limit", Number.MAX_SAFE_INTEGER);
 const priorFile = Bun.file(outputPath);
 if (await priorFile.exists() && !replace) {
@@ -38,6 +39,7 @@ const queries = buildDiscoveryPlan({
   memoryHits: context.memoryHits,
   now: createdAt,
   force,
+  includeBirthdays,
   limit,
 });
 const result = createCampaign({
@@ -62,6 +64,7 @@ process.stdout.write(JSON.stringify({
   rememberedQueries: context.memory.length,
   rememberedHits: context.memoryHits.length,
   force,
+  includeBirthdays,
   replace,
   campaignId: result.campaignId,
   queries: queries.length,

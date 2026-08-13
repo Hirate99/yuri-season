@@ -15,7 +15,7 @@ Read `references/batch-schema.md` before creating a batch and `references/discov
 
 - `incremental`: default. Check registered sources, process only pending diffs, and stop when nothing changed.
 - `rapid`: one-off check scoped to a work, episode, broadcast, or event. Do not turn it into a permanent high-frequency loop.
-- `discovery`: find missing official/cast accounts, work-specific cast posts, creator art, birthdays, original fanworks, or concentrated community threads. Run daily at most; broad seasonal discovery is normally weekly.
+- `discovery`: find missing official/cast accounts, work-specific cast posts, creator art, birthdays, original fanworks, or concentrated community threads. Run daily: rebuild the plan once per day and lease a bounded workset. Per-query cadence and durable search memory keep each target from being searched more often than intended; a forced whole-season audit remains an explicit `--force` operation.
 - `repair`: revisit a known conflict or incomplete entity and cite the conflicting observations.
 
 ## Scheduled budget
@@ -29,7 +29,7 @@ Incremental sync checks every enabled registered source each run; no per-run sou
 Discovery searches for unknown sources; it is separate from registered-source synchronization.
 
 1. Run `bun run research:discover` to create or resume `.research-cache/discovery-plan.json`.
-2. Use `--force` only for an explicitly requested full audit. Use `--replace` only after inspecting an unfinished campaign.
+2. On a daily run, rebuild with `--replace` after checking `research:discover:status`; unleased queries are regenerated from durable search memory, so replace loses nothing. Use `--force` only for an explicitly requested full audit.
 3. Lease a small workset with `bun run research:discover:next -- 4`.
 4. Execute only leased queries and reuse `knownHits`. Preserve the query context in every result: `contentLane`, `animeId`, `personId`, `characterIds`, `accountId`, and `platform` when supplied.
 5. Treat search results as leads. Open the original page and verify identity, entity match, date, authorship, and original-post status. Never turn a snippet into an observation.

@@ -16,7 +16,7 @@ function integerArgument(name: string, fallback: number) {
 const outputPath = ".research-cache/discovery-plan.json";
 const force = process.argv.includes("--force");
 const replace = process.argv.includes("--replace");
-const limit = integerArgument("limit", 40);
+const limit = integerArgument("limit", 500);
 const priorFile = Bun.file(outputPath);
 if (await priorFile.exists() && !replace) {
   const prior = await priorFile.json() as Partial<DiscoveryCampaign>;

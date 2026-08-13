@@ -162,3 +162,29 @@ Allowed content classes are `schedule`, `official_news`, `official_art`, `creato
 Structured `themeSongs` are allowed only on a registered first-party observation. `songKind` is one of `opening`, `ending`, `theme`, `insert`, or `image`. Use `theme` when the official source supplies only a generic numbered theme-song label; keep its sequence and do not infer OP/ED. Automatic writes require an official source, matching anime ID, `publish`, and confidence at least 0.92. Never overwrite a conflicting occupied slot.
 
 For jackets, prefer an exact Apple Music track whenever one exists: use its artwork as `coverUrl`, its track page as both `officialUrl` and `coverSourceUrl`, and record `metadata.coverSourceTrust` as `licensed_platform`. If no exact Apple Music track exists, use the anime, label, or artist's official release jacket and record `official_release`. The first-party observation remains the internal identity evidence even when the public card exposes only Apple Music. Search-result images, aggregators, mirrors, generic artist photos, and title-only matches are invalid.
+
+## Cross-work community thread
+
+Create one candidate for one canonical thread URL. Keep one covered work in `animeId` as the representative foreign key and list the complete covered set in `animeIds`. For a comprehensive seasonal thread, derive the set from the current-season catalog and remove only verified exceptions; do not emit one duplicate candidate per work.
+
+```json
+{
+  "animeId": "anime-anchor",
+  "animeIds": ["anime-anchor", "anime-second", "anime-third"],
+  "contentClass": "community_thread",
+  "sourceIdentity": "community",
+  "title": "2026 夏季百合动画综合讨论",
+  "summary": "百合会本季度综合讨论入口，覆盖当前片单中的大多数作品。",
+  "url": "https://bbs.yamibo.com/thread-example.html",
+  "sourceName": "百合会",
+  "publishedAt": "2026-08-12T12:00:00+08:00",
+  "presentationMode": "link_only",
+  "safetyRating": "safe",
+  "spoilerLevel": "mild",
+  "review": {
+    "decision": "hold",
+    "confidence": 0.95,
+    "reasons": ["已打开原始综合讨论串", "跨作品社区内容需人工复核"]
+  }
+}
+```

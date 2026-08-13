@@ -74,6 +74,7 @@ export const candidateDraftSchema = z.object({
   observationId: optionalNullableText(160, "observationId"),
   claimId: optionalNullableText(160, "claimId"),
   animeId: optionalNullableText(100, "animeId"),
+  animeIds: z.array(requiredText(100, "animeIds")).max(100, "候选最多关联 100 部作品。").optional(),
   personId: optionalNullableText(100, "personId"),
   characterId: optionalNullableText(100, "characterId"),
   accountId: optionalNullableText(100, "accountId"),

@@ -7,8 +7,8 @@ function integerArgument(name: string, fallback: number) {
   const raw = process.argv.find((argument) => argument.startsWith(prefix))?.slice(prefix.length);
   if (!raw) return fallback;
   const value = Number.parseInt(raw, 10);
-  if (!Number.isInteger(value) || value < 1 || value > 500) {
-    throw new Error(`${prefix}<1-500> expected`);
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error(`${prefix}<positive integer> expected`);
   }
   return value;
 }
@@ -16,7 +16,7 @@ function integerArgument(name: string, fallback: number) {
 const outputPath = ".research-cache/discovery-plan.json";
 const force = process.argv.includes("--force");
 const replace = process.argv.includes("--replace");
-const limit = integerArgument("limit", 500);
+const limit = integerArgument("limit", Number.MAX_SAFE_INTEGER);
 const priorFile = Bun.file(outputPath);
 if (await priorFile.exists() && !replace) {
   const prior = await priorFile.json() as Partial<DiscoveryCampaign>;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { AdminAnimeResources, AdminResourceKind, AdminResourceWrite } from "@/domain";
+import type { AdminAnimeResources, AdminAnimeSummary, AdminResourceKind, AdminResourceWrite } from "@/domain";
 import { EmptyState, LoadingRows } from "@/components/empty-state";
 import { apiRequest, useApi } from "@/lib/api";
 import { AccountsEditor } from "./accounts-editor";
@@ -20,8 +20,9 @@ export type ResourceSave = (
 
 export type ResourceGroup = "people" | "content" | "monitoring";
 
-export function AnimeResourcesEditor({ animeId, group, onChanged }: {
+export function AnimeResourcesEditor({ animeId, anime, group, onChanged }: {
   animeId: string;
+  anime: AdminAnimeSummary[];
   group: ResourceGroup;
   onChanged: () => void;
 }) {
@@ -52,7 +53,10 @@ export function AnimeResourcesEditor({ animeId, group, onChanged }: {
   };
 
   const remove = async (kind: Exclude<AdminResourceKind, "source">, id: string) => {
-    if (!window.confirm("确认删除这条资料？")) return;
+    const message = kind === "discussion"
+      ? "确认从当前作品移除这个讨论串？若它还关联其他作品，讨论串本身会保留。"
+      : "确认删除这条资料？";
+    if (!window.confirm(message)) return;
     const key = `${kind}:${id}`;
     setBusyKey(key);
     setError(null);
@@ -82,7 +86,7 @@ export function AnimeResourcesEditor({ animeId, group, onChanged }: {
           {group === "content" && <>
             <EventsEditor resources={resources.data} busyKey={busyKey} onSave={save} onDelete={remove} />
             <ThemeSongsEditor items={resources.data.themeSongs} busyKey={busyKey} onSave={save} onDelete={remove} />
-            <DiscussionsEditor items={resources.data.discussions} busyKey={busyKey} onSave={save} onDelete={remove} />
+            <DiscussionsEditor items={resources.data.discussions} anime={anime} currentAnimeId={animeId} busyKey={busyKey} onSave={save} onDelete={remove} />
             <MediaEditor resources={resources.data} busyKey={busyKey} onSave={save} onDelete={remove} />
           </>}
           {group === "monitoring" && <>

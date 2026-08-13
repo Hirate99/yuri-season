@@ -11,30 +11,37 @@ Update 百合季 without re-researching the whole season or waking a Cloudflare 
 
 Read `references/batch-schema.md` before creating a batch and `references/discovery-results.md` before recording discovery. For product policy, also read `docs/AGENTIC_UPDATES.md` and `docs/PRODUCT_DESIGN.md` in the repository.
 
-## Choose a mode
+## Choose scope
 
-- `incremental`: default. Check registered sources, process only pending diffs, and stop when nothing changed.
+- `cycle`: default for scheduled and unattended work. Finish registered-source synchronization, then continue all currently due discovery until the cycle converges.
+- `incremental`: explicitly source-only. Check registered sources and process pending diffs without broad discovery.
+- `discovery`: explicitly search-only. Find missing official/cast accounts, work-specific cast posts, creator art, birthdays, original fanworks, or concentrated community threads.
 - `rapid`: one-off check scoped to a work, episode, broadcast, or event. Do not turn it into a permanent high-frequency loop.
-- `discovery`: find missing official/cast accounts, work-specific cast posts, creator art, birthdays, original fanworks, or concentrated community threads. Run daily: rebuild the plan once per day and lease a bounded workset. Per-query cadence and durable search memory keep each target from being searched more often than intended; a forced whole-season audit remains an explicit `--force` operation.
 - `repair`: revisit a known conflict or incomplete entity and cite the conflicting observations.
 
-## Scheduled budget
+## Agentic cycle
 
-When one wake can run sync and discovery, run `incremental` first. If there is a pending diff, source error, or changed item, finish only that work and end the wake. Lease discovery only after a clean `0 changes / 0 source errors`. Never spend both budgets in one scheduled run.
+For scheduled and unattended work, one wake is one continuous cycle, not one tiny batch:
 
-Incremental sync checks every enabled registered source each run; no per-run source rotation. Override with `YURI_SOURCE_LIMIT` only to throttle an emergency or rate-limited window. Discovery stays capped at 4 leased queries; queue overflow for a later run. Never lease more than 12 queries.
+1. Finish `.research-cache/pending-diff.json` first when it exists; otherwise run `bun run research:diff`.
+2. Process, import, and commit every real source change. Source errors block only the affected source; record them and continue unrelated sources and discovery. Only a global credential or configuration failure blocks the whole cycle.
+3. Inspect `bun run research:discover:status`. Resume an active campaign, or run `bun run research:discover` when no active due campaign exists. Use `--replace` only for an explicit scope refresh and `--force` only for an explicitly requested whole-season audit.
+4. Prioritize an explicitly requested platform or scope. Lease with `bun run research:discover:next -- --platform=X,Instagram` when those platforms are requested; otherwise lease currently due work. A positional batch size may fit the remaining execution window, but there is no fixed query quota and the lease is only overlap and crash protection.
+5. Execute, verify originals, record results promptly, and import verified candidates. A zero-hit result is normal durable progress.
+6. Repeat leasing and recording until no matching due work remains, a true global blocker appears, or the execution window ends. Persist partial progress so the next wake resumes without a person supervising it.
 
 ## Discovery workflow
 
-Discovery searches for unknown sources; it is separate from registered-source synchronization.
+Discovery searches for unknown sources; it is separate from registered-source synchronization but may run in the same agentic cycle.
 
-1. Run `bun run research:discover` to create or resume `.research-cache/discovery-plan.json`.
-2. On a daily run, rebuild with `--replace` after checking `research:discover:status`; unleased queries are regenerated from durable search memory, so replace loses nothing. Use `--force` only for an explicitly requested full audit.
-3. Lease a small workset with `bun run research:discover:next -- 4`.
-4. Execute only leased queries and reuse `knownHits`. Preserve the query context in every result: `contentLane`, `animeId`, `personId`, `characterIds`, `accountId`, and `platform` when supplied.
-5. Treat search results as leads. Open the original page and verify identity, entity match, date, authorship, and original-post status. Never turn a snippet into an observation.
-6. Record every executed query, including zero-hit and blocked searches, using `references/discovery-results.md`, then run `bun run research:discover:record -- <results.json>`.
-7. Put verified candidates into one traceable batch. Keep extraction and review as separate passes. Import through the normal batch workflow.
+1. Run `bun run research:discover:status`, then resume the active campaign or create one with `bun run research:discover` when needed.
+2. Lease matching due work with `bun run research:discover:next`. For explicit platform work use `--platform=X,Instagram`; `--kind=<comma-separated kinds>` can narrow a search lane. A smaller positional size is allowed only to fit the actual execution window; after recording it, lease again until the due scope converges.
+3. Execute only leased queries and reuse `knownHits`. Preserve the query context in every result: `contentLane`, `animeId`, `personId`, `characterIds`, `accountId`, and `platform` when supplied.
+4. Treat search results as leads. Open the original page and verify identity, entity match, date, authorship, and original-post status. Never turn a snippet into an observation.
+5. Record every executed query, including zero-hit and blocked searches, using `references/discovery-results.md`, then run `bun run research:discover:record -- <results.json>` promptly.
+6. Put verified candidates into traceable batches. Keep extraction and review as separate passes and import through the normal batch workflow.
+
+Login, CAPTCHA, or platform failure blocks only that platform; continue public and unrelated work. Result-file chunk size and lease size are implementation details, never stop conditions.
 
 For an explicitly requested whole-season social audit, inspect each work's verified official account first. When deduplication leaves no new high-value item, inspect a bounded set of verified original-creator and main-cast accounts before recording a zero-hit result. Do not duplicate an official announcement merely because a creator or cast member quoted it; keep the post only when their own text contributes material firsthand context, such as an interview, production note, episode response, or project activity.
 
@@ -44,7 +51,7 @@ If a leased scope disappears before search, run `bun run research:discover:cance
 
 1. Set `YURI_RADAR_URL` and `YURI_ADMIN_TOKEN` locally. Never print either value. When production Admin is protected by Cloudflare Access, also set `YURI_ACCESS_CLIENT_ID` and `YURI_ACCESS_CLIENT_SECRET` for one app-scoped Service Auth policy that includes only the named research service token. Access and Worker token checks are independent. Do not rotate the production `ADMIN_TOKEN` merely because a new local value exists; first reuse the matching operator credential or obtain explicit approval for a production secret change.
 2. Run `bun run research:diff`. It writes `.research-cache/pending-diff.json` only for changed item hashes.
-3. If there are zero changes, report source errors and stop. Do not browse broadly “just in case.”
+3. If there are zero changes, record source errors and return to the agentic cycle. Do not browse broadly in explicitly source-only `incremental` mode.
 4. Reconcile `catalogChanges` as structured metadata; never turn them directly into feed candidates. Only `feedChanges` enter extraction and review.
 5. Extract atomic claims and match registered anime/person/character/account IDs. Do not infer identity from names alone.
 6. Review relevance, entailment, duplicate risk, source identity, safety, spoilers, attribution, and presentation separately from extraction.
@@ -134,7 +141,8 @@ Treat running the 百合季 site as a feedback loop for this skill, not as a seq
 - Creator art: preserve creator name and original post. A page that only says a product/event will include a newly drawn illustration does not prove that the image has been published; keep it as an official-news lead or reject it from the art lane. Publish a creator-art item only after opening the original page/post and confirming that the actual image or a viewable official preview is present.
 - When the original page exposes an actual image or official preview, add a linked `media` record as well as the feed candidate so the work page can show it in the art/fanwork gallery. Preserve the original page as `media.originalUrl`. When caching is permitted and the image is verified safe, store the exact fetched bytes under the scoped `yuri/` prefix in the existing R2 bucket and use `https://r2.i-yuri.com/<key>` as `media.previewUrl` with `remote_preview`; retain creator attribution, the upstream image URL in evidence metadata, correction notices, safety, spoilers, and a rights/provenance note. Never upload a placeholder, `NOW PRINTING` image, search thumbnail, an image whose original page cannot be verified, or any image whose source explicitly prohibits redistribution, reposting, or embedding; keep those entries `link_only`. If no actual image is available, omit `media` and do not title the item as though viewers can see the artwork.
 - Theme songs: use anime/label/official release pages to verify identity and classification. Preserve the source's exact designation: use `opening`, `ending`, `insert`, or `image` only when explicitly labelled; when the source says only `主題歌①/②` (or another generic theme-song label), use `theme` with the stated sequence and never infer OP/ED. Extract only explicitly credited fields. When an exact Apple Music track exists, prefer its artwork and track page over every other jacket source; otherwise use the anime, label, or artist's official release jacket. Retain the exact image URL and the page that associates it with the same title and performer. Keep the first-party evidence internally, but the public card should show only the Apple Music action when one exists. Never use an untraceable image or overwrite a conflicting occupied slot.
-- Community threads: store title, URL, platform, and recent activity only. Do not copy bodies. Title an entry as `《作品名》动画讨论专楼` (or the equivalent work-name + thread-type form); keep platform/source labels and episode or broadcast progress in metadata or the summary, never in the title. Reuse canonical threads across works.
+- Community threads: store title, URL, platform, and recent activity only. Do not copy bodies. Use `《作品名》动画讨论专楼` only for a work-specific thread. For a seasonal or platform-wide comprehensive thread, use a broad season/platform title and never disguise it as one work's dedicated thread.
+- Model one cross-work thread as one canonical candidate. Set `animeId` to one covered anchor work and `animeIds` to every materially covered work; never duplicate the candidate once per anime. For a comprehensive thread such as 百合会综合讨论, start from the current-season catalog, include the covered majority in one operation, then remove the few unsupported exceptions. Keep one canonical URL even when it appears on many work pages. See `references/batch-schema.md` for the candidate shape.
 - Treat 萌战吧 as a separate discussion source from a work's own Tieba. It may contribute a sustained work review, episode discussion, character poll thread, or seasonal cross-work discussion when the original thread is accessible and materially covers the linked work. Store the platform exactly as `萌战吧`; exclude one-line reactions, pure image/meme posts, bait, search snippets and unrelated popularity contests. Reuse one cross-work thread through the canonical URL instead of duplicating it per anime.
 - X and login-gated platforms: use an existing signed-in browser only when allowed. Do not scrape at scale or evade rate limits.
 
@@ -152,6 +160,7 @@ Otherwise use `hold`. Use `reject` for irrelevant, duplicate, contradicted, unsa
 
 ## Stop conditions
 
-- Stop incremental work when there are no changed items.
-- Stop and leave a local job when access needs a new login, CAPTCHA, extensive JavaScript, or unclear authorization.
-- Do not perform an all-season web search during `incremental` or `rapid` mode.
+- A scheduled `cycle` stops only when current due work has converged, a true global credential/configuration blocker prevents all useful work, or the execution window ends after durable progress is saved.
+- Never use a fixed query count, result-file size, or lease size as a reason to stop while relevant due work remains.
+- Login, CAPTCHA, extensive JavaScript, or a platform outage blocks that platform only. Continue other sources and notify only when human login/action is genuinely required or the failure repeats.
+- Do not perform an all-season web search during explicitly source-only `incremental` or narrowly scoped `rapid` mode.

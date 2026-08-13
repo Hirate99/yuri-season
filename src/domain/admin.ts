@@ -259,6 +259,7 @@ export type AdminDiscussion = {
   lastActivityAt: string | null;
   lastCheckedAt: string | null;
   sharedAnimeCount: number;
+  animeIds?: string[];
 };
 
 export type AdminThemeSong = {
@@ -311,7 +312,9 @@ export type EventWrite = Omit<AdminEvent, "id">;
 
 export type MediaWrite = Omit<AdminMedia, "id">;
 
-export type DiscussionWrite = Omit<AdminDiscussion, "id" | "lastCheckedAt" | "sharedAnimeCount">;
+export type DiscussionWrite = Omit<AdminDiscussion, "id" | "lastCheckedAt" | "sharedAnimeCount" | "animeIds"> & {
+  animeIds?: string[];
+};
 
 export type ThemeSongWrite = Omit<AdminThemeSong, "id" | "trackId" | "sharedAnimeCount"> & {
   trackId?: string | null;
@@ -340,6 +343,7 @@ export type CandidateDraft = {
   observationId?: string | null;
   claimId?: string | null;
   animeId?: string | null;
+  animeIds?: string[];
   personId?: string | null;
   characterId?: string | null;
   accountId?: string | null;

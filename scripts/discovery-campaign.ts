@@ -28,14 +28,29 @@ async function saveCampaign(campaign: DiscoveryCampaign): Promise<void> {
 }
 
 function batchLimit(raw: string | undefined): number {
-  const value = Number.parseInt(raw ?? "4", 10);
-  if (!Number.isInteger(value) || value < 1 || value > 12) throw new Error("batch size must be 1-12");
+  const value = raw === undefined ? Number.MAX_SAFE_INTEGER : Number.parseInt(raw, 10);
+  if (!Number.isInteger(value) || value < 1) throw new Error("batch size must be a positive integer");
   return value;
+}
+
+function optionValues(arguments_: string[], name: string): Set<string> | null {
+  const prefix = `--${name}=`;
+  const raw = arguments_.find((argument) => argument.startsWith(prefix))?.slice(prefix.length);
+  if (!raw) return null;
+  const values = raw.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+  if (values.length === 0) throw new Error(`${prefix}<comma-separated values> expected`);
+  return new Set(values);
 }
 
 async function lease(): Promise<void> {
   const campaign = await loadCampaign();
-  const queries = leaseCampaignQueries(campaign, batchLimit(process.argv[3]), new Date());
+  const arguments_ = process.argv.slice(3);
+  const positionalLimit = arguments_.find((argument) => !argument.startsWith("--"));
+  const platforms = optionValues(arguments_, "platform");
+  const kinds = optionValues(arguments_, "kind");
+  const queries = leaseCampaignQueries(campaign, batchLimit(positionalLimit), new Date(), (query) =>
+    (!platforms || (query.platform && platforms.has(query.platform.toLowerCase())))
+    && (!kinds || kinds.has(query.searchKind.toLowerCase())));
   await saveCampaign(campaign);
   process.stdout.write(JSON.stringify({
     campaignId: campaign.campaignId,
@@ -50,8 +65,8 @@ async function record(path: string | undefined): Promise<void> {
   const campaign = await loadCampaign();
   const input = await Bun.file(path).json() as { campaignId: string; results: DiscoveryResult[] };
   if (input.campaignId !== campaign.campaignId) throw new Error("result campaignId does not match active campaign");
-  if (!Array.isArray(input.results) || input.results.length < 1 || input.results.length > 12) {
-    throw new Error("results must contain 1-12 entries");
+  if (!Array.isArray(input.results) || input.results.length < 1) {
+    throw new Error("results must contain at least one entry");
   }
   const memory = await rememberSearchRecords(await memoryRecordsForResults(campaign, input.results));
   completeCampaignResults(campaign, input.results, new Date());

@@ -46,6 +46,7 @@ export type FeedRow = {
   anime_slug: string | null;
   anime_title: string | null;
   anime_cover_url: string | null;
+  related_anime_json: string;
   person_id: string | null;
   person_name: string | null;
   character_id: string | null;

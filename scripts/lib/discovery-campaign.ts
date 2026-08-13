@@ -79,10 +79,17 @@ function recoverExpired(campaign: DiscoveryCampaign, now: Date): void {
   }
 }
 
-export function leaseCampaignQueries(campaign: DiscoveryCampaign, limit: number, now: Date): CampaignQuery[] {
+export function leaseCampaignQueries(
+  campaign: DiscoveryCampaign,
+  limit: number,
+  now: Date,
+  matches: (query: CampaignQuery) => boolean = () => true,
+): CampaignQuery[] {
   recoverExpired(campaign, now);
   const leaseUntil = new Date(now.valueOf() + 2 * 60 * 60_000).toISOString();
-  const leased = campaign.queries.filter((query) => query.state === "pending").slice(0, limit);
+  const leased = campaign.queries
+    .filter((query) => query.state === "pending" && matches(query))
+    .slice(0, limit);
   for (const query of leased) {
     query.state = "leased";
     query.attemptCount += 1;

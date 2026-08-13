@@ -166,7 +166,7 @@ async function prepareCandidate(
   source: SourceRecord,
   observationId: string,
 ): Promise<CandidateDraft> {
-  const animeId = candidate.animeId ?? source.anime_id;
+  const animeId = candidate.animeId ?? candidate.animeIds?.[0] ?? source.anime_id;
   const common: CandidateDraft = {
     ...candidate,
     observationId,
@@ -395,6 +395,7 @@ export async function ingestResearchBatch(db: D1Database, input: unknown): Promi
       if (!existing) {
         const relatedAnime = new Set([
           ...observation.candidates.map((candidate) => candidate.animeId).filter((id): id is string => Boolean(id)),
+          ...observation.candidates.flatMap((candidate) => candidate.animeIds ?? []),
           ...(observation.accountDiscoveries ?? []).map((discovery) => discovery.animeId),
         ]);
         const observationAnimeId = source.anime_id ?? (relatedAnime.size === 1 ? [...relatedAnime][0] : null);

@@ -105,8 +105,11 @@ function publicationStatements(
     ));
     statements.push(db.prepare(`
       INSERT OR IGNORE INTO discussion_anime (discussion_id, anime_id)
-      SELECT id, ? FROM discussions WHERE url = ?
-    `).bind(candidate.anime_id, candidate.url));
+      SELECT d.id, ca.anime_id
+      FROM discussions d
+      JOIN candidate_anime ca ON ca.candidate_id = ?
+      WHERE d.url = ?
+    `).bind(candidate.id, candidate.url));
   }
   return statements;
 }

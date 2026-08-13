@@ -63,6 +63,21 @@ describe("Hono API boundary", () => {
     });
   });
 
+  test("rejects unknown feed content classes instead of silently dropping them", async () => {
+    const response = await api.request("https://example.test/api/feed?classes=official_news,unknown", undefined, {} as Env);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: "request_failed" });
+  });
+
+  test("does not run Worker research from a local-first deployment", async () => {
+    const response = await api.request("https://example.test/api/admin/research/run", {
+      method: "POST",
+      headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+      body: JSON.stringify({ lane: "standard" }),
+    }, { ADMIN_TOKEN: "test-secret", UPDATE_MODE: "local-first" } as Env);
+    expect(response.status).toBe(409);
+  });
+
   test("serves the exported Hono RPC contract", async () => {
     const client = hc<ApiType>("https://example.test", {
       fetch: (request: RequestInfo | URL, init?: RequestInit) => api.request(request, init),

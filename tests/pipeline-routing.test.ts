@@ -38,8 +38,10 @@ describe("worker source routing", () => {
       scope_id: "source-kimi-bgm",
       priority: 50,
       attempt_count: 1,
-      max_attempts: 4,
-      input_json: "{}",
+    max_attempts: 4,
+    input_json: "{}",
+    research_run_id: "run-test",
+    lease_token_hash: "lease-test",
     };
 
     const result = await syncSourceJob(env, job, async () => Response.json({

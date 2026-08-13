@@ -14,6 +14,8 @@ import { HttpError } from "~/shared/http-error";
 import { createId } from "~/shared/id";
 
 import { auditInsert } from "../audit";
+import type { AdminPrincipal } from "~/infrastructure/auth";
+import type { ResourceAudit } from "./resource-write";
 
 function linkedAnimeIds(animeId: string, value: DiscussionWrite): string[] {
   return [...new Set([animeId, ...(value.animeIds ?? [])])];
@@ -32,14 +34,15 @@ function linkQueries(db: D1Database, discussionId: string, animeIds: string[]) {
     .onConflictDoNothing());
 }
 
-export async function createDiscussion(db: D1Database, animeId: string, value: DiscussionWrite): Promise<string> {
+export async function createDiscussion(db: D1Database, animeId: string, value: DiscussionWrite, audit?: ResourceAudit): Promise<string> {
   const animeIds = linkedAnimeIds(animeId, value);
   await assertAnimeLinks(db, animeIds);
   const orm = database(db);
   const existing = await orm.select({ id: discussionsTable.id }).from(discussionsTable)
     .where(eq(discussionsTable.url, value.url)).get();
   if (existing) {
-    const links = linkQueries(db, existing.id, animeIds);
+    const links: BatchItem<"sqlite">[] = linkQueries(db, existing.id, animeIds);
+    if (audit) links.push(audit(existing.id));
     await orm.batch(links as unknown as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
     return existing.id;
   }
@@ -59,11 +62,12 @@ export async function createDiscussion(db: D1Database, animeId: string, value: D
     }),
     ...linkQueries(db, id, animeIds),
   ];
+  if (audit) queries.push(audit(id));
   await orm.batch(queries as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
   return id;
 }
 
-export async function updateDiscussion(db: D1Database, animeId: string, id: string, value: DiscussionWrite): Promise<void> {
+export async function updateDiscussion(db: D1Database, animeId: string, id: string, value: DiscussionWrite, audit?: ResourceAudit): Promise<void> {
   const orm = database(db);
   const linked = await orm.select({ discussionId: discussionAnimeTable.discussionId })
     .from(discussionAnimeTable).where(and(
@@ -91,10 +95,16 @@ export async function updateDiscussion(db: D1Database, animeId: string, id: stri
     )),
     ...linkQueries(db, id, animeIds),
   ];
+  if (audit) queries.push(audit(id));
   await orm.batch(queries as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 }
 
-export async function unlinkDiscussionFromAnime(db: D1Database, animeId: string, id: string): Promise<D1Result> {
+export async function unlinkDiscussionFromAnime(
+  db: D1Database,
+  animeId: string,
+  id: string,
+  audit?: ResourceAudit,
+): Promise<D1Result> {
   const orm = database(db);
   const linked = await orm.select({ discussionId: discussionAnimeTable.discussionId })
     .from(discussionAnimeTable).where(and(
@@ -123,11 +133,17 @@ export async function unlinkDiscussionFromAnime(db: D1Database, animeId: string,
     orm.update(discussionsTable).set({
       animeId: remaining.animeId,
     }).where(and(eq(discussionsTable.id, id), eq(discussionsTable.animeId, animeId))),
+    ...(audit ? [audit(id)] : []),
   ]);
   return result;
 }
 
-export async function deleteDiscussionEverywhere(db: D1Database, id: string, reason: string): Promise<void> {
+export async function deleteDiscussionEverywhere(
+  db: D1Database,
+  id: string,
+  reason: string,
+  principal?: AdminPrincipal,
+): Promise<void> {
   const normalizedReason = reason.trim();
   if (!normalizedReason) throw new HttpError(400, "彻底删除需要填写原因。");
   if (normalizedReason.length > 300) throw new HttpError(400, "彻底删除原因不能超过 300 字。");
@@ -158,6 +174,7 @@ export async function deleteDiscussionEverywhere(db: D1Database, id: string, rea
     orm.update(feedItemsTable).set({ discussionId: null }).where(eq(feedItemsTable.discussionId, id)),
     orm.delete(discussionsTable).where(eq(discussionsTable.id, id)),
     auditInsert(db, "admin", "delete_discussion", "discussion", id, {
+      principal,
       reason: normalizedReason,
       title: discussion.title,
       url: discussion.url,

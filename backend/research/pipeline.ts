@@ -28,7 +28,12 @@ async function holdAfterReviewFailure(
   });
 }
 
-export async function syncSourceJob(env: Env, job: UpdateJobRow, transport?: SourceTransport): Promise<{
+export async function syncSourceJob(
+  env: Env,
+  job: UpdateJobRow,
+  transport?: SourceTransport,
+  heartbeat?: () => Promise<void>,
+): Promise<{
   counters: RunCounters;
   partial: boolean;
 }> {
@@ -42,8 +47,10 @@ export async function syncSourceJob(env: Env, job: UpdateJobRow, transport?: Sou
   try {
     const hadBaseline = await sourceHasBaseline(env.DB, source.id);
     const fetched = await fetchSource(source, transport);
+    await heartbeat?.();
     let partial = false;
     for (const item of fetched.items) {
+      await heartbeat?.();
       const observation = await storeObservation(env.DB, source, item, fetched.status);
       if (!observation.inserted) continue;
       counters.observations += 1;
@@ -99,6 +106,7 @@ export async function syncSourceJob(env: Env, job: UpdateJobRow, transport?: Sou
         }));
       }
     }
+    await heartbeat?.();
     await markSourceSuccess(env.DB, source, fetched.etag, fetched.lastModified);
     return { counters, partial };
   } catch (error) {

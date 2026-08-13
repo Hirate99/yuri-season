@@ -1,4 +1,5 @@
 import type { CandidateDraft, ContentClass, SafetyRating, SpoilerLevel } from "@/domain";
+import { z } from "zod";
 import type { NormalizedSource, SourceRecord } from "./types";
 import { runJsonModel } from "./model";
 
@@ -11,23 +12,23 @@ function sourceIdentity(source: SourceRecord) {
   return "community" as const;
 }
 
-const CONTENT_CLASSES: ContentClass[] = [
+const CONTENT_CLASSES = [
   "schedule", "official_news", "official_art", "creator_art", "birthday",
   "cast_post", "staff_post", "fanwork", "community_thread", "editorial",
-];
-const SAFETY: SafetyRating[] = ["safe", "suggestive", "adult", "unknown"];
-const SPOILERS: SpoilerLevel[] = ["none", "mild", "major"];
+] as const satisfies readonly ContentClass[];
+const SAFETY = ["safe", "suggestive", "adult", "unknown"] as const satisfies readonly SafetyRating[];
+const SPOILERS = ["none", "mild", "major"] as const satisfies readonly SpoilerLevel[];
 
-type Extracted = {
-  relevant: boolean;
-  contentClass: ContentClass;
-  title: string;
-  summary: string;
-  importance: number;
-  safetyRating: SafetyRating;
-  spoilerLevel: SpoilerLevel;
-  confidence: number;
-};
+const extractedSchema = z.object({
+  relevant: z.boolean(),
+  contentClass: z.enum(CONTENT_CLASSES),
+  title: z.string().trim().min(1).max(90),
+  summary: z.string().trim().min(1).max(280),
+  importance: z.number().int().min(1).max(5),
+  safetyRating: z.enum(SAFETY),
+  spoilerLevel: z.enum(SPOILERS),
+  confidence: z.number().finite().min(0).max(1),
+}).strict();
 
 const schema = {
   type: "object",
@@ -36,20 +37,14 @@ const schema = {
   properties: {
     relevant: { type: "boolean" },
     contentClass: { type: "string", enum: CONTENT_CLASSES },
-    title: { type: "string", maxLength: 90 },
-    summary: { type: "string", maxLength: 280 },
+    title: { type: "string", minLength: 1, maxLength: 90 },
+    summary: { type: "string", minLength: 1, maxLength: 280 },
     importance: { type: "integer", minimum: 1, maximum: 5 },
     safetyRating: { type: "string", enum: SAFETY },
     spoilerLevel: { type: "string", enum: SPOILERS },
     confidence: { type: "number", minimum: 0, maximum: 1 },
   },
 };
-
-function validExtracted(value: Extracted): boolean {
-  return CONTENT_CLASSES.includes(value.contentClass) &&
-    SAFETY.includes(value.safetyRating) && SPOILERS.includes(value.spoilerLevel) &&
-    value.importance >= 1 && value.importance <= 5 && value.confidence >= 0 && value.confidence <= 1;
-}
 
 export async function extractCandidate(
   ai: Ai,
@@ -66,12 +61,12 @@ export async function extractCandidate(
 证据正文：${item.excerpt.slice(0, 12_000)}
 
 只依据证据判断是否与作品、作者、staff、cast、角色生日、公式贺图、同人作品或集中讨论串直接相关。导航、版权页、泛化宣传和无法确认的线索标记 relevant=false。标题与摘要使用简体中文，不添加证据中没有的日期、关系或评价。`;
-  const extracted = await runJsonModel<Extracted>(ai, {
+  const extracted = extractedSchema.parse(await runJsonModel(ai, {
     prompt,
     schemaName: "yuri_feed_extraction",
     schema,
-  });
-  if (!extracted.relevant || !validExtracted(extracted)) return null;
+  }));
+  if (!extracted.relevant) return null;
   return {
     observationId,
     animeId: source.animeId,

@@ -9,8 +9,9 @@ import { createId } from "~/shared/id";
 
 import { birthdayEventQueries } from "./birthday-events";
 import { personForWrite, personInsert } from "./resource-context";
+import type { ResourceAudit } from "./resource-write";
 
-export async function createCast(db: D1Database, animeId: string, value: CastWrite): Promise<string> {
+export async function createCast(db: D1Database, animeId: string, value: CastWrite, audit?: ResourceAudit): Promise<string> {
   const personValue = {
     personId: value.personId,
     name: value.personName,
@@ -52,11 +53,12 @@ export async function createCast(db: D1Database, animeId: string, value: CastWri
     }),
     ...await birthdayEventQueries(db, animeId, characterId, value),
   );
+  if (audit) queries.push(audit(creditId));
   await orm.batch(queries as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
   return creditId;
 }
 
-export async function updateCast(db: D1Database, animeId: string, id: string, value: CastWrite): Promise<void> {
+export async function updateCast(db: D1Database, animeId: string, id: string, value: CastWrite, audit?: ResourceAudit): Promise<void> {
   const orm = database(db);
   const row = await orm.select({
     characterId: castCreditsTable.characterId,
@@ -92,16 +94,18 @@ export async function updateCast(db: D1Database, animeId: string, id: string, va
       .where(and(eq(castCreditsTable.id, id), eq(castCreditsTable.animeId, animeId))),
     ...await birthdayEventQueries(db, animeId, row.characterId, value),
   ];
+  if (audit) queries.push(audit(id));
   await orm.batch(queries as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 }
 
-export async function deleteCast(db: D1Database, animeId: string, id: string): Promise<D1Result> {
+export async function deleteCast(db: D1Database, animeId: string, id: string, audit?: ResourceAudit): Promise<D1Result> {
   const orm = database(db);
   const credit = await orm.select({ characterId: castCreditsTable.characterId })
     .from(castCreditsTable)
     .where(and(eq(castCreditsTable.id, id), eq(castCreditsTable.animeId, animeId)))
     .get();
   if (!credit) throw new HttpError(404, "没有找到 Cast 项。");
-  return orm.delete(charactersTable)
-    .where(and(eq(charactersTable.id, credit.characterId), eq(charactersTable.animeId, animeId))).run();
+  const remove = orm.delete(charactersTable)
+    .where(and(eq(charactersTable.id, credit.characterId), eq(charactersTable.animeId, animeId)));
+  return audit ? (await orm.batch([remove, audit(id)]))[0] : remove.run();
 }

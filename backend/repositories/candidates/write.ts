@@ -11,6 +11,7 @@ import {
 } from "~/infrastructure/db/schema";
 import { stableFingerprint } from "~/shared/fingerprint";
 import { createId } from "~/shared/id";
+import { canonicalInstant } from "~/shared/time";
 
 function candidateAnimeIds(draft: CandidateDraft): string[] {
   return [...new Set([draft.animeId, ...(draft.animeIds ?? [])].filter((id): id is string => Boolean(id)))];
@@ -75,6 +76,7 @@ async function mediaWrite(db: D1Database, draft: CandidateDraft) {
 }
 
 export async function createCandidate(db: D1Database, draft: CandidateDraft): Promise<string> {
+  draft = { ...draft, publishedAt: canonicalInstant(draft.publishedAt) };
   const fingerprint = await stableFingerprint(draft.originKey ?? `${draft.url}|${draft.title}|${draft.publishedAt}`);
   const orm = database(db);
   const existingId = await existingCandidateId(db, draft, fingerprint);

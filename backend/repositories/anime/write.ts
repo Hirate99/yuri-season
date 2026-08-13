@@ -5,8 +5,9 @@ import { animeTable, seasonsTable, type AnimeUpdate } from "~/infrastructure/db/
 import { HttpError } from "~/shared/http-error";
 import { createId } from "~/shared/id";
 import { auditInsert } from "../audit";
+import type { AdminPrincipal } from "~/infrastructure/auth";
 
-export async function patchAnime(db: D1Database, id: string, patch: AnimePatch): Promise<void> {
+export async function patchAnime(db: D1Database, id: string, patch: AnimePatch, principal?: AdminPrincipal): Promise<void> {
   const values = Object.fromEntries(
     Object.entries(patch).filter(([, value]) => value !== undefined),
   ) as AnimeUpdate;
@@ -20,11 +21,11 @@ export async function patchAnime(db: D1Database, id: string, patch: AnimePatch):
     orm.update(animeTable)
       .set({ ...values, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(eq(animeTable.id, id)),
-    auditInsert(db, "admin", "update_anime", "anime", id, { before, patch }),
+    auditInsert(db, "admin", "update_anime", "anime", id, { principal, before, patch }),
   ]);
 }
 
-export async function createAnime(db: D1Database, value: AnimeCreate): Promise<string> {
+export async function createAnime(db: D1Database, value: AnimeCreate, principal?: AdminPrincipal): Promise<string> {
   const orm = database(db);
   const season = await orm.select({ id: seasonsTable.id })
     .from(seasonsTable)
@@ -70,7 +71,7 @@ export async function createAnime(db: D1Database, value: AnimeCreate): Promise<s
         createdAt: sql`CURRENT_TIMESTAMP`,
         updatedAt: sql`CURRENT_TIMESTAMP`,
       }),
-      auditInsert(db, "admin", "create_anime", "anime", id, { after: value }),
+      auditInsert(db, "admin", "create_anime", "anime", id, { principal, after: value }),
     ]);
   } catch (error) {
     if (String(error).includes("UNIQUE constraint failed")) {

@@ -109,4 +109,6 @@ export type UpdateJobRow = {
   attempt_count: number;
   max_attempts: number;
   input_json: string;
+  research_run_id: string;
+  lease_token_hash: string;
 };

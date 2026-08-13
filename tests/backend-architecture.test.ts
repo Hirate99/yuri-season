@@ -52,6 +52,15 @@ describe("backend architecture boundaries", () => {
     expect(apiSource).not.toContain("shouldInvalidatePublicCache");
     expect(adminRoutes.join("\n")).toContain("invalidatePublicData(context)");
     expect(researchRoutes.join("\n")).toContain("invalidatePublicData(context)");
+    expect(adminRoutes.join("\n")).toContain("await invalidatePublicData(context)");
+    expect(researchRoutes.join("\n")).toContain("await invalidatePublicData(context)");
+  });
+
+  test("keeps new migration prefixes unique after the historical 0027 collision", () => {
+    const prefixes = [...new Bun.Glob("migrations/*.sql").scanSync()]
+      .map((path) => path.replaceAll("\\", "/").split("/").at(-1)!.split("_")[0]);
+    const duplicates = [...new Set(prefixes.filter((prefix, index) => prefixes.indexOf(prefix) !== index))];
+    expect(duplicates).toEqual(["0027"]);
   });
 
   test("keeps native D1 prepare calls inside the explicit whitelist", async () => {

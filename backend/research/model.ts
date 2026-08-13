@@ -6,14 +6,14 @@ function responseValue(result: unknown): unknown {
   return object.response ?? object.result ?? result;
 }
 
-export async function runJsonModel<T>(
+export async function runJsonModel(
   ai: Ai,
   options: {
     prompt: string;
     schemaName: string;
     schema: Record<string, unknown>;
   },
-): Promise<T> {
+): Promise<unknown> {
   const result = await ai.run(REVIEW_MODEL, {
     messages: [
       { role: "system", content: "Return only data matching the supplied JSON schema. Never invent facts absent from the evidence." },
@@ -31,6 +31,6 @@ export async function runJsonModel<T>(
     temperature: 0.1,
   });
   const value = responseValue(result);
-  if (typeof value === "string") return JSON.parse(value) as T;
-  return value as T;
+  if (typeof value === "string") return JSON.parse(value) as unknown;
+  return value;
 }

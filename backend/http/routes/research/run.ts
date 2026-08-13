@@ -17,5 +17,5 @@ export const runRoutes = new Hono<ApiEnvironment>()
   .post(
     "/research/run",
     validatedJson<ResearchRunRequest, ResearchRunInput>((value) => parseWithSchema(researchRunSchema, value)),
-    async (context) => context.json(await context.var.services.research.run(context.req.valid("json").lane), 202),
+    async (context) => context.json(await context.var.services.research.run(context.req.valid("json").lane)),
   );

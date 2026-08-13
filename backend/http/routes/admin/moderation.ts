@@ -33,7 +33,7 @@ export const moderationRoutes = new Hono<ApiEnvironment>()
         context.req.param("id"),
         context.req.valid("json").reason,
       );
-      invalidatePublicData(context);
+      await invalidatePublicData(context);
       return context.body(null, 204);
     },
   )
@@ -47,7 +47,7 @@ export const moderationRoutes = new Hono<ApiEnvironment>()
     async (context) => {
       const input = context.req.valid("json");
       await context.var.services.admin.candidates.decide(context.req.param("id"), input.decision, input.reason);
-      invalidatePublicData(context);
+      await invalidatePublicData(context);
       return context.json({ ok: true });
     },
   );

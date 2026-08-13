@@ -4,6 +4,7 @@ import { database } from "~/infrastructure/db/client";
 import { claimsTable, sourceObservationsTable } from "~/infrastructure/db/schema";
 import { stableFingerprint } from "~/shared/fingerprint";
 import { createId } from "~/shared/id";
+import { canonicalTemporal } from "~/shared/time";
 import type { CandidateDraft } from "@/domain";
 import type { NormalizedSource, SourceRecord } from "./types";
 
@@ -36,7 +37,7 @@ export async function storeObservation(
     title: item.title,
     excerpt: item.excerpt,
     authorName: item.authorName,
-    publishedAt: item.publishedAt,
+    publishedAt: item.publishedAt ? canonicalTemporal(item.publishedAt) : null,
     capturedAt: sql`CURRENT_TIMESTAMP`,
     connectorVersion: "incremental-http@1",
     originalLanguage: item.language,

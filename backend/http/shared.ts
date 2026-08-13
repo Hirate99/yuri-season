@@ -8,7 +8,7 @@ import { HttpError } from "~/shared/http-error";
 export type ApiEnvironment = { Bindings: Env; Variables: { services: RequestServices } };
 export type ApiContext = Context<ApiEnvironment>;
 
-const PUBLIC_CACHE = "public, max-age=30, stale-while-revalidate=120";
+const PUBLIC_CACHE = "public, max-age=0, must-revalidate";
 const JSON_CONTENT_TYPE = /^application\/(?:[\w.+-]+\+)?json(?:\s*;|$)/i;
 
 type ValidatedInput<Target extends "json" | "query", Input, Output> = {
@@ -54,6 +54,6 @@ export async function cachedPublicJson<T extends object>(
   return publicJson(context, data);
 }
 
-export function invalidatePublicData(context: ApiContext): void {
-  context.executionCtx.waitUntil(invalidatePublicCache(context.env));
+export function invalidatePublicData(context: ApiContext): Promise<void> {
+  return invalidatePublicCache(context.env);
 }

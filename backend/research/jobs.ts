@@ -5,6 +5,7 @@ import { and, asc, desc, eq, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { database } from "~/infrastructure/db/client";
 import { researchSourcesTable, updateJobsTable } from "~/infrastructure/db/schema";
 import { createId } from "~/shared/id";
+import { stableFingerprint } from "~/shared/fingerprint";
 import type { JobLane, UpdateJobRow } from "./types";
 import { recoverExpiredJobs } from "./local-jobs";
 
@@ -13,6 +14,22 @@ const laneProfile: Record<JobLane, string> = {
   standard: "standard",
   discovery: "local",
 };
+
+const WORKER_LEASE_MINUTES = 10;
+
+function leaseWhere(job: UpdateJobRow) {
+  return and(
+    eq(updateJobsTable.id, job.id),
+    eq(updateJobsTable.executionTarget, "worker"),
+    eq(updateJobsTable.researchRunId, job.research_run_id),
+    eq(updateJobsTable.leaseTokenHash, job.lease_token_hash),
+    sql`${updateJobsTable.leaseUntil} >= CURRENT_TIMESTAMP`,
+  );
+}
+
+function assertLeaseChange(changes: number | undefined): void {
+  if ((changes ?? 0) === 0) throw new Error("worker job lease was lost");
+}
 
 export async function planSourceJobs(db: D1Database, lane: JobLane, limit: number): Promise<number> {
   if (lane === "discovery") {
@@ -80,7 +97,8 @@ export async function leaseJobs(
   await recoverExpiredJobs(db);
   const jobs: UpdateJobRow[] = [];
   for (let index = 0; index < limit; index += 1) {
-    const job = await leaseWorkerJob(db, runId);
+    const tokenHash = await stableFingerprint(createId("worker-lease"));
+    const job = await leaseWorkerJob(db, runId, tokenHash, WORKER_LEASE_MINUTES);
     if (!job) break;
     jobs.push(job);
   }
@@ -88,31 +106,50 @@ export async function leaseJobs(
 }
 
 export async function startJob(db: D1Database, job: UpdateJobRow): Promise<void> {
-  await database(db).update(updateJobsTable).set({
+  const result = await database(db).update(updateJobsTable).set({
     status: "running",
-    startedAt: sql`CURRENT_TIMESTAMP`,
+    startedAt: sql`COALESCE(${updateJobsTable.startedAt}, CURRENT_TIMESTAMP)`,
+    lastHeartbeatAt: sql`CURRENT_TIMESTAMP`,
+    leaseUntil: sql`datetime('now', ${`+${WORKER_LEASE_MINUTES} minutes`})`,
     updatedAt: sql`CURRENT_TIMESTAMP`,
-  }).where(and(eq(updateJobsTable.id, job.id), eq(updateJobsTable.status, "leased")));
+  }).where(and(leaseWhere(job), eq(updateJobsTable.status, "leased"))).run();
+  assertLeaseChange(result.meta.changes);
+}
+
+export async function heartbeatJob(db: D1Database, job: UpdateJobRow): Promise<void> {
+  const result = await database(db).update(updateJobsTable).set({
+    lastHeartbeatAt: sql`CURRENT_TIMESTAMP`,
+    leaseUntil: sql`datetime('now', ${`+${WORKER_LEASE_MINUTES} minutes`})`,
+    updatedAt: sql`CURRENT_TIMESTAMP`,
+  }).where(and(leaseWhere(job), eq(updateJobsTable.status, "running"))).run();
+  assertLeaseChange(result.meta.changes);
 }
 
 export async function completeJob(db: D1Database, job: UpdateJobRow, partial = false): Promise<void> {
-  await database(db).update(updateJobsTable).set({
+  const result = await database(db).update(updateJobsTable).set({
     status: partial ? "partial" : "completed",
+    leaseTokenHash: null,
     leaseUntil: null,
     finishedAt: sql`CURRENT_TIMESTAMP`,
     updatedAt: sql`CURRENT_TIMESTAMP`,
-  }).where(eq(updateJobsTable.id, job.id));
+  }).where(and(leaseWhere(job), eq(updateJobsTable.status, "running"))).run();
+  assertLeaseChange(result.meta.changes);
 }
 
 export async function failJob(db: D1Database, job: UpdateJobRow, error: unknown): Promise<void> {
   const retry = job.attempt_count < job.max_attempts;
   const delay = Math.min(360, 5 * 2 ** Math.max(0, job.attempt_count - 1));
-  await database(db).update(updateJobsTable).set({
+  const result = await database(db).update(updateJobsTable).set({
     status: retry ? "retry" : "dead",
+    leaseTokenHash: null,
     leaseUntil: null,
     scheduledAt: sql`datetime('now', ${`+${delay} minutes`})`,
     lastError: error instanceof Error ? error.message.slice(0, 800) : String(error).slice(0, 800),
     finishedAt: retry ? null : sql`CURRENT_TIMESTAMP`,
     updatedAt: sql`CURRENT_TIMESTAMP`,
-  }).where(eq(updateJobsTable.id, job.id));
+  }).where(and(
+    leaseWhere(job),
+    or(eq(updateJobsTable.status, "leased"), eq(updateJobsTable.status, "running")),
+  )).run();
+  assertLeaseChange(result.meta.changes);
 }

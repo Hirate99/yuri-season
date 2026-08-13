@@ -1,6 +1,6 @@
 import type { SourceCheckWrite } from "@/domain";
 import type { BatchItem } from "drizzle-orm/batch";
-import { and, eq, lt, or, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 
 import { database } from "~/infrastructure/db/client";
 import { researchSourcesTable } from "~/infrastructure/db/schema";
@@ -9,7 +9,10 @@ function sourceCheckQuery(db: D1Database, check: SourceCheckWrite) {
   const orm = database(db);
   const where = and(
     eq(researchSourcesTable.id, check.sourceId),
-    or(sql`${researchSourcesTable.lastCheckedAt} IS NULL`, lt(researchSourcesTable.lastCheckedAt, check.checkedAt)),
+    or(
+      sql`${researchSourcesTable.lastCheckedAt} IS NULL`,
+      sql`datetime(${researchSourcesTable.lastCheckedAt}) < datetime(${check.checkedAt})`,
+    ),
   );
   if (check.outcome === "success") {
     return orm.update(researchSourcesTable).set({

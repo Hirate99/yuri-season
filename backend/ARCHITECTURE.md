@@ -33,7 +33,7 @@ creates `hc<ApiType>()` clients for both the browser and operational scripts. Do
 duplicate internal API paths, request DTOs, response casts, or generic `fetch<T>`
 wrappers in consumers.
 
-Mutation handlers invalidate public data explicitly after successful writes. Cache
+Mutation handlers await public-data invalidation explicitly after successful writes. Cache
 invalidation is not inferred from URL prefixes.
 
 ## Database rules
@@ -53,6 +53,8 @@ invalidation is not inferred from URL prefixes.
 - Do not issue a query per parent row. Coverage and feed query counts must remain
   constant as result size grows.
 - Use deterministic cursor ordering.
+- Persist instants as canonical UTC ISO strings before using indexed text ordering;
+  date-only calendar values remain `YYYY-MM-DD`.
 - Indexes must match real filter/order prefixes and important plans remain protected
   by `EXPLAIN QUERY PLAN` tests.
 - Every promise is awaited, returned, or deliberately passed to
@@ -67,6 +69,7 @@ TTL.
 
 ## Migration rules
 
-Applied migrations are immutable. New prefixes are unique and monotonically
-increasing. Operational seed or discovery data belongs in explicit idempotent import
+Applied migrations are immutable. The historical `0027` prefix collision is retained
+because both files may already be applied; every new prefix is unique and monotonically
+increasing from `0032`. Operational seed or discovery data belongs in explicit idempotent import
 scripts, not schema migrations.

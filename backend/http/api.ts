@@ -44,7 +44,8 @@ app.use("/api/admin/*", bodyLimit({
 }));
 
 app.use("/api/admin/*", async (context, next) => {
-  await requireAdmin(context.req.raw, context.env);
+  const principal = await requireAdmin(context.req.raw, context.env);
+  context.set("services", createRequestServices(context.env, principal));
   await next();
 });
 

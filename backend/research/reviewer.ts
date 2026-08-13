@@ -1,4 +1,5 @@
 import type { CandidateDraft } from "@/domain";
+import { z } from "zod";
 import { applyReviewPolicy, POLICY_VERSION } from "./policy";
 import { REVIEW_MODEL, runJsonModel } from "./model";
 import type { LlmReview, NormalizedSource, ReviewContext, SourceRecord } from "./types";
@@ -12,15 +13,27 @@ const schema = {
   properties: {
     decision: { type: "string", enum: ["publish", "hold", "reject"] },
     contentClass: { type: "string", enum: ["schedule", "official_news", "official_art", "creator_art", "birthday", "cast_post", "staff_post", "fanwork", "community_thread", "editorial"] },
-    title: { type: "string", maxLength: 90 },
-    summary: { type: "string", maxLength: 280 },
+    title: { type: "string", minLength: 1, maxLength: 90 },
+    summary: { type: "string", minLength: 1, maxLength: 280 },
     importance: { type: "integer", minimum: 1, maximum: 5 },
     safetyRating: { type: "string", enum: ["safe", "suggestive", "adult", "unknown"] },
     spoilerLevel: { type: "string", enum: ["none", "mild", "major"] },
     confidence: { type: "number", minimum: 0, maximum: 1 },
-    reasons: { type: "array", maxItems: 6, items: { type: "string", maxLength: 100 } },
+    reasons: { type: "array", maxItems: 6, items: { type: "string", minLength: 1, maxLength: 100 } },
   },
 };
+
+const reviewSchema = z.object({
+  decision: z.enum(["publish", "hold", "reject"]),
+  contentClass: z.enum(["schedule", "official_news", "official_art", "creator_art", "birthday", "cast_post", "staff_post", "fanwork", "community_thread", "editorial"]),
+  title: z.string().trim().min(1).max(90),
+  summary: z.string().trim().min(1).max(280),
+  importance: z.number().int().min(1).max(5),
+  safetyRating: z.enum(["safe", "suggestive", "adult", "unknown"]),
+  spoilerLevel: z.enum(["none", "mild", "major"]),
+  confidence: z.number().finite().min(0).max(1),
+  reasons: z.array(z.string().trim().min(1).max(100)).max(6),
+}).strict() satisfies z.ZodType<LlmReview>;
 
 export async function reviewCandidate(
   ai: Ai,
@@ -38,11 +51,11 @@ export async function reviewCandidate(
 原始证据：${item.excerpt.slice(0, 12_000)}
 
 publish 只用于事实清楚、与作品直接相关、摘要没有扩写、版权展示模式安全的内容；证据不足、可能剧透、作者身份或媒体分级不确定时 hold；明显无关或错误时 reject。`;
-  const review = await runJsonModel<LlmReview>(ai, {
+  const review = reviewSchema.parse(await runJsonModel(ai, {
     prompt,
     schemaName: "yuri_feed_review",
     schema,
-  });
+  }));
   const context: ReviewContext = {
     candidateId,
     animeTitle: source.animeTitle,

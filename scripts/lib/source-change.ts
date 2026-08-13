@@ -1,4 +1,4 @@
-import type { NormalizedSource } from "../../worker/research/types";
+import type { NormalizedSource } from "~/research/types";
 
 export type SourceChangeKind = "catalog_metadata" | "feed_candidate";
 

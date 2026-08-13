@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { hc } from "hono/client";
 
-import { api } from "../src/server/api";
+import { api, type ApiType } from "~/http/api";
 
 describe("Hono API boundary", () => {
   test("serves health JSON with no-store caching", async () => {
@@ -46,5 +47,28 @@ describe("Hono API boundary", () => {
     }, { ADMIN_TOKEN: "test-secret" } as Env);
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ error: "request_failed" });
+  });
+
+  test("maps malformed JSON to the existing request error boundary", async () => {
+    const response = await api.request("https://example.test/api/admin/anime", {
+      method: "POST",
+      headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+      body: "{",
+    }, { ADMIN_TOKEN: "test-secret" } as Env);
+    expect(response.status).toBe(400);
+    const body: unknown = await response.json();
+    expect(body).toEqual({
+      error: "request_failed",
+      message: "请求内容不是有效的 UTF-8 JSON。",
+    });
+  });
+
+  test("serves the exported Hono RPC contract", async () => {
+    const client = hc<ApiType>("https://example.test", {
+      fetch: (request: RequestInfo | URL, init?: RequestInit) => api.request(request, init),
+    });
+    const response = await client.api.health.$get();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ ok: true });
   });
 });

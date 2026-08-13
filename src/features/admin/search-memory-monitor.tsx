@@ -3,7 +3,7 @@ import type { SearchMemoryResponse, SearchMemorySummary } from "@/domain";
 import { Badge } from "@/components/badge";
 import { EmptyState, LoadingRows } from "@/components/empty-state";
 import { dateTime } from "@/lib/format";
-import { useApi } from "@/lib/api";
+import { apiClient, rpcData, useApi } from "@/lib/api";
 import { cn } from "@/lib/ui";
 import { VirtualWindowGrid } from "@/components/virtual-window-grid";
 
@@ -37,7 +37,8 @@ function hasUsefulResult(record: SearchMemorySummary) {
 }
 
 export function SearchMemoryMonitor() {
-  const memory = useApi<SearchMemoryResponse>("/api/admin/research/memory");
+  const memory = useApi<SearchMemoryResponse>((signal) =>
+    rpcData(apiClient.api.admin.research.memory.$get({}, { init: { signal } })), []);
   const [view, setView] = useState<View>("recent");
   const records = memory.data?.records ?? [];
   const usefulCount = records.filter(hasUsefulResult).length;

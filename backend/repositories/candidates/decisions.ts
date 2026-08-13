@@ -1,0 +1,216 @@
+import type { CandidateDraft, ReviewDecision } from "@/domain";
+import type { BatchItem } from "drizzle-orm/batch";
+import { eq, sql } from "drizzle-orm";
+
+import { database } from "~/infrastructure/db/client";
+import {
+  candidateAnimeTable,
+  correctionsTable,
+  discussionAnimeTable,
+  discussionsTable,
+  feedCandidatesTable,
+  feedItemsTable,
+  reviewDecisionsTable,
+} from "~/infrastructure/db/schema";
+import { HttpError } from "~/shared/http-error";
+import { createId } from "~/shared/id";
+
+import { auditInsert } from "../audit";
+
+export type ReviewMetadata = {
+  reviewerType: "llm" | "policy" | "admin" | "local_skill";
+  confidence?: number;
+  model?: string;
+  promptVersion?: string;
+  reasons?: string[];
+  output?: unknown;
+};
+
+type CandidateDecisionRow = {
+  id: string;
+  animeId: string | null;
+  contentClass: CandidateDraft["contentClass"];
+  title: string;
+  url: string;
+  sourceName: string;
+  publishedAt: string;
+  feedItemId: string | null;
+  withdrawnAt: string | null;
+};
+
+async function candidateForDecision(db: D1Database, candidateId: string) {
+  const row = await database(db).select({
+    id: feedCandidatesTable.id,
+    animeId: feedCandidatesTable.animeId,
+    contentClass: feedCandidatesTable.contentClass,
+    title: feedCandidatesTable.title,
+    url: feedCandidatesTable.url,
+    sourceName: feedCandidatesTable.sourceName,
+    publishedAt: feedCandidatesTable.publishedAt,
+    feedItemId: feedItemsTable.id,
+    withdrawnAt: feedItemsTable.withdrawnAt,
+  }).from(feedCandidatesTable)
+    .leftJoin(feedItemsTable, eq(feedItemsTable.candidateId, feedCandidatesTable.id))
+    .where(eq(feedCandidatesTable.id, candidateId)).get();
+  return row;
+}
+
+function validateWithdrawal(candidate: CandidateDecisionRow, metadata: ReviewMetadata): void {
+  if (!candidate.feedItemId) throw new HttpError(409, "这条动态尚未发布。");
+  if (candidate.withdrawnAt) throw new HttpError(409, "这条动态已经撤回。");
+  if (!metadata.reasons?.[0]?.trim()) throw new HttpError(400, "请填写撤回原因。");
+}
+
+function validateDecisionTransition(candidate: CandidateDecisionRow, decision: ReviewDecision): void {
+  if (!candidate.feedItemId) return;
+  if (candidate.withdrawnAt) {
+    if (decision === "withdraw") return;
+    throw new HttpError(409, "这条动态已经撤回，不能重新审核或发布。");
+  }
+  if (decision === "hold" || decision === "reject") {
+    throw new HttpError(409, "已发布动态不能改为暂存或拒绝，请使用撤回。");
+  }
+}
+
+function reviewQuery(db: D1Database, candidateId: string, decision: ReviewDecision, metadata: ReviewMetadata) {
+  return database(db).insert(reviewDecisionsTable).values({
+    id: createId("review"),
+    candidateId,
+    reviewerType: metadata.reviewerType,
+    decision,
+    confidence: metadata.confidence ?? null,
+    model: metadata.model ?? null,
+    promptVersion: metadata.promptVersion ?? null,
+    reasonsJson: JSON.stringify(metadata.reasons ?? []),
+    outputJson: JSON.stringify(metadata.output ?? {}),
+  });
+}
+
+function publicationQueries(
+  db: D1Database,
+  candidate: CandidateDecisionRow,
+  metadata: ReviewMetadata,
+): BatchItem<"sqlite">[] {
+  const orm = database(db);
+  const queries: BatchItem<"sqlite">[] = [];
+  if (candidate.contentClass === "community_thread" && candidate.animeId) {
+    queries.push(orm.insert(discussionsTable).values({
+      id: createId("discussion"),
+      animeId: candidate.animeId,
+      platform: candidate.sourceName,
+      title: candidate.title,
+      url: candidate.url,
+      note: null,
+      isActive: true,
+      lastActivityAt: candidate.publishedAt,
+      lastCheckedAt: sql`CURRENT_TIMESTAMP`,
+    }).onConflictDoUpdate({
+      target: discussionsTable.url,
+      set: {
+        platform: candidate.sourceName,
+        title: candidate.title,
+        isActive: true,
+        lastActivityAt: candidate.publishedAt,
+        lastCheckedAt: sql`CURRENT_TIMESTAMP`,
+      },
+    }));
+    queries.push(orm.insert(discussionAnimeTable).select(
+      orm.select({
+        discussionId: discussionsTable.id,
+        animeId: candidateAnimeTable.animeId,
+        createdAt: sql<string>`CURRENT_TIMESTAMP`.as("created_at"),
+      }).from(discussionsTable)
+        .innerJoin(candidateAnimeTable, eq(candidateAnimeTable.candidateId, candidate.id))
+        .where(eq(discussionsTable.url, candidate.url)),
+    ).onConflictDoNothing());
+  }
+
+  queries.push(orm.insert(feedItemsTable).select(
+    orm.select({
+      id: sql<string>`${createId("feed")}`.as("id"),
+      candidateId: feedCandidatesTable.id,
+      animeId: feedCandidatesTable.animeId,
+      personId: feedCandidatesTable.personId,
+      characterId: feedCandidatesTable.characterId,
+      eventId: feedCandidatesTable.eventId,
+      mediaId: feedCandidatesTable.mediaId,
+      accountId: feedCandidatesTable.accountId,
+      discussionId: sql<string | null>`CASE WHEN ${feedCandidatesTable.contentClass} = 'community_thread'
+        THEN ${discussionsTable.id} ELSE NULL END`.as("discussion_id"),
+      platformObjectId: feedCandidatesTable.platformObjectId,
+      originKey: feedCandidatesTable.originKey,
+      contentClass: feedCandidatesTable.contentClass,
+      sourceIdentity: feedCandidatesTable.sourceIdentity,
+      title: feedCandidatesTable.title,
+      summary: feedCandidatesTable.summary,
+      url: feedCandidatesTable.url,
+      sourceName: feedCandidatesTable.sourceName,
+      sourceAccount: feedCandidatesTable.sourceAccount,
+      importance: feedCandidatesTable.importance,
+      publishedAt: feedCandidatesTable.publishedAt,
+      safetyRating: feedCandidatesTable.safetyRating,
+      spoilerLevel: feedCandidatesTable.spoilerLevel,
+      autoPublished: sql<boolean>`${metadata.reviewerType === "admin" ? 0 : 1}`.as("auto_published"),
+      isPinned: sql<boolean>`0`.as("is_pinned"),
+      withdrawnAt: sql<string | null>`NULL`.as("withdrawn_at"),
+      createdAt: sql<string>`CURRENT_TIMESTAMP`.as("created_at"),
+    }).from(feedCandidatesTable)
+      .leftJoin(discussionsTable, eq(discussionsTable.url, feedCandidatesTable.url))
+      .where(eq(feedCandidatesTable.id, candidate.id)),
+  ).onConflictDoNothing());
+  return queries;
+}
+
+function withdrawalQueries(
+  db: D1Database,
+  feedItemId: string,
+  actorType: "system" | "llm" | "admin" | "local_skill",
+  reason: string,
+) {
+  const orm = database(db);
+  return [
+    orm.insert(correctionsTable).values({
+      id: createId("correction"),
+      feedItemId,
+      correctionType: "withdraw",
+      reason,
+      replacementFeedItemId: null,
+      actorType,
+      createdAt: sql`CURRENT_TIMESTAMP`,
+    }),
+    orm.update(feedItemsTable).set({ withdrawnAt: sql`CURRENT_TIMESTAMP` })
+      .where(sql`${feedItemsTable.id} = ${feedItemId} AND ${feedItemsTable.withdrawnAt} IS NULL`),
+  ] as const;
+}
+
+export async function applyCandidateDecision(
+  db: D1Database,
+  candidateId: string,
+  decision: ReviewDecision,
+  metadata: ReviewMetadata,
+): Promise<void> {
+  const candidate = await candidateForDecision(db, candidateId);
+  if (!candidate) throw new HttpError(404, "没有找到这条候选。");
+  validateDecisionTransition(candidate, decision);
+  if (decision === "withdraw") validateWithdrawal(candidate, metadata);
+
+  const status = decision === "publish" || decision === "withdraw" ? "published"
+    : decision === "hold" ? "held" : "rejected";
+  const actorType = metadata.reviewerType === "policy" ? "system" : metadata.reviewerType;
+  const orm = database(db);
+  const queries: BatchItem<"sqlite">[] = [
+    orm.update(feedCandidatesTable).set({ status, reviewedAt: sql`CURRENT_TIMESTAMP` })
+      .where(eq(feedCandidatesTable.id, candidateId)),
+    reviewQuery(db, candidateId, decision, metadata),
+  ];
+  if (decision === "publish") queries.push(...publicationQueries(db, candidate, metadata));
+  if (decision === "withdraw") {
+    queries.push(...withdrawalQueries(db, candidate.feedItemId!, actorType, metadata.reasons![0].trim()));
+  }
+  queries.push(auditInsert(db, actorType, "review_candidate", "feed_candidate", candidateId, {
+    decision,
+    reasons: metadata.reasons ?? [],
+    feedItemId: candidate.feedItemId,
+  }));
+  await orm.batch(queries as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+}

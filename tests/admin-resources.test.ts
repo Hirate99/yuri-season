@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { parseResourceWrite } from "../worker/api/resource-input";
-import { birthdayOccurrence } from "../worker/repositories/admin-birthday-events";
+import { parseResourceWrite } from "~/http/input/resource-input";
+import { birthdayOccurrence } from "~/repositories/admin/birthday-events";
 import {
   createAdminResource,
   deleteAdminResource,
   updateAdminResource,
-} from "../worker/repositories/admin-resource-mutations";
-import { readAdminAnimeResources } from "../worker/repositories/admin-resources";
+} from "~/application/admin/resources";
+import { readAdminAnimeResources } from "~/repositories/admin/resources";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;

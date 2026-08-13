@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { ingestResearchBatch } from "../worker/research/batch";
-import { applyCandidateDecision, createCandidate } from "../worker/repositories/mutations";
-import { rememberSearch } from "../worker/repositories/search-memory";
+import { ingestResearchBatch } from "~/research/batch";
+import { applyCandidateDecision } from "~/repositories/candidates/decisions";
+import { createCandidate } from "~/repositories/candidates/write";
+import { rememberSearch } from "~/repositories/search-memory";
 import { TestD1 } from "./support/d1-adapter";
-import { readAdminDashboard } from "../worker/repositories/admin";
-import { readDiscussions, readFeed, readMedia } from "../worker/repositories/feed";
-import { deleteDiscussionEverywhere } from "../worker/repositories/admin-discussion-mutations";
+import { readAdminDashboard } from "~/application/admin/service";
+import { readDiscussions, readFeed, readMedia } from "~/repositories/feed";
+import { deleteDiscussionEverywhere } from "~/repositories/admin/discussion";
 import type { ResearchBatch } from "@/domain";
 
 let database: TestD1;

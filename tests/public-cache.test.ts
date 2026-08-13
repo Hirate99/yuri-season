@@ -4,7 +4,7 @@ import {
   invalidatePublicCache,
   readThroughPublicCache,
   type PublicCacheClient,
-} from "../worker/cache/public-cache";
+} from "~/infrastructure/cache/public-cache";
 
 const noRedis = {
   UPSTASH_REDIS_REST_URL: "",

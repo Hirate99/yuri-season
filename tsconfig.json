@@ -13,7 +13,7 @@
     "noEmit": true,
     "paths": {
       "@/*": ["src/*"],
-      "@worker/*": ["worker/*"]
+      "~/*": ["backend/*"]
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,
@@ -24,7 +24,8 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
-    "worker/**/*.ts",
+    "backend/**/*.ts",
+    "scripts/**/*.ts",
     "tests/**/*.ts",
     "vite.config.ts"
   ]

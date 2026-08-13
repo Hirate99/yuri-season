@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { requireAdmin } from "../worker/auth";
-import { verifyAccessJwt } from "../worker/auth/access";
+import { requireAdmin } from "~/infrastructure/auth";
+import { verifyAccessJwt } from "~/infrastructure/auth/access";
 
 const config = {
   teamDomain: "example.cloudflareaccess.com",

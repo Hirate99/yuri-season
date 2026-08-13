@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { CandidateDraft } from "../src/domain";
-import { atomicBatch } from "../worker/db/transaction";
-import { createCandidate } from "../worker/repositories/mutations";
+import { atomicBatch } from "~/infrastructure/db/transaction";
+import { createCandidate } from "~/repositories/candidates/write";
 import { TestD1 } from "./support/d1-adapter";
 
 describe("D1 atomic writes", () => {

@@ -1,5 +1,5 @@
-import { fetchSource } from "../worker/research/source-fetcher";
-import { normalizerVersion } from "../worker/research/connectors/normalize";
+import { fetchSource } from "~/research/source-fetcher";
+import { normalizerVersion } from "~/research/connectors/normalize";
 import { adminSourceRecord } from "./lib/admin-source-record";
 import { fetchAdminDashboard } from "./lib/admin-dashboard";
 import { localSourceTransport } from "./lib/local-source-transport";
@@ -49,7 +49,7 @@ async function check(): Promise<void> {
   for (const source of selection.selected) {
     const previous = current.sources[source.id];
     try {
-      const version = normalizerVersion({ source_type: source.sourceType });
+      const version = normalizerVersion({ sourceType: source.sourceType });
       const canReusePrevious = isReusableSourceState(previous, source.sourceType, version);
       const reusablePrevious = canReusePrevious ? previous : undefined;
       const record = adminSourceRecord(source, reusablePrevious);

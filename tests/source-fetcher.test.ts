@@ -1,21 +1,21 @@
 import { describe, expect, test } from "bun:test";
-import { fetchSource } from "../worker/research/source-fetcher";
-import type { SourceRecord } from "../worker/research/types";
+import { fetchSource } from "~/research/source-fetcher";
+import type { SourceRecord } from "~/research/types";
 
 const source: SourceRecord = {
   id: "source-large-official-news",
-  anime_id: "anime-test",
-  anime_title: "测试作品",
-  source_type: "official_json",
-  change_kind: "feed_candidate",
+  animeId: "anime-test",
+  animeTitle: "测试作品",
+  sourceType: "official_json",
+  changeKind: "feed_candidate",
   label: "动画公式 NEWS",
   url: "https://example.test/api/site-data/init",
-  item_url_template: "https://example.test/news/{id}/",
-  trust_level: "official",
-  cadence_profile: "local",
-  poll_interval_min: 720,
+  itemUrlTemplate: "https://example.test/news/{id}/",
+  trustLevel: "official",
+  cadenceProfile: "local",
+  pollIntervalMin: 720,
   etag: null,
-  last_modified: null,
+  lastModified: null,
   cursor: null,
 };
 

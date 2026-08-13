@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { parseSeasonWrite } from "../worker/api/season-input";
-import { readSeasons } from "../worker/repositories/catalog";
-import { createSeason, updateSeason } from "../worker/repositories/season-mutations";
+import { parseSeasonWrite } from "~/http/input/season-input";
+import { readSeasons } from "~/repositories/catalog";
+import { createSeason, updateSeason } from "~/repositories/seasons/write";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;

@@ -1,6 +1,6 @@
 import type { AdminAnimeResources, AdminThemeSong, ThemeSongWrite } from "@/domain";
-import { adminHeaders } from "./lib/admin-headers";
-import { fetchAdminDashboard, fetchAdminJson, researchBaseUrl, requiredResearchEnv } from "./lib/admin-dashboard";
+import { rpcData } from "@/lib/rpc";
+import { adminApi, fetchAdminDashboard, fetchAdminResources } from "./lib/admin-dashboard";
 
 type AppleTrack = {
   wrapperType?: string;
@@ -65,15 +65,10 @@ function writeWithAppleCover(song: AdminThemeSong, coverUrl: string): ThemeSongW
 }
 
 async function patchThemeSong(animeId: string, song: AdminThemeSong, coverUrl: string): Promise<void> {
-  const response = await fetch(
-    `${researchBaseUrl()}/api/admin/anime/${encodeURIComponent(animeId)}/resources/theme_song/${encodeURIComponent(song.id)}`,
-    {
-      method: "PATCH",
-      headers: adminHeaders(requiredResearchEnv("YURI_ADMIN_TOKEN"), { "content-type": "application/json" }),
-      body: JSON.stringify(writeWithAppleCover(song, coverUrl)),
-    },
-  );
-  if (!response.ok) throw new Error(`${song.title} update returned ${response.status}: ${await response.text()}`);
+  await rpcData(adminApi().api.admin.anime[":animeId"].resources[":kind"][":id"].$patch({
+    param: { animeId, kind: "theme_song", id: song.id },
+    json: writeWithAppleCover(song, coverUrl),
+  }));
 }
 
 export async function preferAppleThemeCovers(apply: boolean): Promise<void> {
@@ -84,7 +79,7 @@ export async function preferAppleThemeCovers(apply: boolean): Promise<void> {
   const summary = { checked: 0, matched: 0, changed: 0, unchanged: 0, skipped: 0 };
 
   for (const item of anime) {
-    const resources = await fetchAdminJson<AdminAnimeResources>(`/api/admin/anime/${encodeURIComponent(item.id)}/resources`);
+    const resources = await fetchAdminResources(item.id);
     for (const song of resources.themeSongs) {
       if (seen.has(song.id)) continue;
       seen.add(song.id);

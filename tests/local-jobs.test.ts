@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { parseCompleteLocalJob } from "../worker/api/job-input";
-import { completeLocalJob, heartbeatLocalJob, leaseLocalJobs, recoverExpiredJobs } from "../worker/research/local-jobs";
-import { planSourceJobs } from "../worker/research/jobs";
+import { parseCompleteLocalJob } from "~/http/input/job-input";
+import { completeLocalJob, heartbeatLocalJob, leaseLocalJobs, recoverExpiredJobs } from "~/research/local-jobs";
+import { planSourceJobs } from "~/research/jobs";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;

@@ -1,5 +1,5 @@
 import type { SearchMemoryWrite } from "@/domain";
-import { stableFingerprint } from "../../worker/lib/fingerprint";
+import { stableFingerprint } from "~/shared/fingerprint";
 import type { DiscoveryQuery } from "./discovery-query-plan";
 
 export type CampaignQuery = DiscoveryQuery & {

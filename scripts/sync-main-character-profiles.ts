@@ -1,6 +1,6 @@
 import type { AdminAnimeResources, AdminCastCredit, CastWrite } from "@/domain";
-import { adminHeaders } from "./lib/admin-headers";
-import { fetchAdminJson, researchBaseUrl, requiredResearchEnv } from "./lib/admin-dashboard";
+import { rpcData } from "@/lib/rpc";
+import { adminApi, fetchAdminResources } from "./lib/admin-dashboard";
 
 export type CharacterRepair = {
   animeId: string;
@@ -209,15 +209,10 @@ async function verifyPortraits(): Promise<void> {
 }
 
 async function patchCast(animeId: string, cast: AdminCastCredit, repair: CharacterRepair): Promise<void> {
-  const response = await fetch(
-    `${researchBaseUrl()}/api/admin/anime/${encodeURIComponent(animeId)}/resources/cast/${encodeURIComponent(cast.id)}`,
-    {
-      method: "PATCH",
-      headers: adminHeaders(requiredResearchEnv("YURI_ADMIN_TOKEN"), { "content-type": "application/json" }),
-      body: JSON.stringify(castWrite(cast, repair)),
-    },
-  );
-  if (!response.ok) throw new Error(`${animeId}/${cast.characterName} returned ${response.status}: ${await response.text()}`);
+  await rpcData(adminApi().api.admin.anime[":animeId"].resources[":kind"][":id"].$patch({
+    param: { animeId, kind: "cast", id: cast.id },
+    json: castWrite(cast, repair),
+  }));
 }
 
 export async function syncMainCharacterProfiles(apply: boolean): Promise<void> {
@@ -238,7 +233,7 @@ export async function syncMainCharacterProfiles(apply: boolean): Promise<void> {
   const summary = { targets: mainCharacterRepairs.length, portraitsVerified: mainCharacterRepairs.length, changed: 0, unchanged: 0 };
 
   for (const [animeId, repairs] of byAnime) {
-    const resources = await fetchAdminJson<AdminAnimeResources>(`/api/admin/anime/${encodeURIComponent(animeId)}/resources`);
+    const resources = await fetchAdminResources(animeId);
     for (const repair of repairs) {
       const cast = resources.cast.find((item) => item.characterId === repair.characterId);
       if (!cast) throw new Error(`Missing cast record: ${animeId}/${repair.characterId}`);

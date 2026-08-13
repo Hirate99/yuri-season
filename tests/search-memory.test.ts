@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { parseSearchMemoryBatch } from "../worker/api/search-memory-input";
-import { readSearchMemory, rememberSearch } from "../worker/repositories/search-memory";
+import { parseSearchMemoryBatch } from "~/http/input/search-memory-input";
+import { readSearchMemory, rememberSearch } from "~/repositories/search-memory";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;

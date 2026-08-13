@@ -1,31 +1,31 @@
 import { describe, expect, test } from "bun:test";
-import { normalizeSource } from "../worker/research/connectors/normalize";
-import type { SourceRecord } from "../worker/research/types";
+import { normalizeSource } from "~/research/connectors/normalize";
+import type { SourceRecord } from "~/research/types";
 
 const source: SourceRecord = {
   id: "source-test",
-  anime_id: "anime-test",
-  anime_title: "测试作品",
-  source_type: "rss",
-  change_kind: "feed_candidate",
+  animeId: "anime-test",
+  animeTitle: "测试作品",
+  sourceType: "rss",
+  changeKind: "feed_candidate",
   label: "公式 NEWS",
   url: "https://example.com/news/",
-  item_url_template: null,
-  trust_level: "official",
-  cadence_profile: "local",
-  poll_interval_min: 720,
+  itemUrlTemplate: null,
+  trustLevel: "official",
+  cadenceProfile: "local",
+  pollIntervalMin: 720,
   etag: null,
-  last_modified: null,
+  lastModified: null,
   cursor: null,
 };
 
 describe("source normalization", () => {
   test("extracts same-page official news articles before unrelated links", async () => {
     const source = {
-      id: "official", anime_id: "anime", anime_title: "作品", source_type: "official_page",
-      change_kind: "feed_candidate" as const, label: "公式 NEWS", url: "https://example.com/news/",
-      item_url_template: null, trust_level: "official" as const, cadence_profile: "local" as const,
-      poll_interval_min: 720, etag: null, last_modified: null, cursor: null,
+      id: "official", animeId: "anime", animeTitle: "作品", sourceType: "official_page",
+      changeKind: "feed_candidate" as const, label: "公式 NEWS", url: "https://example.com/news/",
+      itemUrlTemplate: null, trustLevel: "official" as const, cadenceProfile: "local" as const,
+      pollIntervalMin: 720, etag: null, lastModified: null, cursor: null,
     };
     const raw = `<main><article id="news-2"><div><time>2026.08.07</time><h3>新视觉公开</h3></div><p>公式公开第二弹主视觉。</p><a href="https://shop.example.com/item">购买</a></article></main>`;
     const items = await normalizeSource(raw, "text/html", source);
@@ -84,9 +84,9 @@ describe("source normalization", () => {
   test("normalizes a community thread instead of action links", async () => {
     const communitySource = {
       ...source,
-      source_type: "community",
+      sourceType: "community",
       url: "https://bbs.yamibo.com/thread-573280-1-1.html",
-      trust_level: "community" as const,
+      trustLevel: "community" as const,
     };
     const html = `
       <title>错误的页面标题 - 动漫区 - 百合会 - Powered by Discuz!</title>
@@ -115,8 +115,8 @@ describe("source normalization", () => {
     const jsonSource = {
       ...source,
       url: "https://example.com/news/newslist.json",
-      item_url_template: "https://example.com/news/?id={id}",
-      source_type: "official_json",
+      itemUrlTemplate: "https://example.com/news/?id={id}",
+      sourceType: "official_json",
     };
     const items = await normalizeSource(JSON.stringify([{
       uniqueId: "20260811_01",
@@ -136,8 +136,8 @@ describe("source normalization", () => {
     const jsonSource = {
       ...source,
       url: "https://example.test/news/newslist.json",
-      item_url_template: "https://example.test/news/{id}.html",
-      source_type: "official_json",
+      itemUrlTemplate: "https://example.test/news/{id}.html",
+      sourceType: "official_json",
     };
     const items = await normalizeSource(JSON.stringify([{
       uniqueId: "20260811_01",
@@ -150,17 +150,17 @@ describe("source normalization", () => {
 
   test("maps numeric official news IDs to detail URLs", async () => {
     const source = {
-      id: "official-json", anime_id: "anime", anime_title: "作品", source_type: "official_json",
-      change_kind: "feed_candidate" as const, label: "公式 NEWS", url: "https://example.com/news.json",
-      item_url_template: "https://example.com/news/{id}", trust_level: "official" as const,
-      cadence_profile: "local" as const, poll_interval_min: 720, etag: null, last_modified: null, cursor: null,
+      id: "official-json", animeId: "anime", animeTitle: "作品", sourceType: "official_json",
+      changeKind: "feed_candidate" as const, label: "公式 NEWS", url: "https://example.com/news.json",
+      itemUrlTemplate: "https://example.com/news/{id}", trustLevel: "official" as const,
+      cadenceProfile: "local" as const, pollIntervalMin: 720, etag: null, lastModified: null, cursor: null,
     };
     const items = await normalizeSource(JSON.stringify([{ uniqueId: 42, title: "活动决定" }]), "application/json", source);
     expect(items[0].canonicalUrl).toBe("https://example.com/news/42");
   });
 
   test("extracts nested CMS rows with millisecond timestamps", async () => {
-    const jsonSource = { ...source, url: "https://example.com/api/news/list", source_type: "official_json" };
+    const jsonSource = { ...source, url: "https://example.com/api/news/list", sourceType: "official_json" };
     const items = await normalizeSource(JSON.stringify({ data: { rows: [{
       id: 4166,
       title: "第6话转发活动",
@@ -176,10 +176,10 @@ describe("source normalization", () => {
 
   test("extracts a named official news collection and builds detail URLs from record IDs", async () => {
     const source = {
-      id: "official-news-api", anime_id: "anime", anime_title: "作品", source_type: "official_json",
-      change_kind: "feed_candidate" as const, label: "公式 NEWS", url: "https://example.com/api/site-data/init",
-      item_url_template: "https://example.com/news/{id}/", trust_level: "official" as const,
-      cadence_profile: "local" as const, poll_interval_min: 720, etag: null, last_modified: null, cursor: null,
+      id: "official-news-api", animeId: "anime", animeTitle: "作品", sourceType: "official_json",
+      changeKind: "feed_candidate" as const, label: "公式 NEWS", url: "https://example.com/api/site-data/init",
+      itemUrlTemplate: "https://example.com/news/{id}/", trustLevel: "official" as const,
+      cadenceProfile: "local" as const, pollIntervalMin: 720, etag: null, lastModified: null, cursor: null,
     };
     const items = await normalizeSource(JSON.stringify({ news: [{
       id: "20260809_879",
@@ -210,8 +210,8 @@ describe("source normalization", () => {
     }));
     const items = await normalizeSource(JSON.stringify(archive), "application/json", {
       ...source,
-      source_type: "official_json",
-      item_url_template: "https://example.com/news/?id={id}",
+      sourceType: "official_json",
+      itemUrlTemplate: "https://example.com/news/?id={id}",
     });
 
     expect(items).toHaveLength(73);
@@ -224,7 +224,7 @@ describe("source normalization", () => {
       <article id="news-1"><time>2026.08.11</time><h3>新视觉公开</h3></article>
     `, "text/html", {
       ...source,
-      source_type: "official_page",
+      sourceType: "official_page",
     });
 
     expect(items).toHaveLength(1);
@@ -232,7 +232,7 @@ describe("source normalization", () => {
   });
 
   test("ignores volatile Bangumi popularity metrics but keeps catalog changes", async () => {
-    const bangumiSource = { ...source, source_type: "bangumi", url: "https://api.bgm.tv/v0/subjects/42" };
+    const bangumiSource = { ...source, sourceType: "bangumi", url: "https://api.bgm.tv/v0/subjects/42" };
     const base = {
       id: 42,
       name: "作品",

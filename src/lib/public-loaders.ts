@@ -1,13 +1,7 @@
 import { createIsomorphicFn } from "@tanstack/react-start";
-import type {
-  AnimePageResponse,
-  CalendarResponse,
-  CatalogResponse,
-  FeedResponse,
-  SeasonsResponse,
-} from "@/domain";
+import type { AnimePageResponse } from "@/domain";
 import type { ServerRequestContext } from "@/server-context";
-import { apiRequest } from "./api";
+import { apiClient, rpcData } from "./api";
 
 export type PublicLoadContext = { serverContext?: ServerRequestContext };
 
@@ -27,7 +21,7 @@ function database(context: PublicLoadContext) {
 export const loadHomeData = createIsomorphicFn()
   .server(async (input: PublicLoadContext & { seasonSlug?: string }) => {
     const renderedAt = new Date().toISOString();
-    const repository = await import("@worker/repositories/catalog");
+    const repository = await import("~/repositories/catalog");
     const catalog = input.seasonSlug
       ? await repository.readCatalogForSeason(database(input), input.seasonSlug)
       : await repository.readCatalog(database(input));
@@ -37,7 +31,7 @@ export const loadHomeData = createIsomorphicFn()
       viewerTimeZone: input.serverContext?.viewerTimeZone ?? "Asia/Tokyo",
       renderedAt,
     };
-    const { readFeed } = await import("@worker/repositories/feed");
+    const { readFeed } = await import("~/repositories/feed");
     return {
       catalog,
       feed: await readFeed(database(input), { limit: 6 }),
@@ -46,30 +40,30 @@ export const loadHomeData = createIsomorphicFn()
     };
   })
   .client(async (input: PublicLoadContext & { seasonSlug?: string }) => ({
-    catalog: await apiRequest<CatalogResponse>(input.seasonSlug
-      ? `/api/seasons/${encodeURIComponent(input.seasonSlug)}`
-      : "/api/catalog"),
-    feed: input.seasonSlug ? null : await apiRequest<FeedResponse>("/api/feed?limit=6"),
+    catalog: await (input.seasonSlug
+      ? rpcData(apiClient.api.seasons[":slug"].$get({ param: { slug: input.seasonSlug } }))
+      : rpcData(apiClient.api.catalog.$get())),
+    feed: input.seasonSlug ? null : await rpcData(apiClient.api.feed.$get({ query: { limit: "6" } })),
     viewerTimeZone: browserTimeZone(),
     renderedAt: new Date().toISOString(),
   }));
 
 export const loadCalendarData = createIsomorphicFn()
   .server(async (input: PublicLoadContext & { seasonSlug?: string }) => {
-    const repository = await import("@worker/repositories/catalog");
+    const repository = await import("~/repositories/catalog");
     return input.seasonSlug
       ? repository.readCalendarForSeason(database(input), input.seasonSlug)
       : repository.readCalendar(database(input));
   })
-  .client((input: PublicLoadContext & { seasonSlug?: string }) => apiRequest<CalendarResponse>(input.seasonSlug
-    ? `/api/seasons/${encodeURIComponent(input.seasonSlug)}/calendar`
-    : "/api/calendar"));
+  .client((input: PublicLoadContext & { seasonSlug?: string }) => input.seasonSlug
+    ? rpcData(apiClient.api.seasons[":slug"].calendar.$get({ param: { slug: input.seasonSlug } }))
+    : rpcData(apiClient.api.calendar.$get()));
 
 export const loadFeedData = createIsomorphicFn()
   .server(async (input: PublicLoadContext) => {
     const [{ readFeed }, { readCatalog }] = await Promise.all([
-      import("@worker/repositories/feed"),
-      import("@worker/repositories/catalog"),
+      import("~/repositories/feed"),
+      import("~/repositories/catalog"),
     ]);
     const [feed, catalog] = await Promise.all([
       readFeed(database(input), { limit: 20 }),
@@ -78,23 +72,23 @@ export const loadFeedData = createIsomorphicFn()
     return { feed, catalog };
   })
   .client(async () => ({
-    feed: await apiRequest<FeedResponse>("/api/feed?limit=20"),
-    catalog: await apiRequest<CatalogResponse>("/api/catalog"),
+    feed: await rpcData(apiClient.api.feed.$get({ query: { limit: "20" } })),
+    catalog: await rpcData(apiClient.api.catalog.$get()),
   }));
 
 export const loadAnimeData = createIsomorphicFn()
   .server(async (input: PublicLoadContext & { slug: string }): Promise<AnimePageResponse> => {
-    const { readAnimePage } = await import("@worker/repositories/detail");
+    const { readAnimePage } = await import("~/application/public/service");
     const page = await readAnimePage(database(input), input.slug);
     if (!page) throw new Error("没有找到这部动画。");
     return page;
   })
   .client((input: PublicLoadContext & { slug: string }) =>
-    apiRequest<AnimePageResponse>(`/api/anime/${encodeURIComponent(input.slug)}`));
+    rpcData(apiClient.api.anime[":slug"].$get({ param: { slug: input.slug } })));
 
 export const loadSeasonsData = createIsomorphicFn()
   .server(async (input: PublicLoadContext) => {
-    const { readSeasons } = await import("@worker/repositories/catalog");
+    const { readSeasons } = await import("~/repositories/catalog");
     return readSeasons(database(input));
   })
-  .client(() => apiRequest<SeasonsResponse>("/api/seasons"));
+  .client(() => rpcData(apiClient.api.seasons.$get()));

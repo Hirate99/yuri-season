@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { redirectPublicAdmin } from "@/server/admin-boundary";
+import { redirectPublicAdmin } from "~/platform/admin-boundary";
 
 const publicEnv = {
   DEPLOYMENT_ROLE: "public",

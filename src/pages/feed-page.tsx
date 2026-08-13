@@ -41,15 +41,16 @@ export function FeedPage({ initialPage, catalog }: { initialPage: FeedResponse; 
   const [query, setQuery] = useState("");
   const [animeSlug, setAnimeSlug] = useState("");
   const debouncedQuery = useDebouncedValue(query, 250);
-  const endpoint = useMemo(() => {
-    const search = new URLSearchParams({ limit: "20" });
-    if (debouncedQuery.trim()) search.set("q", debouncedQuery.trim());
-    if (animeSlug) search.set("anime", animeSlug);
+  const feedQuery = useMemo(() => {
     const selectedFilter = filters.find((item) => item.value === filter);
-    if (selectedFilter?.classes.length) search.set("classes", selectedFilter.classes.join(","));
-    return `/api/feed?${search.toString()}`;
+    return {
+      limit: "20",
+      q: debouncedQuery.trim() || undefined,
+      anime: animeSlug || undefined,
+      classes: selectedFilter?.classes.length ? selectedFilter.classes.join(",") : undefined,
+    };
   }, [animeSlug, debouncedQuery, filter]);
-  const feed = useCursorFeed(endpoint, initialPage);
+  const feed = useCursorFeed(feedQuery, initialPage);
 
   return (
     <div className={page}>

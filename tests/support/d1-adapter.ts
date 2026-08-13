@@ -32,6 +32,15 @@ class TestStatement {
     const result = this.database.query(this.sql).run(...this.bindings as SQLQueryBindings[]);
     return Promise.resolve({ success: true, meta: { changes: result.changes } });
   }
+
+  batchResult() {
+    if (/^\s*(?:SELECT|WITH|PRAGMA|EXPLAIN)\b/i.test(this.sql)) {
+      const results = this.database.query(this.sql).all(...this.bindings as SQLQueryBindings[]);
+      return { results, success: true, meta: { changes: 0 } };
+    }
+    const result = this.database.query(this.sql).run(...this.bindings as SQLQueryBindings[]);
+    return { results: [], success: true, meta: { changes: result.changes } };
+  }
 }
 
 export class TestD1 {
@@ -49,8 +58,8 @@ export class TestD1 {
 
   async batch(statements: D1PreparedStatement[]) {
     const results = this.sqlite.transaction(() => statements.map((statement) =>
-      (statement as unknown as TestStatement).run()))();
-    return Promise.all(results);
+      (statement as unknown as TestStatement).batchResult()))();
+    return results;
   }
 
   exec(sql: string): void {

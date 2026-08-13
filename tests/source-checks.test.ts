@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { parseSourceChecks } from "../worker/api/source-check-input";
-import { recordSourceChecks } from "../worker/repositories/source-checks";
+import { parseSourceChecks } from "~/http/input/source-check-input";
+import { recordSourceChecks } from "~/repositories/source-checks";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;

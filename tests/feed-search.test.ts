@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { readFeed } from "../worker/repositories/feed";
+import { readFeed } from "~/repositories/feed";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;
@@ -53,5 +53,17 @@ describe("feed search", () => {
 
   test("rejects malformed feed cursors", async () => {
     await expect(readFeed(database.binding(), { cursor: "not-a-cursor" })).rejects.toMatchObject({ status: 400 });
+  });
+
+  test("keeps feed query count constant across page sizes", async () => {
+    database.resetMetrics();
+    await readFeed(database.binding(), { limit: 1 });
+    const singleItemQueries = database.preparedStatements;
+
+    database.resetMetrics();
+    await readFeed(database.binding(), { limit: 80 });
+
+    expect(database.preparedStatements).toBe(singleItemQueries);
+    expect(singleItemQueries).toBe(1);
   });
 });

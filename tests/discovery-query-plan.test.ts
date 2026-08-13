@@ -351,6 +351,32 @@ describe("discovery query planning", () => {
       && query.targetKey.startsWith("account:official-"))).toBe(false);
   });
 
+  test("monitors verified 2.5D project personas daily without requiring a title match", () => {
+    const monitoredResources: AdminAnimeResources = {
+      ...resources,
+      cast: resources.cast.map((item) => ({
+        ...item,
+        personName: item.characterName,
+        personNameNative: item.characterNameNative,
+      })),
+      accounts: [{
+        id: "account-persona-x", ownerType: "person", ownerId: "person-1", ownerLabel: "Project Persona",
+        platform: "X", handle: "@project_persona", url: "https://x.com/project_persona", verified: true,
+        monitorMode: "local", verificationSourceUrl: "https://example.com/project-member", verifiedAt: "2026-08-11T00:00:00Z",
+      }],
+    };
+    const queries = buildDiscoveryPlan({
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime],
+      resources: { "anime-1": monitoredResources }, memory: [], memoryHits: [],
+      now: new Date("2026-08-11T20:00:00Z"), force: false, limit: 100,
+    });
+    const query = queries.find((item) => item.accountId === "account-persona-x");
+    expect(query).toMatchObject({ cadenceDays: 1, priority: 4, contentLane: "cast" });
+    expect(query?.queryText).toContain("X account timeline: https://x.com/project_persona");
+    expect(query?.queryText).toContain("public professional or creative activity");
+    expect(query?.queryText).not.toContain(anime.titleJa);
+  });
+
   test("skips account discovery when monitoring is disabled or a feed source exists", () => {
     const monitoredResources: AdminAnimeResources = {
       ...resources,

@@ -178,9 +178,11 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
       const prior = remembered.get(memoryKey(target.scopeType, target.scopeId, "social", target.targetKey));
       add({ ...target, animeId: anime.id, animeTitle: anime.titleZh,
         searchKind: "social",
-        queryText: accountUpdateQuery(account, titleJa, prior?.searchedAt ?? null, input.now),
-        cadenceDays: 7,
-        reason: "检查已验证账号的作品相关新帖；只接受明确关联作品、角色、集数或活动的原始帖" });
+        queryText: accountUpdateQuery(account, titleJa, prior?.searchedAt ?? null, input.now, target.projectPersona),
+        cadenceDays: target.projectPersona ? 1 : 7,
+        reason: target.projectPersona
+          ? "增量检查已验证的 2.5D 主角组成员／企划人格账号；收录企划、动画及公开职业或创作动态，排除纯日常、无关广告抽奖和仅转发"
+          : "检查已验证账号的作品相关新帖；只接受明确关联作品、角色、集数或活动的原始帖" });
     }
     add({ ...common, searchKind: "media", targetKey: "media:creator-art",
       queryText: `\"${titleJa}\" 描き下ろし 応援イラスト`, priority: 4, cadenceDays: 7,

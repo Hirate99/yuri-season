@@ -37,3 +37,4 @@ for (const sourceUrl of sourceUrls) {
 
   console.log(JSON.stringify({ sourceUrl, status: response.status, bytes: body.length, assets, contexts }, null, 2));
 }
+export {};

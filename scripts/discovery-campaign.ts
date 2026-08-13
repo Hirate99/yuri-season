@@ -49,7 +49,7 @@ async function lease(): Promise<void> {
   const platforms = optionValues(arguments_, "platform");
   const kinds = optionValues(arguments_, "kind");
   const queries = leaseCampaignQueries(campaign, batchLimit(positionalLimit), new Date(), (query) =>
-    (!platforms || (query.platform && platforms.has(query.platform.toLowerCase())))
+    (!platforms || Boolean(query.platform && platforms.has(query.platform.toLowerCase())))
     && (!kinds || kinds.has(query.searchKind.toLowerCase())));
   await saveCampaign(campaign);
   process.stdout.write(JSON.stringify({
@@ -80,16 +80,16 @@ async function record(path: string | undefined): Promise<void> {
 async function cancel(scopeType: string | undefined, scopeId: string | undefined, reason: string | undefined): Promise<void> {
   if (!scopeType || !scopeId) throw new Error("scope type and scope id are required");
   const campaign = await loadCampaign();
-  const cancelled = cancelCampaignQueries(
+  const cancelledNow = cancelCampaignQueries(
     campaign,
     scopeType,
     scopeId,
     reason?.trim() || "scope removed",
     new Date(),
   );
-  if (cancelled === 0) throw new Error(`no unfinished queries matched ${scopeType}:${scopeId}`);
+  if (cancelledNow === 0) throw new Error(`no unfinished queries matched ${scopeType}:${scopeId}`);
   await saveCampaign(campaign);
-  process.stdout.write(JSON.stringify({ cancelled, ...campaignSummary(campaign) }, null, 2));
+  process.stdout.write(JSON.stringify({ ...campaignSummary(campaign), cancelledNow }, null, 2));
 }
 
 const command = process.argv[2] ?? "status";

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FileJson2, Upload } from "lucide-react";
-import type { BatchResult } from "@/domain";
-import { apiRequest } from "@/lib/api";
+import type { ResearchBatch } from "@/domain";
+import { apiClient, rpcData } from "@/lib/api";
 import { primaryButton } from "@/lib/ui";
 
 export function BatchImporter({ onImported }: { onImported: () => void }) {
@@ -12,8 +12,8 @@ export function BatchImporter({ onImported }: { onImported: () => void }) {
     if (!file) return;
     setBusy(true); setMessage(null);
     try {
-      const body: unknown = JSON.parse(await file.text());
-      const result = await apiRequest<BatchResult>("/api/admin/batches", { method: "POST", body });
+      const body = JSON.parse(await file.text()) as ResearchBatch;
+      const result = await rpcData(apiClient.api.admin.batches.$post({ json: body }));
       setMessage(result.duplicate ? "这个批次已经导入过，没有重复写入。" : `已写入 ${result.observations} 条观察；发布 ${result.published}，待复核 ${result.held}。`);
       onImported();
     } catch (error) {

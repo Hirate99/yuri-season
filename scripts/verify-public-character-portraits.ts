@@ -1,8 +1,6 @@
-type PublicAnimeDetail = {
-  anime: {
-    cast: Array<{ portraitUrl: string | null }>;
-  };
-};
+import { createApiClient, rpcData } from "@/lib/rpc";
+
+const publicApi = createApiClient("https://i-yuri.com");
 
 const checks = [
   { slug: "dodge-danko", expectedPortraits: 7, style: "object-position:50% 20%" },
@@ -12,10 +10,10 @@ const checks = [
 const results = await Promise.all(checks.map(async (check) => {
   const [pageResponse, apiResponse] = await Promise.all([
     fetch(`https://i-yuri.com/anime/${check.slug}`),
-    fetch(`https://i-yuri.com/api/anime/${check.slug}`),
+    publicApi.api.anime[":slug"].$get({ param: { slug: check.slug } }),
   ]);
   const page = await pageResponse.text();
-  const detail = await apiResponse.json() as PublicAnimeDetail;
+  const detail = await rpcData(apiResponse);
   return {
     slug: check.slug,
     pageStatus: pageResponse.status,

@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type DependencyList } from "react";
+
+export { apiClient, createApiClient, rpcData } from "./rpc";
 
 type ApiState<T> = {
   data: T | null;
@@ -6,54 +8,27 @@ type ApiState<T> = {
   loading: boolean;
 };
 
-async function errorMessage(response: Response): Promise<string> {
-  try {
-    const value = await response.json() as { message?: string };
-    return value.message ?? `请求失败（${response.status}）`;
-  } catch {
-    return `请求失败（${response.status}）`;
-  }
-}
-
-export async function apiRequest<T>(path: string, options: {
-  method?: string;
-  body?: unknown;
-  signal?: AbortSignal;
-} = {}): Promise<T> {
-  const headers = new Headers({ accept: "application/json" });
-  if (options.body !== undefined) headers.set("content-type", "application/json");
-  const response = await fetch(path, {
-    method: options.method ?? "GET",
-    headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    signal: options.signal,
-  });
-  if (!response.ok) throw new Error(await errorMessage(response));
-  if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
-}
-
-export function useApi<T>(path: string | null) {
+export function useApi<T>(load: (signal: AbortSignal) => Promise<T>, dependencies: DependencyList) {
   const [version, setVersion] = useState(0);
-  const [state, setState] = useState<ApiState<T>>({ data: null, error: null, loading: Boolean(path) });
+  const [state, setState] = useState<ApiState<T>>({ data: null, error: null, loading: true });
   const reload = useCallback(() => setVersion((value) => value + 1), []);
 
   useEffect(() => {
-    if (!path) {
-      setState({ data: null, error: null, loading: false });
-      return;
-    }
     const controller = new AbortController();
     setState((current) => ({ ...current, error: null, loading: true }));
-    apiRequest<T>(path)
+    load(controller.signal)
       .then((data) => {
         if (!controller.signal.aborted) setState({ data, error: null, loading: false });
       })
       .catch((error: unknown) => {
-        if (!controller.signal.aborted) setState({ data: null, error: error instanceof Error ? error.message : String(error), loading: false });
+        if (!controller.signal.aborted) {
+          setState({ data: null, error: error instanceof Error ? error.message : String(error), loading: false });
+        }
       });
     return () => controller.abort();
-  }, [path, version]);
+    // Callers explicitly declare the values captured by their RPC request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...dependencies, version]);
 
   return { ...state, reload };
 }

@@ -1,6 +1,6 @@
 import type { LocalJobCompletion, LocalJobLease } from "@/domain";
-import { adminHeaders } from "./lib/admin-headers";
-import { requiredResearchEnv } from "./lib/research-env";
+import { rpcData } from "@/lib/rpc";
+import { adminApi } from "./lib/admin-dashboard";
 
 type StoredLease = LocalJobLease & { completionKey: string };
 
@@ -15,20 +15,6 @@ function leasePath(id: string): string {
   return `${leaseDirectory}/${id}.json`;
 }
 
-async function request<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  const baseUrl = requiredResearchEnv("YURI_RADAR_URL").replace(/\/$/, "");
-  const response = await fetch(`${baseUrl}${path}`, {
-    method: "POST",
-    headers: adminHeaders(requiredResearchEnv("YURI_ADMIN_TOKEN"), {
-      "content-type": "application/json; charset=utf-8",
-    }),
-    body: JSON.stringify(body),
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`job API returned ${response.status}: ${text.slice(0, 500)}`);
-  return JSON.parse(text) as T;
-}
-
 async function loadLease(id: string): Promise<StoredLease> {
   const file = Bun.file(leasePath(id));
   if (!await file.exists()) throw new Error(`no local lease for ${id}`);
@@ -38,7 +24,7 @@ async function loadLease(id: string): Promise<StoredLease> {
 async function lease(): Promise<void> {
   const owner = process.env.YURI_AGENT_ID?.trim() || "codex-local";
   const limitValue = Number(process.argv[3] ?? 1);
-  const { jobs } = await request<{ jobs: LocalJobLease[] }>("/api/admin/jobs/lease", { owner, limit: limitValue });
+  const { jobs } = await rpcData(adminApi().api.admin.jobs.lease.$post({ json: { owner, limit: limitValue } }));
   for (const job of jobs) {
     const stored: StoredLease = { ...job, completionKey: `complete-${crypto.randomUUID()}` };
     await Bun.write(leasePath(job.id), JSON.stringify(stored, null, 2));
@@ -51,10 +37,10 @@ async function lease(): Promise<void> {
 
 async function heartbeat(id: string): Promise<void> {
   const stored = await loadLease(id);
-  const result = await request<{ id: string; status: string; leaseUntil: string }>(
-    `/api/admin/jobs/${encodeURIComponent(id)}/heartbeat`,
-    { leaseToken: stored.leaseToken },
-  );
+  const result = await rpcData(adminApi().api.admin.jobs[":id"].heartbeat.$post({
+    param: { id },
+    json: { leaseToken: stored.leaseToken },
+  }));
   await Bun.write(leasePath(id), JSON.stringify({ ...stored, leaseUntil: result.leaseUntil }, null, 2));
   process.stdout.write(JSON.stringify(result, null, 2));
 }
@@ -64,14 +50,17 @@ async function finish(id: string, outcome: "completed" | "partial" | "failed"): 
   const runId = outcome === "failed" ? null : process.argv[4]?.trim() || null;
   const message = outcome === "failed" ? process.argv.slice(4).join(" ").trim() : null;
   if (outcome === "failed" && !message) throw new Error("failure message is required");
-  const result = await request<LocalJobCompletion>(`/api/admin/jobs/${encodeURIComponent(id)}/complete`, {
-    leaseToken: stored.leaseToken,
-    idempotencyKey: stored.completionKey,
-    outcome,
-    runId,
-    message,
-    result: { jobType: stored.jobType, finishedBy: process.env.YURI_AGENT_ID?.trim() || "codex-local" },
-  });
+  const result = await rpcData(adminApi().api.admin.jobs[":id"].complete.$post({
+    param: { id },
+    json: {
+      leaseToken: stored.leaseToken,
+      idempotencyKey: stored.completionKey,
+      outcome,
+      runId,
+      message,
+      result: { jobType: stored.jobType, finishedBy: process.env.YURI_AGENT_ID?.trim() || "codex-local" },
+    },
+  }));
   await Bun.file(leasePath(id)).delete();
   process.stdout.write(JSON.stringify(result, null, 2));
 }

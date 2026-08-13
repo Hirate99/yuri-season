@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { applyReviewPolicy } from "../worker/research/policy";
-import type { LlmReview, ReviewContext } from "../worker/research/types";
+import { applyReviewPolicy } from "~/research/policy";
+import type { LlmReview, ReviewContext } from "~/research/types";
 
 const context: ReviewContext = {
   candidateId: "candidate-1",

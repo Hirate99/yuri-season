@@ -13,7 +13,7 @@ import { PublicationList } from "@/features/admin/publication-list";
 import { AuditTrail } from "@/features/admin/audit-trail";
 import { SearchMemoryMonitor } from "@/features/admin/search-memory-monitor";
 import { CoveragePanel } from "@/features/admin/coverage-panel";
-import { apiRequest, useApi } from "@/lib/api";
+import { apiClient, rpcData, useApi } from "@/lib/api";
 
 type ReviewView = "inbox" | "published";
 type AutomationView = "runs" | "search" | "sources" | "import";
@@ -24,23 +24,35 @@ export function AdminPage() {
   const [automationView, setAutomationView] = useState<AutomationView>("runs");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const dashboard = useApi<AdminDashboard>("/api/admin/dashboard");
+  const dashboard = useApi<AdminDashboard>((signal) =>
+    rpcData(apiClient.api.admin.dashboard.$get({}, { init: { signal } })), []);
 
   const decide = async (id: string, decision: ReviewDecision, reason?: string) => {
     setBusyId(id); setActionError(null);
-    try { await apiRequest(`/api/admin/candidates/${id}/decision`, { method: "POST", body: { decision, reason } }); await dashboard.reload(); }
+    try {
+      await rpcData(apiClient.api.admin.candidates[":id"].decision.$post({
+        param: { id }, json: { decision, reason: reason ?? "" },
+      }));
+      await dashboard.reload();
+    }
     catch (error) { setActionError(error instanceof Error ? error.message : String(error)); }
     finally { setBusyId(null); }
   };
   const patchWork = async (id: string, patch: AnimePatch) => {
     setBusyId(id); setActionError(null);
-    try { await apiRequest(`/api/admin/anime/${id}`, { method: "PATCH", body: patch }); await dashboard.reload(); }
+    try {
+      await rpcData(apiClient.api.admin.anime[":id"].$patch({ param: { id }, json: patch }));
+      await dashboard.reload();
+    }
     catch (error) { setActionError(error instanceof Error ? error.message : String(error)); }
     finally { setBusyId(null); }
   };
   const createWork = async (value: AnimeCreate) => {
     setBusyId("new-work"); setActionError(null);
-    try { await apiRequest("/api/admin/anime", { method: "POST", body: value }); await dashboard.reload(); }
+    try {
+      await rpcData(apiClient.api.admin.anime.$post({ json: value }));
+      await dashboard.reload();
+    }
     catch (error) { setActionError(error instanceof Error ? error.message : String(error)); throw error; }
     finally { setBusyId(null); }
   };

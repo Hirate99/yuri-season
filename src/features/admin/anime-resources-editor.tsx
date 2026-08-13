@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { AdminAnimeResources, AdminAnimeSummary, AdminResourceKind, AdminResourceWrite } from "@/domain";
 import { EmptyState, LoadingRows } from "@/components/empty-state";
-import { apiRequest, useApi } from "@/lib/api";
+import { apiClient, rpcData, useApi } from "@/lib/api";
 import { AccountsEditor } from "./accounts-editor";
 import { BroadcastsEditor } from "./broadcasts-editor";
 import { CastEditor } from "./cast-editor";
@@ -26,8 +26,9 @@ export function AnimeResourcesEditor({ animeId, anime, group, onChanged }: {
   group: ResourceGroup;
   onChanged: () => void;
 }) {
-  const endpoint = `/api/admin/anime/${encodeURIComponent(animeId)}/resources`;
-  const resources = useApi<AdminAnimeResources>(endpoint);
+  const resources = useApi<AdminAnimeResources>((signal) => rpcData(
+    apiClient.api.admin.anime[":id"].resources.$get({ param: { id: animeId } }, { init: { signal } }),
+  ), [animeId]);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,12 +37,17 @@ export function AnimeResourcesEditor({ animeId, anime, group, onChanged }: {
     setBusyKey(key);
     setError(null);
     try {
-      await apiRequest(id
-        ? `${endpoint}/${kind}/${encodeURIComponent(id)}`
-        : endpoint, {
-        method: id ? "PATCH" : "POST",
-        body: id ? value : { kind, value },
-      });
+      if (id) {
+        await rpcData(apiClient.api.admin.anime[":animeId"].resources[":kind"][":id"].$patch({
+          param: { animeId, kind, id },
+          json: value,
+        }));
+      } else {
+        await rpcData(apiClient.api.admin.anime[":id"].resources.$post({
+          param: { id: animeId },
+          json: { kind, value } as AdminResourceWrite,
+        }));
+      }
       resources.reload();
       onChanged();
     } catch (cause) {
@@ -57,10 +63,7 @@ export function AnimeResourcesEditor({ animeId, anime, group, onChanged }: {
     setBusyKey(key);
     setError(null);
     try {
-      await apiRequest(`/api/admin/discussions/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        body: { reason },
-      });
+      await rpcData(apiClient.api.admin.discussions[":id"].$delete({ param: { id }, json: { reason } }));
       resources.reload();
       onChanged();
     } catch (cause) {
@@ -80,7 +83,9 @@ export function AnimeResourcesEditor({ animeId, anime, group, onChanged }: {
     setBusyKey(key);
     setError(null);
     try {
-      await apiRequest(`${endpoint}/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" });
+      await rpcData(apiClient.api.admin.anime[":animeId"].resources[":kind"][":id"].$delete({
+        param: { animeId, kind, id },
+      }));
       resources.reload();
       onChanged();
     } catch (cause) {

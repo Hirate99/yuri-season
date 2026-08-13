@@ -1,5 +1,5 @@
 import type { AdminAnimeResources } from "@/domain";
-import { fetchAdminDashboard, fetchAdminJson } from "./lib/admin-dashboard";
+import { fetchAdminDashboard, fetchAdminResources } from "./lib/admin-dashboard";
 
 const dashboard = await fetchAdminDashboard();
 const currentSeasonIds = new Set(dashboard.seasons.filter((season) => season.isCurrent).map((season) => season.id));
@@ -7,9 +7,7 @@ const anime = dashboard.anime.filter((item) => currentSeasonIds.has(item.seasonI
 const rows = [];
 
 for (const item of anime) {
-  const resources = await fetchAdminJson<AdminAnimeResources>(
-    `/api/admin/anime/${encodeURIComponent(item.id)}/resources`,
-  );
+  const resources = await fetchAdminResources(item.id);
   for (const cast of resources.cast.filter((credit) => credit.isMainGroup)) {
     rows.push({
       animeId: item.id,

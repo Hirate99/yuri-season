@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { syncSourceJob } from "../worker/research/pipeline";
-import type { UpdateJobRow } from "../worker/research/types";
+import { syncSourceJob } from "~/research/pipeline";
+import type { UpdateJobRow } from "~/research/types";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;

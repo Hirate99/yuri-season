@@ -1,5 +1,5 @@
 import type { AdminAnimeResources, SearchMemoryWrite } from "@/domain";
-import { fetchAdminDashboard, fetchAdminJson } from "./lib/admin-dashboard";
+import { fetchAdminDashboard, fetchAdminResources } from "./lib/admin-dashboard";
 import { rememberSearchRecords } from "./lib/search-memory-client";
 
 type AuditScope = { officialUrl: string; checkedLayers: string };
@@ -60,7 +60,7 @@ const records: SearchMemoryWrite[] = [];
 
 for (const anime of dashboard.anime) {
   if (!auditScopes[anime.id]) continue;
-  const resources = await fetchAdminJson<AdminAnimeResources>(`/api/admin/anime/${encodeURIComponent(anime.id)}/resources`);
+  const resources = await fetchAdminResources(anime.id);
   for (const cast of resources.cast.filter((item) => item.isMainGroup)) records.push(auditRecord(anime.id, cast, searchedAt));
 }
 

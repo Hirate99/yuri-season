@@ -1,4 +1,4 @@
-import type { SourceTransport } from "../../worker/research/types";
+import type { SourceTransport } from "~/research/types";
 
 type DnsJson = {
   Status: number;
@@ -78,7 +78,7 @@ async function fetchWithResolvedAddress(url: string, init: RequestInit): Promise
   ]);
   if (exitCode !== 0) throw new Error(`DNS fallback failed: ${stderr.trim() || `curl exit ${exitCode}`}`);
   const parsed = responseParts(new Uint8Array(stdoutBuffer));
-  const body = parsed.status === 204 || parsed.status === 304 ? null : parsed.body;
+  const body = parsed.status === 204 || parsed.status === 304 ? null : Uint8Array.from(parsed.body).buffer;
   return new Response(body, { status: parsed.status, headers: parsed.headers });
 }
 

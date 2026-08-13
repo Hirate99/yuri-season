@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { parseAnimeCreate, parseAnimePatch } from "../worker/api/input";
-import { createAnime, patchAnime } from "../worker/repositories/mutations";
+import { parseAnimeCreate, parseAnimePatch } from "~/http/input/anime-input";
+import { createAnime, patchAnime } from "~/repositories/anime/write";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;

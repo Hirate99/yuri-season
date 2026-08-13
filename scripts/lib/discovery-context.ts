@@ -4,7 +4,7 @@ import type {
   SearchMemoryHitSummary,
   SearchMemorySummary,
 } from "@/domain";
-import { fetchAdminDashboard, fetchAdminJson } from "./admin-dashboard";
+import { fetchAdminDashboard, fetchAdminResources, fetchSearchMemory } from "./admin-dashboard";
 import { mapConcurrent } from "./map-concurrent";
 
 export type DiscoveryContext = {
@@ -19,11 +19,9 @@ export async function fetchDiscoveryContext(): Promise<DiscoveryContext> {
   const [resourcePairs, memory] = await Promise.all([
     mapConcurrent(dashboard.anime, 4, async (anime) => [
       anime.id,
-      await fetchAdminJson<AdminAnimeResources>(`/api/admin/anime/${encodeURIComponent(anime.id)}/resources`),
+      await fetchAdminResources(anime.id),
     ] as const),
-    fetchAdminJson<{ records: SearchMemorySummary[]; hits?: SearchMemoryHitSummary[] }>(
-      "/api/admin/research/memory?includeHits=1",
-    ),
+    fetchSearchMemory(true),
   ]);
   return {
     dashboard,

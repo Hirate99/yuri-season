@@ -1,4 +1,4 @@
-import { fetchSource } from "../worker/research/source-fetcher";
+import { fetchSource } from "~/research/source-fetcher";
 import { adminSourceRecord } from "./lib/admin-source-record";
 import { fetchAdminDashboard } from "./lib/admin-dashboard";
 import {

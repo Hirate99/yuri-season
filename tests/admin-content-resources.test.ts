@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { parseResourceWrite } from "../worker/api/resource-input";
-import { createAdminResource, deleteAdminResource, updateAdminResource } from "../worker/repositories/admin-resource-mutations";
-import { readAdminAnimeResources } from "../worker/repositories/admin-resources";
-import { readDiscussions, readMedia } from "../worker/repositories/feed";
-import { deleteDiscussionEverywhere } from "../worker/repositories/admin-discussion-mutations";
+import { parseResourceWrite } from "~/http/input/resource-input";
+import { createAdminResource, deleteAdminResource, updateAdminResource } from "~/application/admin/resources";
+import { readAdminAnimeResources } from "~/repositories/admin/resources";
+import { readDiscussions, readMedia } from "~/repositories/feed";
+import { deleteDiscussionEverywhere } from "~/repositories/admin/discussion";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { SeasonSummary, SeasonWrite } from "@/domain";
-import { apiRequest } from "@/lib/api";
+import { apiClient, rpcData } from "@/lib/api";
 import { AdminField, adminInput, formText, ResourceActions, ResourceDetails } from "./resource-form";
 
 function write(form: FormData, current = false): SeasonWrite {
@@ -44,10 +44,11 @@ export function SeasonsEditor({ seasons, onChanged }: {
     setBusyId(id ?? "new");
     setError(null);
     try {
-      await apiRequest(id ? `/api/admin/seasons/${encodeURIComponent(id)}` : "/api/admin/seasons", {
-        method: id ? "PATCH" : "POST",
-        body: value,
-      });
+      if (id) {
+        await rpcData(apiClient.api.admin.seasons[":id"].$patch({ param: { id }, json: value }));
+      } else {
+        await rpcData(apiClient.api.admin.seasons.$post({ json: value }));
+      }
       onChanged();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));

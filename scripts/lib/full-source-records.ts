@@ -1,6 +1,6 @@
 import type { SearchMemoryWrite, SourceCheckWrite } from "@/domain";
-import type { NormalizedSource } from "../../worker/research/types";
-import { stableFingerprint } from "../../worker/lib/fingerprint";
+import type { NormalizedSource } from "~/research/types";
+import { stableFingerprint } from "~/shared/fingerprint";
 
 export type FullSyncSource = {
   sourceId: string;

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { readCatalog, readCatalogForSeason, readSeasons } from "../worker/repositories/catalog";
-import { readAnimeDetail } from "../worker/repositories/detail";
-import { readAdminDashboard } from "../worker/repositories/admin";
+import { readCatalog, readCatalogForSeason, readSeasons } from "~/repositories/catalog";
+import { readAnimeDetail } from "~/repositories/detail";
+import { readAdminDashboard } from "~/application/admin/service";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;

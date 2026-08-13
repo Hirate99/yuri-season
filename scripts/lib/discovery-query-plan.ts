@@ -169,17 +169,19 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
     add({ ...common, searchKind: "media", targetKey: "media:creator-art",
       queryText: `\"${titleJa}\" 描き下ろし 応援イラスト`, priority: 4, cadenceDays: 7,
       reason: "寻找作者、Staff 或 Cast 的原始贺图与新绘发布页" });
-    const fanworkTargets = [
-      { key: "pixiv", site: "pixiv.net/artworks", label: "Pixiv" },
-      { key: "x", site: "x.com", label: "X" },
-      { key: "instagram", site: "instagram.com", label: "Instagram" },
-    ];
-    for (const target of fanworkTargets) {
-      add({ ...common, searchKind: "media", targetKey: `media:fanwork:${target.key}`,
-        queryText: `\"${titleJa}\" ファンアート site:${target.site}`, priority: 2, cadenceDays: 14,
-        platform: target.label, contentLane: "fanwork",
-        reason: `寻找 ${target.label} 原作者发布页；同人默认 link-only 并进入审核` });
-    }
+    const pixivTag = encodeURIComponent(titleJa);
+    add({ ...common, searchKind: "media", targetKey: "media:fanwork:pixiv",
+      queryText: `pixiv tag search: ${titleJa} (https://www.pixiv.net/ajax/search/artworks/${pixivTag}?word=${pixivTag}&order=date_d&mode=safe&s_mode=s_tag)`,
+      priority: 3, cadenceDays: 7, platform: "Pixiv", contentLane: "fanwork",
+      reason: "用 Pixiv 免登录公开标签接口按新序检查同人；逐条记录已见 artwork ID，只对原作者原帖建候选（默认 hold）" });
+    add({ ...common, searchKind: "media", targetKey: "media:fanwork:x",
+      queryText: `X fanart: reuse knownHits creator profiles; guest hashtag search unavailable`,
+      priority: 2, cadenceDays: 14, platform: "X", contentLane: "fanwork",
+      reason: "X 站内检索未登录不可用；复查搜索记忆中已知同人作者主页的新作品，只收原作者原帖" });
+    add({ ...common, searchKind: "media", targetKey: "media:fanwork:instagram",
+      queryText: `Instagram fanart: signed-in browser only`,
+      priority: 1, cadenceDays: 30, platform: "Instagram", contentLane: "fanwork",
+      reason: "Instagram 检索需登录；无登录浏览器时记录 blocked，不伪造线索" });
 
     const communities = [
       { key: "yamibo", site: "bbs.yamibo.com", label: "百合会", priority: 4, terms: "专楼 集中讨论" },

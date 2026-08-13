@@ -157,7 +157,7 @@ Fanwork requires an inline creator source, original creator post, and media meta
 
 ## General candidate rules
 
-Allowed content classes are `schedule`, `official_news`, `official_art`, `creator_art`, `birthday`, `cast_post`, `staff_post`, `fanwork`, `community_thread`, and `editorial`. Use `presentationMode: link_only` in phase one. Every candidate needs a review object with `decision`, `confidence`, and evidence-based reasons.
+Allowed content classes are `schedule`, `official_news`, `official_art`, `creator_art`, `cast_post`, `staff_post`, `fanwork`, `community_thread`, and `editorial`. Birthdays are never feed candidates: a verified birthday updates the character record and calendar event only; birthday-related celebration art enters the feed as `official_art` / `creator_art` (or `cast_post` for a cast birthday post) under that lane's rules. Use `presentationMode: link_only` in phase one. Every candidate needs a review object with `decision`, `confidence`, and evidence-based reasons.
 
 Structured `themeSongs` are allowed only on a registered first-party observation. `songKind` is one of `opening`, `ending`, `theme`, `insert`, or `image`. Use `theme` when the official source supplies only a generic numbered theme-song label; keep its sequence and do not infer OP/ED. Automatic writes require an official source, matching anime ID, `publish`, and confidence at least 0.92. Never overwrite a conflicting occupied slot.
 

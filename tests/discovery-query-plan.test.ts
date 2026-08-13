@@ -50,6 +50,12 @@ describe("discovery query planning", () => {
       && query.targetKey === "account:official-instagram" && query.platform === "Instagram")).toBe(true);
     expect(queries.filter((query) => query.contentLane === "fanwork").map((query) => query.platform).sort())
       .toEqual(["Instagram", "Pixiv", "X"]);
+    const pixivFanwork = queries.find((query) => query.targetKey === "media:fanwork:pixiv");
+    expect(pixivFanwork).toMatchObject({ priority: 3, cadenceDays: 7, platform: "Pixiv" });
+    expect(pixivFanwork?.queryText).toContain("pixiv tag search: 作品日本語");
+    expect(pixivFanwork?.queryText).toContain("ajax/search/artworks/");
+    expect(queries.find((query) => query.targetKey === "media:fanwork:instagram"))
+      .toMatchObject({ priority: 1, cadenceDays: 30 });
   });
 
   test("keeps Mengzhan Bar separate from an ordinary work Tieba thread", () => {

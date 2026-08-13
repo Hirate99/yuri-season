@@ -13,6 +13,10 @@ describe("research skill policy", () => {
       expect(content).toContain("first_party_source_change");
       expect(content).toContain("real ship's launch date");
       expect(content).toContain("萌战吧");
+      expect(content).toContain("AI-generated fanwork is out of scope");
+      expect(content).toContain("Require the platform AI status to be explicitly non-AI");
+      expect(content).toContain("Do not guess undocumented numeric enum meanings");
+      expect(content).toContain("do not put them into a research batch");
     });
   }
 });

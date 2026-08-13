@@ -1,4 +1,5 @@
 import { nativeStatement } from "./statement";
+import { atomicBatch } from "../transaction";
 
 export type NativeWorkerJobRow = {
   id: string;
@@ -9,6 +10,8 @@ export type NativeWorkerJobRow = {
   attempt_count: number;
   max_attempts: number;
   input_json: string;
+  research_run_id: string;
+  lease_token_hash: string;
 };
 
 export type NativeLocalLeaseRow = NativeWorkerJobRow & {
@@ -16,11 +19,18 @@ export type NativeLocalLeaseRow = NativeWorkerJobRow & {
   lease_until: string;
 };
 
-export async function leaseWorkerJob(db: D1Database, runId: string): Promise<NativeWorkerJobRow | null> {
+export async function leaseWorkerJob(
+  db: D1Database,
+  runId: string,
+  tokenHash: string,
+  leaseMinutes: number,
+): Promise<NativeWorkerJobRow | null> {
   return nativeStatement(db, `
     UPDATE update_jobs SET
-      status = 'leased', research_run_id = ?, lease_until = datetime('now', '+3 minutes'),
-      attempt_count = attempt_count + 1, updated_at = CURRENT_TIMESTAMP
+      status = 'leased', research_run_id = ?, lease_token_hash = ?,
+      lease_until = datetime('now', '+' || ? || ' minutes'),
+      last_heartbeat_at = CURRENT_TIMESTAMP,
+      attempt_count = attempt_count + 1, last_error = NULL, updated_at = CURRENT_TIMESTAMP
     WHERE id = (
       SELECT id FROM update_jobs
       WHERE status IN ('planned', 'retry') AND execution_target = 'worker'
@@ -29,8 +39,8 @@ export async function leaseWorkerJob(db: D1Database, runId: string): Promise<Nat
       ORDER BY priority DESC, scheduled_at, created_at LIMIT 1
     )
     RETURNING id, job_type, scope_type, scope_id, priority, attempt_count,
-      max_attempts, input_json
-  `).bind(runId).first<NativeWorkerJobRow>();
+      max_attempts, input_json, research_run_id, lease_token_hash
+  `).bind(runId, tokenHash, leaseMinutes).first<NativeWorkerJobRow>();
 }
 
 export async function leaseLocalJob(
@@ -53,7 +63,7 @@ export async function leaseLocalJob(
       ORDER BY priority DESC, scheduled_at, created_at LIMIT 1
     )
     RETURNING id, job_type, scope_type, scope_id, priority, attempt_count,
-      max_attempts, budget_json, input_json, lease_until
+      max_attempts, budget_json, input_json, lease_until, research_run_id, lease_token_hash
   `).bind(owner, tokenHash, leaseMinutes).first<NativeLocalLeaseRow>();
 }
 
@@ -87,9 +97,11 @@ export async function completeLocalLease(
     delayMinutes: number;
     jobId: string;
     tokenHash: string;
+    auditId: string;
+    auditDetailJson: string;
   },
 ): Promise<D1Result> {
-  return nativeStatement(db, `
+  const update = nativeStatement(db, `
     UPDATE update_jobs SET status = ?, research_run_id = COALESCE(?, research_run_id),
       lease_owner = NULL, lease_token_hash = NULL, lease_until = NULL,
       completion_key = ?, result_json = ?, last_error = ?,
@@ -108,5 +120,22 @@ export async function completeLocalLease(
     input.status,
     input.jobId,
     input.tokenHash,
-  ).run();
+  );
+  const audit = nativeStatement(db, `
+    INSERT OR IGNORE INTO audit_log (
+      id, actor_type, action, entity_type, entity_id, detail_json, created_at
+    )
+    SELECT ?, 'local_skill', 'complete_job', 'update_job', ?, ?, CURRENT_TIMESTAMP
+    WHERE EXISTS (
+      SELECT 1 FROM update_jobs WHERE id = ? AND completion_key = ? AND status = ?
+    )
+  `).bind(
+    input.auditId,
+    input.jobId,
+    input.auditDetailJson,
+    input.jobId,
+    input.idempotencyKey,
+    input.status,
+  );
+  return (await atomicBatch(db, [update, audit]))[0];
 }

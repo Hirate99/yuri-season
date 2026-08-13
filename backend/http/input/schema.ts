@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { HttpError } from "~/shared/http-error";
+import { canonicalInstant, canonicalTemporal } from "~/shared/time";
 
 export function parseWithSchema<T extends z.ZodType>(schema: T, input: unknown): z.output<T> {
   const result = schema.safeParse(input);
@@ -78,7 +79,7 @@ export function dateOnly(label: string) {
 export function offsetDateTime(label: string) {
   return requiredText(80, label).pipe(
     z.iso.datetime({ offset: true, error: `${label} 必须是带明确时区的 ISO 时间。` }),
-  );
+  ).transform(canonicalInstant);
 }
 
 export function temporal(label: string, allowDateOnly = true) {
@@ -91,7 +92,7 @@ export function temporal(label: string, allowDateOnly = true) {
   return z.preprocess(
     (value) => value === "" ? null : value,
     valueSchema.nullable(),
-  );
+  ).transform((value) => value === null ? null : canonicalTemporal(value));
 }
 
 export const jsonObject = z.record(z.string(), z.unknown());

@@ -14,7 +14,7 @@ export const resourceRoutes = new Hono<ApiEnvironment>()
       context.req.param("id"),
       context.req.valid("json"),
     );
-    invalidatePublicData(context);
+    await invalidatePublicData(context);
     return context.json({ id }, 201);
   })
   .patch(
@@ -29,7 +29,7 @@ export const resourceRoutes = new Hono<ApiEnvironment>()
         context.req.param("id"),
         context.req.valid("json"),
       );
-      invalidatePublicData(context);
+      await invalidatePublicData(context);
       return context.json({ ok: true });
     },
   )
@@ -41,6 +41,6 @@ export const resourceRoutes = new Hono<ApiEnvironment>()
       kind,
       context.req.param("id"),
     );
-    invalidatePublicData(context);
+    await invalidatePublicData(context);
     return context.body(null, 204);
   });

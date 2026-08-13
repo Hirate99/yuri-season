@@ -67,7 +67,10 @@ describe("Admin automation identity", () => {
         "cf-access-jwt-assertion": "service-token-assertion",
       },
     });
-    await expect(requireAdmin(request, { ADMIN_TOKEN: "local-agent-secret" } as Env)).resolves.toBeUndefined();
+    await expect(requireAdmin(request, { ADMIN_TOKEN: "local-agent-secret" } as Env)).resolves.toEqual({
+      kind: "automation",
+      subject: "admin-token",
+    });
   });
 
   test("rejects an invalid automation token without falling through to Access", async () => {

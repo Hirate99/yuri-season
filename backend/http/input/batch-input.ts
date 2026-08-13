@@ -13,6 +13,7 @@ import {
   optionalNullableText,
   parseWithSchema,
   requiredText,
+  temporal,
 } from "./schema";
 
 const reviewSchema = z.object({
@@ -73,7 +74,7 @@ const observationSchema = z.object({
   title: optionalNullableText(300, "title"),
   excerpt: requiredText(24_000, "excerpt"),
   authorName: optionalNullableText(200, "authorName"),
-  publishedAt: optionalNullableText(80, "publishedAt"),
+  publishedAt: temporal("publishedAt").optional(),
   contentType: requiredText(120, "contentType").optional(),
   language: optionalNullableText(40, "language"),
   metadata: jsonObject.default({}),

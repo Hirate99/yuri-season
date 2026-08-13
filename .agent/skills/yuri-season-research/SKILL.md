@@ -58,6 +58,7 @@ If a leased scope disappears before search, run `bun run research:discover:cance
 5. Extract atomic claims and match registered anime/person/character/account IDs. Do not infer identity from names alone.
 6. Review relevance, entailment, duplicate risk, source identity, safety, spoilers, attribution, and presentation separately from extraction.
 7. Create one JSON file in `research-batches/`, following `references/batch-schema.md`.
+   Before import, preflight every user-facing candidate: `title` and `summary` must be concise Chinese by default, while preserving necessary official proper nouns. Do not use English fallback copy merely to satisfy validation; stop and correct it before import.
 8. Run `bun run research:import -- <batch.json>`. The server may downgrade `publish` to `hold`; never bypass policy.
 9. After successful or duplicate-safe import run `bun run research:commit`. Keep the pending diff when import fails.
 

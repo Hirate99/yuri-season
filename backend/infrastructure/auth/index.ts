@@ -1,6 +1,12 @@
 import { HttpError } from "~/shared/http-error";
 import { verifyAccessJwt } from "./access";
 
+export type AdminPrincipal = {
+  kind: "access" | "automation";
+  subject: string;
+  email?: string;
+};
+
 const encoder = new TextEncoder();
 
 async function digest(value: string): Promise<Uint8Array> {
@@ -17,34 +23,38 @@ async function secretMatches(candidate: string, expected: string): Promise<boole
   return difference === 0;
 }
 
-async function requireAccessIdentity(assertion: string, env: Env): Promise<void> {
+async function requireAccessIdentity(assertion: string, env: Env): Promise<AdminPrincipal> {
   if (!env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD || !env.ADMIN_EMAILS) {
     throw new HttpError(503, "尚未配置 Admin 邮箱身份验证。");
   }
-  await verifyAccessJwt(assertion, {
+  const identity = await verifyAccessJwt(assertion, {
     teamDomain: env.ACCESS_TEAM_DOMAIN,
     audience: env.ACCESS_AUD,
     adminEmails: env.ADMIN_EMAILS,
   });
+  return {
+    kind: "access",
+    subject: identity.subject ?? identity.email,
+    email: identity.email,
+  };
 }
 
-async function requireAutomationToken(request: Request, env: Env): Promise<void> {
+async function requireAutomationToken(request: Request, env: Env): Promise<AdminPrincipal> {
   const authorization = request.headers.get("authorization") ?? "";
   const candidate = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   if (!env.ADMIN_TOKEN || !candidate || !(await secretMatches(candidate, env.ADMIN_TOKEN))) {
     throw new HttpError(401, "Admin 身份验证失败。");
   }
+  return { kind: "automation", subject: "admin-token" };
 }
 
-export async function requireAdmin(request: Request, env: Env): Promise<void> {
+export async function requireAdmin(request: Request, env: Env): Promise<AdminPrincipal> {
   if ((request.headers.get("authorization") ?? "").startsWith("Bearer ")) {
-    await requireAutomationToken(request, env);
-    return;
+    return requireAutomationToken(request, env);
   }
   const accessAssertion = request.headers.get("cf-access-jwt-assertion");
   if (accessAssertion) {
-    await requireAccessIdentity(accessAssertion, env);
-    return;
+    return requireAccessIdentity(accessAssertion, env);
   }
-  await requireAutomationToken(request, env);
+  return requireAutomationToken(request, env);
 }

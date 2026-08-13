@@ -15,11 +15,15 @@ const feedQuerySchema = z.object({
   q: z.string().max(120).optional(),
   anime: z.string().max(100).optional(),
   cursor: z.string().max(500).optional(),
-  classes: z.string().max(500).optional().transform((value) => value?.split(",")
-    .flatMap((item) => {
-      const result = contentClassSchema.safeParse(item);
-      return result.success ? [result.data] : [];
-    })),
+  classes: z.string().max(500).optional().transform((value, context) => {
+    if (value === undefined) return undefined;
+    const parsed = value.split(",").map((item) => contentClassSchema.safeParse(item));
+    if (parsed.some((item) => !item.success)) {
+      context.addIssue({ code: "custom", message: "classes 包含未知的内容分类。" });
+      return z.NEVER;
+    }
+    return parsed.map((item) => item.data!);
+  }),
 });
 
 type FeedQueryInput = z.input<typeof feedQuerySchema>;

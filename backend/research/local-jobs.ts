@@ -5,7 +5,6 @@ import { database } from "~/infrastructure/db/client";
 import { completeLocalLease, heartbeatLocalLease, leaseLocalJob } from "~/infrastructure/db/native/jobs";
 import { researchRunsTable, updateJobsTable } from "~/infrastructure/db/schema";
 import type { CompleteLocalJobInput } from "./types";
-import { recordAudit } from "~/repositories/audit";
 import { stableFingerprint } from "~/shared/fingerprint";
 import { HttpError } from "~/shared/http-error";
 import { createId } from "~/shared/id";
@@ -137,6 +136,7 @@ export async function completeLocalJob(
     : input.outcome;
   const delayMinutes = Math.min(360, 5 * 2 ** Math.max(0, current.attempt_count - 1));
   const resultJson = JSON.stringify(input.result);
+  const auditDetailJson = JSON.stringify({ status, runId: input.runId, message: input.message });
   const update = await completeLocalLease(db, {
     status,
     runId: input.runId,
@@ -146,6 +146,8 @@ export async function completeLocalJob(
     delayMinutes,
     jobId,
     tokenHash,
+    auditId: `audit-${await stableFingerprint(`${jobId}|${input.idempotencyKey}`)}`,
+    auditDetailJson,
   });
   if ((update.meta.changes ?? 0) === 0) {
     const latest = await readCompletion(db, jobId);
@@ -155,10 +157,5 @@ export async function completeLocalJob(
     throw new HttpError(409, "任务状态已经变化，请重新领取。");
   }
 
-  await recordAudit(db, "local_skill", "complete_job", "update_job", jobId, {
-    status,
-    runId: input.runId,
-    message: input.message,
-  });
   return { id: jobId, status, duplicate: false, runId: input.runId };
 }

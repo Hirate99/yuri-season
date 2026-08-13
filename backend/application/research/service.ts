@@ -6,6 +6,7 @@ import { recordSourceChecks } from "~/repositories/source-checks";
 import { ingestResearchBatch } from "~/research/batch";
 import { completeLocalJob, heartbeatLocalJob, leaseLocalJobs } from "~/research/local-jobs";
 import { runResearch } from "~/research/scheduler";
+import { HttpError } from "~/shared/http-error";
 
 export function createResearchService(env: Env) {
   return {
@@ -23,6 +24,11 @@ export function createResearchService(env: Env) {
       write: (input: SearchMemoryWrite[]) => rememberSearch(env.DB, input),
     },
     sources: { recordChecks: (input: SourceCheckWrite[]) => recordSourceChecks(env.DB, input) },
-    run: (lane: JobLane) => runResearch(env, lane, "admin"),
+    run: (lane: JobLane) => {
+      if (String(env.UPDATE_MODE) !== "worker") {
+        throw new HttpError(409, "当前部署使用本地研究模式，不能启动 Worker 研究任务。");
+      }
+      return runResearch(env, lane, "admin");
+    },
   };
 }

@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { database } from "~/infrastructure/db/client";
 import { researchRunsTable } from "~/infrastructure/db/schema";
 import { createId } from "~/shared/id";
-import { completeJob, failJob, leaseJobs, planSourceJobs, startJob } from "./jobs";
+import { completeJob, failJob, heartbeatJob, leaseJobs, planSourceJobs, startJob } from "./jobs";
 import { syncSourceJob } from "./pipeline";
 import type { JobLane, RunCounters } from "./types";
 
@@ -54,17 +54,32 @@ export async function runResearch(
   try {
     const planned = await planSourceJobs(env.DB, lane, limits[lane].planned);
     const jobs = await leaseJobs(env.DB, runId, limits[lane].leased);
-    for (const job of jobs) {
+    const outcomes = await Promise.all(jobs.map(async (job) => {
       await startJob(env.DB, job);
       try {
         if (job.job_type !== "sync_source") throw new Error(`unsupported worker job ${job.job_type}`);
-        const outcome = await syncSourceJob(env, job);
-        addCounters(counters, outcome.counters);
+        const outcome = await syncSourceJob(env, job, undefined, () => heartbeatJob(env.DB, job));
         await completeJob(env.DB, job, outcome.partial);
+        return { counters: outcome.counters, error: null };
       } catch (error) {
-        errors.push(error instanceof Error ? error.message : String(error));
-        await failJob(env.DB, job, error);
+        try {
+          await failJob(env.DB, job, error);
+        } catch (leaseError) {
+          console.warn(JSON.stringify({
+            message: "worker job could not be failed after losing its lease",
+            jobId: job.id,
+            error: leaseError instanceof Error ? leaseError.message : String(leaseError),
+          }));
+        }
+        return {
+          counters: null,
+          error: error instanceof Error ? error.message : String(error),
+        };
       }
+    }));
+    for (const outcome of outcomes) {
+      if (outcome.counters) addCounters(counters, outcome.counters);
+      if (outcome.error) errors.push(outcome.error);
     }
 
     const status = errors.length > 0 && counters.sources === 0 ? "failed" : jobs.length === 0 ? "skipped" : "completed";

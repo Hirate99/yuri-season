@@ -5,8 +5,9 @@ import { peopleTable, workCreditsTable } from "~/infrastructure/db/schema";
 import { HttpError } from "~/shared/http-error";
 import { createId } from "~/shared/id";
 import { personForWrite, personInsert } from "./resource-context";
+import type { ResourceAudit } from "./resource-write";
 
-export async function createStaff(db: D1Database, animeId: string, value: StaffWrite): Promise<string> {
+export async function createStaff(db: D1Database, animeId: string, value: StaffWrite, audit?: ResourceAudit): Promise<string> {
   const person = await personForWrite(db, value);
   const id = createId("credit");
   const orm = database(db);
@@ -18,12 +19,13 @@ export async function createStaff(db: D1Database, animeId: string, value: StaffW
     profileUrl: value.profileUrl,
     sortOrder: value.sortOrder,
   });
-  if (person.create) await orm.batch([personInsert(db, person.id, value), insertCredit]);
+  if (person.create) await orm.batch([personInsert(db, person.id, value), insertCredit, ...(audit ? [audit(id)] : [])]);
+  else if (audit) await orm.batch([insertCredit, audit(id)]);
   else await insertCredit;
   return id;
 }
 
-export async function updateStaff(db: D1Database, animeId: string, id: string, value: StaffWrite): Promise<void> {
+export async function updateStaff(db: D1Database, animeId: string, id: string, value: StaffWrite, audit?: ResourceAudit): Promise<void> {
   const orm = database(db);
   const row = await orm.select({ personId: workCreditsTable.personId }).from(workCreditsTable)
     .where(and(eq(workCreditsTable.id, id), eq(workCreditsTable.animeId, animeId))).get();
@@ -40,10 +42,13 @@ export async function updateStaff(db: D1Database, animeId: string, id: string, v
       profileUrl: value.profileUrl,
       sortOrder: value.sortOrder,
     }).where(and(eq(workCreditsTable.id, id), eq(workCreditsTable.animeId, animeId))),
+    ...(audit ? [audit(id)] : []),
   ]);
 }
 
-export async function deleteStaff(db: D1Database, animeId: string, id: string): Promise<D1Result> {
-  return database(db).delete(workCreditsTable)
-    .where(and(eq(workCreditsTable.id, id), eq(workCreditsTable.animeId, animeId))).run();
+export async function deleteStaff(db: D1Database, animeId: string, id: string, audit?: ResourceAudit): Promise<D1Result> {
+  const orm = database(db);
+  const remove = orm.delete(workCreditsTable)
+    .where(and(eq(workCreditsTable.id, id), eq(workCreditsTable.animeId, animeId)));
+  return audit ? (await orm.batch([remove, audit(id)]))[0] : remove.run();
 }

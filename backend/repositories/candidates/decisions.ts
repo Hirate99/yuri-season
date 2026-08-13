@@ -16,6 +16,7 @@ import { HttpError } from "~/shared/http-error";
 import { createId } from "~/shared/id";
 
 import { auditInsert } from "../audit";
+import type { AdminPrincipal } from "~/infrastructure/auth";
 
 export type ReviewMetadata = {
   reviewerType: "llm" | "policy" | "admin" | "local_skill";
@@ -24,6 +25,7 @@ export type ReviewMetadata = {
   promptVersion?: string;
   reasons?: string[];
   output?: unknown;
+  principal?: AdminPrincipal;
 };
 
 type CandidateDecisionRow = {
@@ -208,6 +210,7 @@ export async function applyCandidateDecision(
     queries.push(...withdrawalQueries(db, candidate.feedItemId!, actorType, metadata.reasons![0].trim()));
   }
   queries.push(auditInsert(db, actorType, "review_candidate", "feed_candidate", candidateId, {
+    principal: metadata.principal,
     decision,
     reasons: metadata.reasons ?? [],
     feedItemId: candidate.feedItemId,

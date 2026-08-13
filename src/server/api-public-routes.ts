@@ -9,8 +9,8 @@ import {
   readCatalogForSeason,
   readSeasons,
 } from "@worker/repositories/catalog";
-import { readAnimeDetail } from "@worker/repositories/detail";
-import { readDiscussions, readFeed, readMedia } from "@worker/repositories/feed";
+import { readAnimePage } from "@worker/repositories/detail";
+import { readFeed } from "@worker/repositories/feed";
 import type { ApiApp } from "./api-shared";
 import { cachedPublicData, cachedPublicJson, publicJson } from "./api-shared";
 
@@ -66,21 +66,9 @@ export function registerPublicRoutes(api: ApiApp): void {
 
   api.get("/api/anime/:slug", async (context) => {
     const slug = context.req.param("slug");
-    const detail = await cachedPublicData(context, `anime:${cacheKeyPart(slug)}`, 180, async () => {
-      const anime = await readAnimeDetail(context.env.DB, slug);
-      if (!anime) throw new HttpError(404, "没有找到这部动画。");
-      const [media, discussions] = await Promise.all([
-        readMedia(context.env.DB, anime.id),
-        readDiscussions(context.env.DB, anime.id),
-      ]);
-      return { anime, media, discussions };
-    });
-    const feed = await readFeed(context.env.DB, { animeId: detail.anime.id, limit: 40 });
-    return publicJson(context, {
-      anime: detail.anime,
-      feed: feed.items,
-      media: detail.media,
-      discussions: detail.discussions,
-    });
+    const page = await cachedPublicData(context, `anime:${cacheKeyPart(slug)}`, 180, () =>
+      readAnimePage(context.env.DB, slug));
+    if (!page) throw new HttpError(404, "没有找到这部动画。");
+    return publicJson(context, page);
   });
 }

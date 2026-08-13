@@ -92,6 +92,32 @@ export async function createCandidate(db: D1Database, draft: CandidateDraft): Pr
   if (existingId) {
     const evidence = evidenceStatement(db, existingId, draft);
     const statements = candidateAnimeStatements(db, existingId, draft);
+    if (draft.contentClass === "community_thread") {
+      statements.push(db.prepare(`
+        UPDATE feed_candidates SET
+          observation_id = COALESCE(?, observation_id),
+          platform_object_id = COALESCE(?, platform_object_id),
+          title = ?, summary = ?, source_name = ?, importance = ?, published_at = ?,
+          presentation_mode = ?, safety_rating = ?, spoiler_level = ?, confidence = ?,
+          extractor_version = ?, policy_version = ?
+        WHERE id = ? AND content_class = 'community_thread' AND status != 'published'
+      `).bind(
+        draft.observationId ?? null,
+        draft.platformObjectId ?? null,
+        draft.title,
+        draft.summary,
+        draft.sourceName,
+        draft.importance ?? 2,
+        draft.publishedAt,
+        draft.presentationMode ?? "link_only",
+        draft.safetyRating ?? "unknown",
+        draft.spoilerLevel ?? "none",
+        draft.confidence ?? 0,
+        draft.extractorVersion ?? "manual@1",
+        draft.policyVersion ?? "publish-policy@1",
+        existingId,
+      ));
+    }
     if (evidence) statements.push(evidence);
     if (statements.length) await atomicBatch(db, statements);
     return existingId;

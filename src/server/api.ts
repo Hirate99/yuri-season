@@ -29,6 +29,7 @@ function shouldInvalidatePublicCache(method: string, path: string): boolean {
   if (method === "GET" || method === "HEAD") return false;
   return path === "/api/admin/batches"
     || path.startsWith("/api/admin/anime")
+    || path.startsWith("/api/admin/discussions")
     || path.startsWith("/api/admin/seasons")
     || /^\/api\/admin\/candidates\/[^/]+\/decision$/.test(path);
 }

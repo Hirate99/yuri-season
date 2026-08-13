@@ -8,6 +8,7 @@ import { HttpError } from "@worker/http";
 import { readAdminDashboard } from "@worker/repositories/admin";
 import { createAdminResource, deleteAdminResource, updateAdminResource } from "@worker/repositories/admin-resource-mutations";
 import { readAdminAnimeResources } from "@worker/repositories/admin-resources";
+import { deleteDiscussionEverywhere } from "@worker/repositories/admin-discussion-mutations";
 import { applyCandidateDecision, createAnime, createCandidate, patchAnime } from "@worker/repositories/mutations";
 import { createSeason, updateSeason } from "@worker/repositories/season-mutations";
 import type { ApiApp } from "./api-shared";
@@ -19,6 +20,10 @@ const decisionSchema = z.object({
 }).refine((value) => value.decision !== "withdraw" || value.reason.length > 0, {
   message: "撤回需要填写 reason。",
   path: ["reason"],
+});
+
+const deleteReasonSchema = z.object({
+  reason: z.string().trim().min(1, "彻底删除需要填写原因。").max(300),
 });
 
 export function registerAdminRoutes(api: ApiApp): void {
@@ -62,6 +67,12 @@ export function registerAdminRoutes(api: ApiApp): void {
     const kind = parseResourceKind(context.req.param("kind"));
     if (kind === "source") throw new HttpError(400, "请停用来源，不直接删除历史来源。");
     await deleteAdminResource(context.env.DB, context.req.param("animeId"), kind, context.req.param("id"));
+    return context.body(null, 204);
+  });
+
+  api.delete("/api/admin/discussions/:id", async (context) => {
+    const input = await jsonInput(context, (value) => parseWithSchema(deleteReasonSchema, value));
+    await deleteDiscussionEverywhere(context.env.DB, context.req.param("id"), input.reason);
     return context.body(null, 204);
   });
 

@@ -34,16 +34,20 @@ function plan(memory: SearchMemorySummary[] = [], force = false) {
 }
 
 describe("discovery query planning", () => {
-  test("plans missing communities, verified birthday research and account discovery", () => {
+  test("plans database-aware community and account discovery without birthday polling", () => {
     const queries = plan();
     expect(queries.find((query) => query.targetKey === "music:theme-songs"))
       .toMatchObject({ searchKind: "official_news", priority: 5, cadenceDays: 14 });
-    expect(queries.some((query) => query.targetKey === "community:yamibo")).toBe(false);
+    expect(queries.filter((query) => query.targetKey === "community:yamibo-recent")).toHaveLength(1);
+    expect(queries.find((query) => query.targetKey === "community:yamibo-recent"))
+      .toMatchObject({ scopeType: "season", searchKind: "community", cadenceDays: 1, priority: 5 });
+    expect(queries.find((query) => query.targetKey === "community:yamibo-recent")?.queryText)
+      .toContain("https://bbs.yamibo.com/forum-5-1.html");
     expect(queries.some((query) => query.targetKey === "community:tieba")).toBe(true);
     expect(queries.find((query) => query.targetKey === "community:moesen"))
       .toMatchObject({ priority: 3, cadenceDays: 14 });
     expect(queries.some((query) => query.targetKey === "community:nga")).toBe(true);
-    expect(queries.some((query) => query.scopeId === "character-1" && query.searchKind === "birthday")).toBe(true);
+    expect(queries.some((query) => query.scopeId === "character-1" && query.searchKind === "birthday")).toBe(false);
     expect(queries.some((query) => query.scopeId === "person-1"
       && query.targetKey === "account:official-x" && query.platform === "X")).toBe(true);
     expect(queries.some((query) => query.scopeId === "person-1"
@@ -56,6 +60,36 @@ describe("discovery query planning", () => {
     expect(pixivFanwork?.queryText).toContain("ajax/search/artworks/");
     expect(queries.find((query) => query.targetKey === "media:fanwork:instagram"))
       .toMatchObject({ priority: 1, cadenceDays: 30 });
+  });
+
+  test("plans birthday research only for an explicit audit", () => {
+    const queries = buildDiscoveryPlan({
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime], resources: { "anime-1": resources },
+      memory: [], memoryHits: [], now: new Date("2026-08-11T20:00:00Z"),
+      force: false, includeBirthdays: true, limit: 100,
+    });
+    expect(queries.some((query) => query.scopeId === "character-1" && query.searchKind === "birthday"))
+      .toBe(true);
+  });
+
+  test("treats exhausted durable search memory as satisfied unless forced", () => {
+    const exhausted = [{
+      id: "memory-birthday", scopeType: "character", scopeId: "character-1", searchKind: "birthday",
+      targetKey: "birthday:official", queryText: "audited", status: "exhausted",
+      lastResultHash: null, lastResultCount: 1, usefulResultCount: 0,
+      searchedAt: "2026-08-10T00:00:00Z", nextSearchAt: null, notes: null,
+      seenCount: 0, candidateCount: 0, publishedCount: 0, heldCount: 0,
+      rejectedCount: 0, ignoredCount: 1,
+    }] satisfies SearchMemorySummary[];
+    const common = {
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime], resources: { "anime-1": resources },
+      memory: exhausted, memoryHits: [], now: new Date("2026-08-11T20:00:00Z"),
+      includeBirthdays: true, limit: 100,
+    };
+    expect(buildDiscoveryPlan({ ...common, force: false }).some((query) => query.searchKind === "birthday"))
+      .toBe(false);
+    expect(buildDiscoveryPlan({ ...common, force: true }).some((query) => query.searchKind === "birthday"))
+      .toBe(true);
   });
 
   test("keeps Mengzhan Bar separate from an ordinary work Tieba thread", () => {
@@ -89,6 +123,28 @@ describe("discovery query planning", () => {
     });
     expect(queries.some((query) => query.scopeId === "supporting-1" && query.searchKind === "birthday"))
       .toBe(false);
+    expect(queries.some((query) => query.scopeId === "person-1" && query.searchKind === "social"))
+      .toBe(false);
+  });
+
+  test("does not search ordinary staff accounts unless explicitly forced", () => {
+    const resourcesWithOrdinaryStaff: AdminAnimeResources = {
+      ...resources,
+      cast: [],
+      staff: [{
+        id: "staff-ordinary", personId: "person-staff", name: "普通制作人员", nameNative: null,
+        primaryKind: "staff", role: "摄影监督", profileUrl: null, sortOrder: 1,
+      }],
+    };
+    const common = {
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime],
+      resources: { "anime-1": resourcesWithOrdinaryStaff }, memory: [], memoryHits: [],
+      now: new Date("2026-08-11T20:00:00Z"), limit: 100,
+    };
+    expect(buildDiscoveryPlan({ ...common, force: false })
+      .some((query) => query.scopeId === "person-staff" && query.searchKind === "social")).toBe(false);
+    expect(buildDiscoveryPlan({ ...common, force: true })
+      .some((query) => query.scopeId === "person-staff" && query.searchKind === "social")).toBe(true);
   });
 
   test("respects next search time unless a from-scratch audit is forced", () => {
@@ -128,6 +184,46 @@ describe("discovery query planning", () => {
       && query.queryText === 'site:x.com/work "作品日本語" after:2026-07-12'
       && query.priority === 5)).toBe(true);
     expect(queries.some((query) => query.scopeId === "person-1" && query.searchKind === "social")).toBe(true);
+  });
+
+  test("treats existing unverified platform accounts as discovered unless forced", () => {
+    const resourcesWithPendingAccounts: AdminAnimeResources = {
+      ...resources,
+      accounts: [
+        {
+          id: "account-work-pending", ownerType: "anime", ownerId: anime.id, ownerLabel: anime.titleZh,
+          platform: "X", handle: "@work_pending", url: "https://x.com/work_pending", verified: false,
+          monitorMode: "disabled", verificationSourceUrl: null, verifiedAt: null,
+        },
+        {
+          id: "account-cast-x-pending", ownerType: "person", ownerId: "person-1", ownerLabel: "声优",
+          platform: "X", handle: "@voice_pending", url: "https://x.com/voice_pending", verified: false,
+          monitorMode: "disabled", verificationSourceUrl: null, verifiedAt: null,
+        },
+        {
+          id: "account-cast-instagram-pending", ownerType: "person", ownerId: "person-1", ownerLabel: "声优",
+          platform: "Instagram", handle: "voice_pending", url: "https://www.instagram.com/voice_pending/", verified: false,
+          monitorMode: "disabled", verificationSourceUrl: null, verifiedAt: null,
+        },
+      ],
+    };
+    const common = {
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime],
+      resources: { "anime-1": resourcesWithPendingAccounts }, memory: [], memoryHits: [],
+      now: new Date("2026-08-11T20:00:00Z"), limit: 100,
+    };
+
+    const ordinary = buildDiscoveryPlan({ ...common, force: false });
+    expect(ordinary.some((query) => query.targetKey === "social:work")).toBe(false);
+    expect(ordinary.some((query) => query.scopeId === "person-1"
+      && query.targetKey.startsWith("account:official-"))).toBe(false);
+
+    const forced = buildDiscoveryPlan({ ...common, force: true });
+    expect(forced.some((query) => query.targetKey === "social:work")).toBe(true);
+    expect(forced.some((query) => query.scopeId === "person-1"
+      && query.targetKey === "account:official-x")).toBe(true);
+    expect(forced.some((query) => query.scopeId === "person-1"
+      && query.targetKey === "account:official-instagram")).toBe(true);
   });
 
   test("plans a low-frequency official jacket lookup for verified songs missing artwork", () => {

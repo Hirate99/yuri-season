@@ -25,7 +25,6 @@ export const dashboardCountsQuery = defineQuery<DashboardCountsRow>(`
     (SELECT COUNT(*) FROM discussions d
       WHERE d.is_active = 1 AND (${PUBLIC_DISCUSSION_PREDICATE})) AS discussion_count,
     (SELECT COUNT(*) FROM feed_items fi
-      LEFT JOIN feed_candidates fc ON fc.id = fi.candidate_id
       WHERE fi.auto_published = 1 AND (${PUBLIC_FEED_ITEM_PREDICATE})) AS auto_count
 `);
 
@@ -76,9 +75,8 @@ export const publicationsQuery = defineQuery<PublicationRow>(`
   SELECT fi.id, fi.candidate_id, a.title_zh AS anime_title, fi.title, fi.url,
     fi.source_name, fi.published_at, fi.auto_published
   FROM feed_items fi
-  JOIN feed_candidates fc ON fc.id = fi.candidate_id
   LEFT JOIN anime a ON a.id = fi.anime_id
-  WHERE ${PUBLIC_FEED_ITEM_PREDICATE}
+  WHERE fi.candidate_id IS NOT NULL AND (${PUBLIC_FEED_ITEM_PREDICATE})
   ORDER BY fi.created_at DESC
   LIMIT 40
 `);

@@ -36,7 +36,9 @@ export const mediaItemsTable = sqliteTable("media_items", {
 
 export const feedItemsTable = sqliteTable("feed_items", {
   id: text("id").primaryKey(),
+  candidateId: text("candidate_id"),
   animeId: text("anime_id"),
+  discussionId: text("discussion_id"),
   publishedAt: text("published_at").notNull(),
   withdrawnAt: text("withdrawn_at"),
 });

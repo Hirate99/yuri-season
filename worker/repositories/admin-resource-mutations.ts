@@ -3,7 +3,7 @@ import { HttpError } from "../http";
 import { createAccount, deleteAccount, updateAccount } from "./admin-account-mutations";
 import { createBroadcast, deleteBroadcast, updateBroadcast } from "./admin-broadcast-mutations";
 import { createCast, deleteCast, updateCast } from "./admin-cast-mutations";
-import { createDiscussion, deleteDiscussion, updateDiscussion } from "./admin-discussion-mutations";
+import { createDiscussion, unlinkDiscussionFromAnime, updateDiscussion } from "./admin-discussion-mutations";
 import { createEvent, deleteEvent, updateEvent } from "./admin-event-mutations";
 import { createMedia, deleteMedia, updateMedia } from "./admin-media-mutations";
 import { assertAnime } from "./admin-resource-context";
@@ -94,7 +94,7 @@ export async function deleteAdminResource(
     case "cast": result = await deleteCast(db, animeId, id); break;
     case "event": result = await deleteEvent(db, animeId, id); break;
     case "media": result = await deleteMedia(db, animeId, id); break;
-    case "discussion": result = await deleteDiscussion(db, animeId, id); break;
+    case "discussion": result = await unlinkDiscussionFromAnime(db, animeId, id); break;
     case "theme_song": result = await deleteThemeSong(db, animeId, id); break;
   }
   if ((result.meta.changes ?? 0) === 0) throw new HttpError(404, "没有找到资源。");

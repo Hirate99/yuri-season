@@ -84,19 +84,10 @@ export const loadFeedData = createIsomorphicFn()
 
 export const loadAnimeData = createIsomorphicFn()
   .server(async (input: PublicLoadContext & { slug: string }): Promise<AnimePageResponse> => {
-    const db = database(input);
-    const [{ readAnimeDetail }, { readDiscussions, readFeed, readMedia }] = await Promise.all([
-      import("@worker/repositories/detail"),
-      import("@worker/repositories/feed"),
-    ]);
-    const anime = await readAnimeDetail(db, input.slug);
-    if (!anime) throw new Error("没有找到这部动画。");
-    const [feed, media, discussions] = await Promise.all([
-      readFeed(db, { animeId: anime.id, limit: 40 }),
-      readMedia(db, anime.id),
-      readDiscussions(db, anime.id),
-    ]);
-    return { anime, feed: feed.items, media, discussions };
+    const { readAnimePage } = await import("@worker/repositories/detail");
+    const page = await readAnimePage(database(input), input.slug);
+    if (!page) throw new Error("没有找到这部动画。");
+    return page;
   })
   .client((input: PublicLoadContext & { slug: string }) =>
     apiRequest<AnimePageResponse>(`/api/anime/${encodeURIComponent(input.slug)}`));

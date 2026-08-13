@@ -33,15 +33,16 @@ export function ResourceDetails({ title, meta, children, open = false }: {
   );
 }
 
-export function ResourceActions({ busy, onDelete }: {
+export function ResourceActions({ busy, onDelete, deleteLabel = "删除" }: {
   busy: boolean;
   onDelete?: () => void;
+  deleteLabel?: string;
 }) {
   return (
     <footer className="flex items-center justify-end gap-2 pt-2 md:col-span-2">
       {onDelete && (
         <button className="inline-flex min-h-9 items-center gap-1 px-2 text-[10px] text-[#8b3048]" disabled={busy} onClick={onDelete} type="button">
-          <Trash2 size={13} />删除
+          <Trash2 size={13} />{deleteLabel}
         </button>
       )}
       <button className={primaryButton} disabled={busy} type="submit"><Save size={13} />保存</button>

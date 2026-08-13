@@ -39,6 +39,7 @@ type PlanInput = {
   memoryHits: SearchMemoryHitSummary[];
   now: Date;
   force: boolean;
+  includeBirthdays?: boolean;
   limit: number;
 };
 
@@ -47,7 +48,9 @@ function memoryKey(scopeType: ScopeType, scopeId: string, searchKind: SearchKind
 }
 
 function isDue(memory: SearchMemorySummary | undefined, now: Date) {
-  if (!memory?.nextSearchAt) return true;
+  if (!memory) return true;
+  if (memory.status === "exhausted") return false;
+  if (!memory.nextSearchAt) return true;
   const next = Date.parse(memory.nextSearchAt);
   return Number.isNaN(next) || next <= now.valueOf();
 }
@@ -70,9 +73,9 @@ function hasRegisteredOfficialSource(resources: AdminAnimeResources) {
     && source.changeKind === "feed_candidate");
 }
 
-function hasVerifiedWorkAccount(resources: AdminAnimeResources, animeId: string) {
+function hasWorkAccount(resources: AdminAnimeResources, animeId: string) {
   return resources.accounts.some((account) => account.ownerType === "anime"
-    && account.ownerId === animeId && account.verified);
+    && account.ownerId === animeId);
 }
 
 function displayName(nativeName: string | null, fallback: string) {
@@ -116,6 +119,19 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
     queryText: `\"${input.seasonLabel}\" 百合 アニメ 新作 公式`, priority: 5, cadenceDays: 7,
     reason: "发现可能遗漏的当季作品；搜索结果只作为线索，必须回到公式来源核对",
   });
+
+  const yamiboAliases = [...new Set(input.anime.flatMap((anime) => [
+    anime.titleZh,
+    anime.titleJa,
+    anime.titleEn,
+  ]).filter((title): title is string => Boolean(title?.trim())))];
+  add({
+    scopeType: "season", scopeId: input.seasonId, animeId: null, animeTitle: null,
+    searchKind: "community", targetKey: "community:yamibo-recent",
+    queryText: `Yamibo recent-board sweep: https://bbs.yamibo.com/forum-5-1.html; match current-season aliases, characters, pairings, and project nicknames; keep dedicated threads plus relevant popular discussions (${yamiboAliases.join(" / ")})`,
+    priority: 5, cadenceDays: 1,
+    reason: "Incrementally scan the Yamibo animation-board thread list instead of relying on indexed exact-title or 专楼 searches; deduplicate canonical thread URLs against database resources and knownHits, then retain dedicated threads and materially active relevant discussions",
+  });
   add({
     scopeType: "season", scopeId: input.seasonId, animeId: null, animeTitle: null,
     searchKind: "catalog", targetKey: "season:relationship-catalog",
@@ -128,18 +144,18 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
     if (!resources) continue;
     const titleJa = anime.titleJa || anime.titleZh;
     const common = { scopeType: "anime" as const, scopeId: anime.id, animeId: anime.id, animeTitle: anime.titleZh };
-    if (!hasRegisteredOfficialSource(resources)) {
+    if (input.force || !hasRegisteredOfficialSource(resources)) {
       add({ ...common, searchKind: "official_news", targetKey: "official:work",
         queryText: `\"${titleJa}\" 公式 アニメ NEWS`, priority: 5, cadenceDays: 7,
         reason: "定位遗漏的公式站、NEWS、专题页与可登记的稳定来源" });
     }
-    if (!hasVerifiedWorkAccount(resources, anime.id)) {
+    if (input.force || !hasWorkAccount(resources, anime.id)) {
       add({ ...common, searchKind: "social", targetKey: "social:work",
         queryText: `\"${titleJa}\" 公式 X キャスト スタッフ`, priority: 4, cadenceDays: 7,
         reason: "发现公式、制作组与声优相关账号；账号身份必须由公式交叉链接验证" });
     }
 
-    if (!resources.themeSongs.some((song) => song.verified)) {
+    if (input.force || !resources.themeSongs.some((song) => song.verified)) {
       add({ ...common, searchKind: "official_news", targetKey: "music:theme-songs",
         queryText: `"${titleJa}" OP ED 主題歌 オープニング エンディング 公式`, priority: 5, cadenceDays: 14,
         reason: "从动画官网、唱片公司或官方音乐页面补齐主题曲、制作名单与页面已有的唱片封面；只接收明确字段" });
@@ -184,24 +200,23 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
       reason: "Instagram 检索需登录；无登录浏览器时记录 blocked，不伪造线索" });
 
     const communities = [
-      { key: "yamibo", site: "bbs.yamibo.com", label: "百合会", priority: 4, terms: "专楼 集中讨论" },
       { key: "tieba", site: "tieba.baidu.com", label: "作品贴吧", priority: 3, terms: "专楼 集中讨论" },
       { key: "moesen", site: "tieba.baidu.com/p", label: "萌战吧", priority: 3, terms: "萌战吧 动画 讨论" },
       { key: "nga", site: "nga.cn", label: "NGA", priority: 3, terms: "专楼 集中讨论" },
     ] as const;
     for (const community of communities) {
-      if (hasCommunity(resources, community.key)) continue;
+      if (!input.force && hasCommunity(resources, community.key)) continue;
       add({ ...common, searchKind: "community", targetKey: `community:${community.key}`,
         queryText: `\"${anime.titleZh}\" ${community.terms} site:${community.site}`,
         priority: community.priority, cadenceDays: 14,
         reason: `补齐${community.label}的作品相关讨论入口；只保留稳定原帖，不复制正文` });
     }
 
-    const verifiedOwners = new Set(resources.accounts.filter((item) => item.verified).map((item) => item.ownerId));
-    const verifiedPlatforms = new Set(resources.accounts.filter((item) => item.verified).map((item) =>
+    const knownPlatforms = new Set(resources.accounts.map((item) =>
       `${item.ownerId}:${item.platform.toLowerCase()}`));
     for (const staff of resources.staff) {
-      if (verifiedOwners.has(staff.personId)) continue;
+      if (!input.force && !["author", "artist"].includes(staff.primaryKind)) continue;
+      if (!input.force && knownPlatforms.has(`${staff.personId}:x`)) continue;
       const name = displayName(staff.nameNative, staff.name);
       add({ scopeType: "person", scopeId: staff.personId, animeId: anime.id, animeTitle: anime.titleZh,
         searchKind: "social", targetKey: "account:official-x",
@@ -210,7 +225,8 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
         cadenceDays: 30, reason: `补齐 ${staff.role} 的可验证账号` });
     }
     for (const cast of resources.cast) {
-      if (cast.isMainGroup && !cast.birthdayVerified) {
+      if (!input.force && !cast.isMainGroup) continue;
+      if (input.includeBirthdays === true && cast.isMainGroup && !cast.birthdayVerified) {
         const character = displayName(cast.characterNameNative, cast.characterName);
         add({ scopeType: "character", scopeId: cast.characterId, animeId: anime.id, animeTitle: anime.titleZh,
           searchKind: "birthday", targetKey: "birthday:official",
@@ -223,7 +239,7 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
         { platform: "Instagram", key: "instagram" },
       ];
       for (const accountPlatform of accountPlatforms) {
-        if (verifiedPlatforms.has(`${cast.personId}:${accountPlatform.platform.toLowerCase()}`)) continue;
+        if (!input.force && knownPlatforms.has(`${cast.personId}:${accountPlatform.platform.toLowerCase()}`)) continue;
         add({ scopeType: "person", scopeId: cast.personId, animeId: anime.id, animeTitle: anime.titleZh,
           searchKind: "social", targetKey: `account:official-${accountPlatform.key}`,
           queryText: `\"${person}\" 公式 ${accountPlatform.platform} \"${titleJa}\"`,

@@ -18,12 +18,34 @@ describe("cross-work discussion UI", () => {
       currentAnimeId="anime-a"
       busyKey={null}
       onSave={async () => {}}
-      onDelete={async () => {}}
+      onUnlink={async () => {}}
+      onDeleteEverywhere={async () => {}}
     />);
 
     expect(html).toContain("全选当前季度");
     expect(html).toContain("全选全部作品");
     expect(html).toContain("先全选，再取消少数例外");
+  });
+
+  test("separates unlinking from destructive global deletion", () => {
+    const html = renderToStaticMarkup(<DiscussionsEditor
+      items={[{
+        id: "discussion-shared", platform: "百合会", title: "集中讨论",
+        url: "https://bbs.example.test/shared", note: null, isActive: true,
+        lastActivityAt: null, lastCheckedAt: null, sharedAnimeCount: 3,
+        animeIds: ["anime-a", "anime-b", "anime-c"],
+      }]}
+      anime={anime}
+      currentAnimeId="anime-a"
+      busyKey={null}
+      onSave={async () => {}}
+      onUnlink={async () => {}}
+      onDeleteEverywhere={async () => {}}
+    />);
+
+    expect(html).toContain("从本作移除");
+    expect(html).toContain("彻底删除");
+    expect(html).toContain("将从 3 部作品及 Feed 撤下");
   });
 
   test("labels a shared thread without presenting one work as its sole owner", () => {

@@ -40,6 +40,17 @@ function validateWithdrawal(candidate: CandidateDecisionRow, metadata: ReviewMet
   if (!metadata.reasons?.[0]?.trim()) throw new HttpError(400, "请填写撤回原因。");
 }
 
+function validateDecisionTransition(candidate: CandidateDecisionRow, decision: ReviewDecision): void {
+  if (!candidate.feed_item_id) return;
+  if (candidate.withdrawn_at) {
+    if (decision === "withdraw") return;
+    throw new HttpError(409, "这条动态已经撤回，不能重新审核或发布。");
+  }
+  if (decision === "hold" || decision === "reject") {
+    throw new HttpError(409, "已发布动态不能改为暂存或拒绝，请使用撤回。");
+  }
+}
+
 function reviewStatement(
   db: D1Database,
   candidateId: string,
@@ -69,20 +80,7 @@ function publicationStatements(
   candidate: CandidateDecisionRow,
   metadata: ReviewMetadata,
 ): D1PreparedStatement[] {
-  const statements = [db.prepare(`
-    INSERT OR IGNORE INTO feed_items (
-      id, candidate_id, anime_id, person_id, character_id, account_id,
-      platform_object_id, origin_key, event_id, media_id,
-      content_class, source_identity, title, summary, url, source_name,
-      source_account, importance, published_at, safety_rating, spoiler_level,
-      auto_published
-    )
-    SELECT ?, id, anime_id, person_id, character_id, account_id,
-      platform_object_id, origin_key, event_id, media_id,
-      content_class, source_identity, title, summary, url, source_name,
-      source_account, importance, published_at, safety_rating, spoiler_level, ?
-    FROM feed_candidates WHERE id = ?
-  `).bind(createId("feed"), metadata.reviewerType === "admin" ? 0 : 1, candidate.id)];
+  const statements: D1PreparedStatement[] = [];
 
   if (candidate.content_class === "community_thread" && candidate.anime_id) {
     statements.push(db.prepare(`
@@ -111,12 +109,30 @@ function publicationStatements(
       WHERE d.url = ?
     `).bind(candidate.id, candidate.url));
   }
+
+  statements.push(db.prepare(`
+    INSERT OR IGNORE INTO feed_items (
+      id, candidate_id, anime_id, person_id, character_id, account_id,
+      platform_object_id, origin_key, event_id, media_id, discussion_id,
+      content_class, source_identity, title, summary, url, source_name,
+      source_account, importance, published_at, safety_rating, spoiler_level,
+      auto_published
+    )
+    SELECT ?, id, anime_id, person_id, character_id, account_id,
+      platform_object_id, origin_key, event_id, media_id,
+      CASE WHEN content_class = 'community_thread'
+        THEN (SELECT id FROM discussions WHERE url = feed_candidates.url)
+        ELSE NULL END,
+      content_class, source_identity, title, summary, url, source_name,
+      source_account, importance, published_at, safety_rating, spoiler_level, ?
+    FROM feed_candidates WHERE id = ?
+  `).bind(createId("feed"), metadata.reviewerType === "admin" ? 0 : 1, candidate.id));
   return statements;
 }
 
 function withdrawalStatements(
   db: D1Database,
-  candidate: CandidateDecisionRow,
+  feedItemId: string,
   actorType: "system" | "llm" | "admin" | "local_skill",
   reason: string,
 ): D1PreparedStatement[] {
@@ -125,9 +141,11 @@ function withdrawalStatements(
       INSERT INTO corrections (
         id, feed_item_id, correction_type, reason, replacement_feed_item_id, actor_type
       ) VALUES (?, ?, 'withdraw', ?, NULL, ?)
-    `).bind(createId("correction"), candidate.feed_item_id, reason, actorType),
-    db.prepare("UPDATE feed_items SET withdrawn_at = CURRENT_TIMESTAMP WHERE candidate_id = ?")
-      .bind(candidate.id),
+    `).bind(createId("correction"), feedItemId, reason, actorType),
+    db.prepare(`
+      UPDATE feed_items SET withdrawn_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND withdrawn_at IS NULL
+    `).bind(feedItemId),
   ];
 }
 
@@ -139,6 +157,7 @@ export async function applyCandidateDecision(
 ): Promise<void> {
   const candidate = await candidateForDecision(db, candidateId);
   if (!candidate) throw new HttpError(404, "没有找到这条候选。");
+  validateDecisionTransition(candidate, decision);
   if (decision === "withdraw") validateWithdrawal(candidate, metadata);
 
   const status = decision === "publish" || decision === "withdraw"
@@ -153,7 +172,12 @@ export async function applyCandidateDecision(
 
   if (decision === "publish") statements.push(...publicationStatements(db, candidate, metadata));
   if (decision === "withdraw") {
-    statements.push(...withdrawalStatements(db, candidate, actorType, metadata.reasons![0].trim()));
+    statements.push(...withdrawalStatements(
+      db,
+      candidate.feed_item_id!,
+      actorType,
+      metadata.reasons![0].trim(),
+    ));
   }
   statements.push(auditStatement(db, actorType, "review_candidate", "feed_candidate", candidateId, {
     decision,

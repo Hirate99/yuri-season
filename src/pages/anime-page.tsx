@@ -6,7 +6,7 @@ import { DiscussionsSection, MediaSection, UpdatesSection } from "@/features/ani
 import { ThemeSongsSection } from "@/features/anime/theme-songs";
 import { page } from "@/lib/ui";
 
-export function AnimePage({ data }: { data: AnimePageResponse & { viewerTimeZone: string } }) {
+export function AnimePage({ data }: { data: AnimePageResponse }) {
   return (
     <div className={page}>
       <AnimeHeader anime={data.anime} />
@@ -19,7 +19,7 @@ export function AnimePage({ data }: { data: AnimePageResponse & { viewerTimeZone
           <UpdatesSection items={data.feed} />
           <MediaSection media={data.media} />
         </div>
-        <AnimeSidebar anime={data.anime} viewerTimeZone={data.viewerTimeZone} />
+        <AnimeSidebar anime={data.anime} />
       </div>
     </div>
   );

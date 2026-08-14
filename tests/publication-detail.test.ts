@@ -102,9 +102,23 @@ describe("publication details", () => {
         publicText: "これは公開する公式ニュー",
         textMode: "excerpt",
         sourceStatus: "active",
-        capturedAt: "2026-08-13T12:05:00Z",
+        capturedAt: "2026-08-13T12:05:00.000Z",
       },
       assets: [],
+    });
+  });
+
+  test("returns zone-less SQLite capture timestamps as explicit UTC instants", async () => {
+    const publication = await publishedOfficialItem();
+    database.sqlite.query(`
+      UPDATE publication_documents
+      SET captured_at = '2026-08-14 06:48:00', last_verified_at = '2026-08-14 06:49:00'
+      WHERE feed_item_id = ?
+    `).run(publication.id);
+
+    expect((await readPublicationPage(database.binding(), publication.id))?.document).toMatchObject({
+      capturedAt: "2026-08-14T06:48:00.000Z",
+      lastVerifiedAt: "2026-08-14T06:49:00.000Z",
     });
   });
 
@@ -189,7 +203,7 @@ describe("publication details", () => {
 
     expect((await readPublicationPage(database.binding(), publication.id))?.document).toMatchObject({
       publicText: "更新された公式ニュース本",
-      capturedAt: "2026-08-13T13:05:00Z",
+      capturedAt: "2026-08-13T13:05:00.000Z",
     });
   });
 

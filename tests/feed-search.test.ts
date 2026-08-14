@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { readFeed } from "~/repositories/feed";
+import { readFeed, readMedia } from "~/repositories/feed";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;
@@ -36,6 +36,22 @@ describe("feed search", () => {
       animeSlug: "taiari",
       animeCoverUrl: expect.any(String),
     });
+  });
+
+  test("returns feed and media timestamps as explicit UTC instants", async () => {
+    database.sqlite.query(`
+      UPDATE feed_items SET published_at = '2026-08-14 06:48:00' WHERE id = 'feed-tai-sf6'
+    `).run();
+    database.sqlite.query(`
+      UPDATE media_items SET published_at = '2026-08-14 06:47:00'
+      WHERE id = 'media-kimi-official-key'
+    `).run();
+
+    const item = (await readFeed(database.binding(), { query: "Street Fighter" })).items[0];
+    expect(item.publishedAt).toBe("2026-08-14T06:48:00.000Z");
+    const media = (await readMedia(database.binding(), "anime-kimishinu"))
+      .find(({ id }) => id === "media-kimi-official-key");
+    expect(media?.publishedAt).toBe("2026-08-14T06:47:00.000Z");
   });
 
   test("paginates with a stable cursor and no duplicate items", async () => {

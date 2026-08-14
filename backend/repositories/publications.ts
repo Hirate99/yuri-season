@@ -7,6 +7,7 @@ import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import { publicMediaUrl } from "@/lib/media-url";
 import { database } from "~/infrastructure/db/client";
+import { nullableUtcInstant, utcInstant } from "~/infrastructure/db/sqlite-time";
 import {
   correctionsTable,
   mediaAssetsTable,
@@ -19,7 +20,7 @@ export async function readPublicationDocument(
   db: D1Database,
   feedItemId: string,
 ): Promise<PublicationDocument | null> {
-  return await database(db).select({
+  const row = await database(db).select({
     sourceTitle: publicationDocumentsTable.sourceTitle,
     authorName: publicationDocumentsTable.authorName,
     sourceLanguage: publicationDocumentsTable.sourceLanguage,
@@ -27,14 +28,15 @@ export async function readPublicationDocument(
     publicTranslation: publicationDocumentsTable.publicTranslation,
     textMode: publicationDocumentsTable.textMode,
     sourceStatus: publicationDocumentsTable.sourceStatus,
-    capturedAt: publicationDocumentsTable.capturedAt,
-    lastVerifiedAt: publicationDocumentsTable.lastVerifiedAt,
+    capturedAt: utcInstant(publicationDocumentsTable.capturedAt),
+    lastVerifiedAt: nullableUtcInstant(publicationDocumentsTable.lastVerifiedAt),
   }).from(publicationDocumentsTable)
     .where(and(
       eq(publicationDocumentsTable.feedItemId, feedItemId),
       eq(publicationDocumentsTable.sourceStatus, "active"),
     ))
-    .get() ?? null;
+    .get();
+  return row ?? null;
 }
 
 export async function readPublicationAssets(
@@ -76,11 +78,12 @@ export async function readPublicationCorrections(
   db: D1Database,
   feedItemId: string,
 ): Promise<PublicationCorrection[]> {
-  return database(db).select({
+  const rows = await database(db).select({
     correctionType: correctionsTable.correctionType,
     reason: correctionsTable.reason,
-    createdAt: correctionsTable.createdAt,
+    createdAt: utcInstant(correctionsTable.createdAt),
   }).from(correctionsTable)
     .where(eq(correctionsTable.feedItemId, feedItemId))
     .orderBy(desc(correctionsTable.createdAt));
+  return rows;
 }

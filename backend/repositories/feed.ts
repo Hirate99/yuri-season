@@ -6,6 +6,7 @@ import { readNativeFeedPage } from "~/infrastructure/db/native/feed";
 import { publicDiscussion, publicMedia } from "~/infrastructure/db/read-models/public-visibility";
 import { discussionAnimeTable, discussionsTable, mediaItemsTable } from "~/infrastructure/db/schema";
 import { decodeFeedCursor, encodeFeedCursor } from "./feed-cursor";
+import { canonicalInstant } from "~/shared/time";
 
 export type FeedOptions = {
   animeId?: string;
@@ -37,7 +38,7 @@ export async function readFeedItem(db: D1Database, id: string) {
 }
 
 export async function readMedia(db: D1Database, animeId: string): Promise<MediaItem[]> {
-  return database(db).select({
+  const rows = await database(db).select({
     id: mediaItemsTable.id,
     contentClass: mediaItemsTable.contentClass,
     title: mediaItemsTable.title,
@@ -56,7 +57,8 @@ export async function readMedia(db: D1Database, animeId: string): Promise<MediaI
       inArray(mediaItemsTable.safetyRating, ["safe", "suggestive"]),
       publicMedia(db),
     ))
-    .orderBy(desc(mediaItemsTable.publishedAt)) as Promise<MediaItem[]>;
+    .orderBy(desc(mediaItemsTable.publishedAt));
+  return rows.map((row) => ({ ...row, publishedAt: canonicalInstant(row.publishedAt) })) as MediaItem[];
 }
 
 export async function readDiscussions(db: D1Database, animeId: string): Promise<Discussion[]> {

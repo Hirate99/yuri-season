@@ -32,7 +32,7 @@ export function PublicationPage({ data, onBack, backLabel = "返回情报" }: {
   const relatedAnime = item.relatedAnime ?? [];
 
   return (
-    <div className="mx-auto w-[calc(100%-1.5rem)] max-w-[1120px] pt-6 pb-24 md:w-[calc(100%-3rem)] md:pt-8 md:pb-20">
+    <div className="mx-auto w-[calc(100%-2.5rem)] max-w-[1120px] pt-6 pb-24 md:w-[calc(100%-3rem)] md:pt-8 md:pb-20">
       {onBack ? (
         <button className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted transition hover:text-ink" type="button" onClick={onBack}>
           <ArrowLeft size={13} />{backLabel}

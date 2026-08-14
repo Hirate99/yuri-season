@@ -15,6 +15,11 @@ export type LocalBroadcastDisplay = {
   instant: Date;
 };
 
+export function weekdayInTimeZone(timeZone: string, now = new Date()): number {
+  const { year, month, day } = calendarParts(now, timeZone);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}
+
 const SOURCE_ZONE_LABELS: Record<string, string> = {
   "Asia/Tokyo": "JST",
   UTC: "UTC",

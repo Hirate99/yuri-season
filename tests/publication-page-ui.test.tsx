@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 
 import type { PublicationDetailResponse } from "@/domain";
-import { publicationCarouselImages } from "@/components/publication-media-carousel";
+import { PublicationMediaCarousel, publicationCarouselImages } from "@/components/publication-media-carousel";
 import { PublicationPage } from "@/pages/publication-page";
 
 const data: PublicationDetailResponse = {
@@ -72,6 +72,23 @@ describe("publication page presentation", () => {
       expect.objectContaining({ id: "first-preview", sourceUrl: "https://source.test/first.jpg" }),
       expect.objectContaining({ id: "second-preview", sourceUrl: "https://source.test/second.jpg" }),
     ]);
+  });
+
+  test("renders one image directly without carousel chrome or a fixed black square", () => {
+    const html = renderToStaticMarkup(
+      <PublicationMediaCarousel
+        assets={[]}
+        media={data.item.media}
+        fallbackAlt={data.item.title}
+      />,
+    );
+
+    expect(html).toContain("https://r2.i-yuri.com/yuri/example.jpg");
+    expect(html).not.toContain("aria-roledescription=\"carousel\"");
+    expect(html).not.toContain("上一张图片");
+    expect(html).not.toContain("下一张图片");
+    expect(html).not.toContain("aspect-square");
+    expect(html).not.toContain("bg-[#111216]");
   });
 
   test("shows original text and translation without storage implementation copy", async () => {

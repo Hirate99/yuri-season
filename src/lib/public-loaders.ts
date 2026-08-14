@@ -77,19 +77,14 @@ export const loadFeedData = createIsomorphicFn()
   }));
 
 export const loadAnimeData = createIsomorphicFn()
-  .server(async (input: PublicLoadContext & { slug: string }): Promise<AnimePageResponse & { viewerTimeZone: string }> => {
+  .server(async (input: PublicLoadContext & { slug: string }): Promise<AnimePageResponse> => {
     const { readAnimePage } = await import("~/application/public/service");
     const page = await readAnimePage(database(input), input.slug);
     if (!page) throw new Error("没有找到这部动画。");
-    return {
-      ...page,
-      viewerTimeZone: input.serverContext?.viewerTimeZone ?? "Asia/Tokyo",
-    };
+    return page;
   })
-  .client(async (input: PublicLoadContext & { slug: string }): Promise<AnimePageResponse & { viewerTimeZone: string }> => ({
-    ...await rpcData(apiClient.api.anime[":slug"].$get({ param: { slug: input.slug } })),
-    viewerTimeZone: browserTimeZone(),
-  }));
+  .client((input: PublicLoadContext & { slug: string }) =>
+    rpcData(apiClient.api.anime[":slug"].$get({ param: { slug: input.slug } })));
 
 export const loadPublicationData = createIsomorphicFn()
   .server(async (input: PublicLoadContext & { id: string }): Promise<PublicationDetailResponse> => {

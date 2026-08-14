@@ -66,7 +66,7 @@ Use the verified account as observation provenance. The importer validates `cast
           "publishedAt": "2026-08-11T12:00:00+09:00",
           "presentationMode": "link_only",
           "safetyRating": "safe",
-          "spoilerLevel": "minor",
+          "spoilerLevel": "mild",
           "confidence": 0.95,
           "review": {
             "decision": "publish",

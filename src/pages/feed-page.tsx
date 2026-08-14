@@ -25,7 +25,7 @@ function FeedSearchInput({ value, onChange }: { value: string; onChange: (value:
       className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted md:text-sm"
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      placeholder="作品、人物、来源或关键词"
+      placeholder="搜索动态、人物或来源"
       type="search"
       autoComplete="off"
       autoCorrect="off"
@@ -54,17 +54,17 @@ export function FeedPage({ initialPage, catalog }: { initialPage: FeedResponse; 
 
   return (
     <div className={page}>
-      <header className="grid gap-6 py-7 md:grid-cols-[1fr_minmax(320px,520px)] md:items-end md:py-9">
+      <header className="grid gap-8 py-7 md:grid-cols-[1fr_minmax(320px,480px)] md:items-end md:py-9">
         <div><p className="flex items-center gap-2 text-[10px] font-bold tracking-[0.14em] text-muted uppercase"><span className="size-1.5 rounded-full bg-signal-coral" />2026 夏 · Latest</p><h1 className="mt-3 text-[38px] leading-none font-black tracking-[-0.045em] md:text-5xl">情报</h1></div>
-        <label className="relative z-10 hidden h-12 items-center gap-3 border border-black/[0.06] bg-white/75 px-4 shadow-[0_14px_35px_rgba(15,23,42,0.08)] backdrop-blur-2xl focus-within:ring-2 focus-within:ring-charcoal/20 md:flex">
+        <label className="hidden h-12 w-full items-center gap-3 justify-self-end rounded-2xl border border-black/[0.06] bg-white/80 px-4 shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition focus-within:border-black/10 focus-within:bg-white focus-within:shadow-[0_14px_34px_rgba(15,23,42,0.09)] focus-within:ring-3 focus-within:ring-[#786bd1]/10 md:flex">
           <Search size={17} className="text-muted" />
           <FeedSearchInput value={query} onChange={setQuery} />
         </label>
       </header>
 
-      <div className="sticky top-[60px] z-20 -mx-2 mt-5 rounded-2xl border border-black/[0.05] bg-white/85 p-2 shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur-2xl md:top-[64px]">
-        <div className="grid gap-3 md:grid-cols-[1fr_240px]">
-          <div className="flex gap-1.5 overflow-x-auto" aria-label="筛选动态">
+      <div className="sticky top-[60px] z-20 mt-8 rounded-2xl border border-black/[0.05] bg-white/90 p-1.5 shadow-[0_10px_28px_rgba(15,23,42,0.05)] backdrop-blur-2xl md:top-[64px] md:mt-10">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(220px,260px)] md:items-center">
+          <div className="scrollbar-hidden flex gap-1 overflow-x-auto p-0.5" aria-label="筛选动态">
             {filters.map((item) => (
               <button
                 key={item.value}

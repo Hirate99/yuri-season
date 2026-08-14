@@ -39,8 +39,7 @@ function appendUnique(current: FeedItem[], incoming: FeedItem[]) {
 
 export function useCursorFeed(query: FeedQuery, initialPage?: FeedResponse) {
   const queryKey = JSON.stringify(query);
-  const initialQueryKey = useRef(queryKey);
-  const initialConsumed = useRef(false);
+  const loadedQueryKey = useRef<string | null>(initialPage ? queryKey : null);
   const [state, setState] = useState<CursorFeedState>(() => initialPage ? {
     items: initialPage.items,
     nextCursor: initialPage.nextCursor,
@@ -51,17 +50,18 @@ export function useCursorFeed(query: FeedQuery, initialPage?: FeedResponse) {
   const requestGeneration = useRef(0);
 
   useEffect(() => {
-    if (!initialConsumed.current && initialPage && queryKey === initialQueryKey.current) {
-      initialConsumed.current = true;
-      return;
-    }
-    initialConsumed.current = true;
+    // The server-rendered page already satisfies the initial query. Keep that
+    // relationship explicit so React's development effect replay cannot clear
+    // the hydrated items and briefly replace them with loading rows.
+    if (loadedQueryKey.current === queryKey) return;
+
     const generation = ++requestGeneration.current;
     const controller = new AbortController();
     setState(initialState);
     loadFeed(query, undefined, controller.signal)
       .then((page) => {
         if (requestGeneration.current !== generation) return;
+        loadedQueryKey.current = queryKey;
         setState({ items: page.items, nextCursor: page.nextCursor, error: null, loading: false, loadingMore: false });
       })
       .catch((error: unknown) => {
@@ -69,7 +69,7 @@ export function useCursorFeed(query: FeedQuery, initialPage?: FeedResponse) {
         setState({ items: [], nextCursor: null, error: error instanceof Error ? error.message : String(error), loading: false, loadingMore: false });
       });
     return () => controller.abort();
-  }, [queryKey, initialPage]);
+  }, [queryKey]);
 
   const loadMore = useCallback(() => {
     if (!state.nextCursor || state.loading || state.loadingMore) return;

@@ -89,6 +89,8 @@ export async function readAdminAnimeResources(
       url: researchSourcesTable.url,
       itemUrlTemplate: researchSourcesTable.itemUrlTemplate,
       trustLevel: researchSourcesTable.trustLevel,
+      publicTextMode: researchSourcesTable.publicTextMode,
+      maxPublicCharacters: researchSourcesTable.maxPublicCharacters,
       pollIntervalMin: researchSourcesTable.pollIntervalMin,
       cadenceProfile: researchSourcesTable.cadenceProfile,
       enabled: researchSourcesTable.enabled,

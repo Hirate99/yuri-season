@@ -119,9 +119,18 @@ const sourceSchema = z.object({
   url: httpUrl("url"),
   itemUrlTemplate: itemUrlTemplate.default(null),
   trustLevel: z.enum(["official", "verified_creator", "community", "unverified"], "trustLevel 格式不正确。"),
+  publicTextMode: z.enum(["full", "full_with_translation", "excerpt", "summary_only", "link_only"]).optional(),
+  maxPublicCharacters: integerBetween(0, 24_000, "maxPublicCharacters").optional(),
   pollIntervalMin: integerBetween(30, 43_200, "pollIntervalMin"),
   cadenceProfile: z.enum(["rapid", "standard", "local"], "cadenceProfile 格式不正确。"),
   enabled: z.boolean("enabled 必须是布尔值。"),
+}).transform((value) => {
+  const trusted = value.trustLevel === "official" || value.trustLevel === "verified_creator";
+  return {
+    ...value,
+    publicTextMode: value.publicTextMode ?? (trusted ? "full_with_translation" : value.trustLevel === "community" ? "summary_only" : "link_only"),
+    maxPublicCharacters: value.maxPublicCharacters ?? (value.trustLevel === "official" ? 24_000 : value.trustLevel === "verified_creator" ? 6_000 : value.trustLevel === "community" ? 800 : 0),
+  };
 });
 
 export function parseResourceKind(value: string): AdminResourceKind {

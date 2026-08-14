@@ -4,6 +4,7 @@ import type {
   MediaItem,
 } from "@/domain";
 import { resolveCurrentEpisode } from "@/lib/episode-progress";
+import { publicMediaUrl } from "@/lib/media-url";
 import type { AnimeSummaryRecord } from "./read-models/anime";
 import type {
   FeedRow,
@@ -92,7 +93,7 @@ export function mapFeed(row: FeedRow): FeedItem {
         creator_name: row.creator_name,
         creator_url: row.creator_url,
         original_url: row.original_url,
-        preview_url: row.preview_url,
+        preview_url: row.media_r2_key ? publicMediaUrl(row.media_r2_key) : row.preview_url,
         presentation_mode: row.presentation_mode ?? "link_only",
         safety_rating: row.media_safety_rating ?? "unknown",
         spoiler_level: row.media_spoiler_level ?? "none",

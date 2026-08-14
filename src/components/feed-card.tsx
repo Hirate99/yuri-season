@@ -23,12 +23,13 @@ export function FeedCard({ item, compact = false }: { item: FeedItem; compact?: 
       <div className={showPreview || showCover ? "mt-4 grid grid-cols-[minmax(0,1fr)_68px] gap-4 sm:grid-cols-[minmax(0,1fr)_116px]" : "mt-4 min-w-0"}>
         <div className="min-w-0">
           <h3 className={compact ? "text-sm font-semibold" : "text-base font-semibold"}>
-            <a className="inline-flex items-start gap-1" href={item.url} target="_blank" rel="noreferrer">{item.title}<ArrowUpRight className="mt-0.5 shrink-0" size={14} /></a>
+            <a className="hover:underline" href={`/updates/${encodeURIComponent(item.id)}`}>{item.title}</a>
           </h3>
           <p className="mt-2 text-xs leading-6 text-[#50545b]">{item.summary}</p>
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
             <span>{item.sourceName}{item.sourceAccount ? ` · ${item.sourceAccount}` : ""}</span>
             {!isCrossWork && item.animeSlug && <Link className="text-ink hover:underline" to="/anime/$slug" params={{ slug: item.animeSlug }}>{item.animeTitle}</Link>}
+            <a className="inline-flex items-center gap-0.5 text-ink hover:underline" href={item.url} target="_blank" rel="noreferrer">原文<ArrowUpRight size={11} /></a>
           </div>
           {isCrossWork && (
             <div className="mt-3 flex flex-wrap gap-1.5" aria-label="关联作品">
@@ -38,15 +39,13 @@ export function FeedCard({ item, compact = false }: { item: FeedItem; compact?: 
           )}
         </div>
         {showPreview ? (
-          <a className="aspect-[4/3] overflow-hidden rounded-xl bg-[#eceef1]" href={item.media?.originalUrl} target="_blank" rel="noreferrer">
+          <a className="aspect-[4/3] overflow-hidden rounded-xl bg-[#eceef1]" href={`/updates/${encodeURIComponent(item.id)}`}>
             <img className="h-full w-full object-cover" src={item.media?.previewUrl ?? ""} alt="" loading="lazy" referrerPolicy="no-referrer" />
           </a>
         ) : showCover ? (
-          item.animeSlug ? (
-            <Link to="/anime/$slug" params={{ slug: item.animeSlug }}>
-              <CoverImage className="aspect-[3/4] w-full rounded-xl shadow-sm" src={item.animeCoverUrl} alt={`${item.animeTitle ?? "作品"} 封面`} />
-            </Link>
-          ) : <CoverImage className="aspect-[3/4] w-full rounded-xl shadow-sm" src={item.animeCoverUrl} alt="作品封面" />
+          <a href={`/updates/${encodeURIComponent(item.id)}`}>
+            <CoverImage className="aspect-[3/4] w-full rounded-xl shadow-sm" src={item.animeCoverUrl} alt={`${item.animeTitle ?? "作品"} 封面`} />
+          </a>
         ) : null}
       </div>
     </article>

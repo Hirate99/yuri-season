@@ -82,6 +82,10 @@ export async function createCandidate(db: D1Database, draft: CandidateDraft): Pr
   const existingId = await existingCandidateId(db, draft, fingerprint);
   if (existingId) {
     const queries: BatchItem<"sqlite">[] = candidateAnimeQueries(db, existingId, draft);
+    if (draft.observationId) {
+      queries.push(orm.update(feedCandidatesTable).set({ observationId: draft.observationId })
+        .where(eq(feedCandidatesTable.id, existingId)));
+    }
     if (draft.contentClass === "community_thread") {
       queries.push(orm.update(feedCandidatesTable).set({
         observationId: sql`COALESCE(${draft.observationId ?? null}, ${feedCandidatesTable.observationId})`,

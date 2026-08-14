@@ -212,6 +212,8 @@ export type AdminSource = {
   url: string;
   itemUrlTemplate: string | null;
   trustLevel: "official" | "verified_creator" | "community" | "unverified";
+  publicTextMode: "full" | "full_with_translation" | "excerpt" | "summary_only" | "link_only";
+  maxPublicCharacters: number;
   pollIntervalMin: number;
   cadenceProfile: "rapid" | "standard" | "local";
   enabled: boolean;

@@ -31,6 +31,11 @@ export async function readFeed(db: D1Database, options: FeedOptions = {}): Promi
   return { items: pageRows.map(mapFeed), nextCursor };
 }
 
+export async function readFeedItem(db: D1Database, id: string) {
+  const rows = await readNativeFeedPage(db, { id, limit: 1 });
+  return rows[0] ? mapFeed(rows[0]) : null;
+}
+
 export async function readMedia(db: D1Database, animeId: string): Promise<MediaItem[]> {
   return database(db).select({
     id: mediaItemsTable.id,

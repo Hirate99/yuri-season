@@ -52,6 +52,7 @@ describe("source change routing", () => {
         canonicalUrl: "https://example.com/1",
         title: "Example",
         excerpt: "Example",
+        publicText: null,
         authorName: null,
         publishedAt: null,
         contentHash: sourceId,

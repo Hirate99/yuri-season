@@ -36,6 +36,7 @@ export async function storeObservation(
     sourceItemId: item.sourceItemId,
     title: item.title,
     excerpt: item.excerpt,
+    publicText: item.publicText,
     authorName: item.authorName,
     publishedAt: item.publishedAt ? canonicalTemporal(item.publishedAt) : null,
     capturedAt: sql`CURRENT_TIMESTAMP`,

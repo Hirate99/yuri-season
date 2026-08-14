@@ -47,6 +47,7 @@ export type NormalizedSource = {
   canonicalUrl: string;
   title: string | null;
   excerpt: string;
+  publicText: string | null;
   authorName: string | null;
   publishedAt: string | null;
   contentHash: string;

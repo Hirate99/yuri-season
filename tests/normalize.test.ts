@@ -196,7 +196,11 @@ describe("source normalization", () => {
       canonicalUrl: "https://example.com/news/20260809_879/",
       title: "新角色 しん 公开",
       publishedAt: "2026-08-09T01:25:37+09:00",
-      metadata: { normalization: "json-record", previewUrl: "https://example.com/media/879.jpg" },
+      metadata: {
+        normalization: "json-record",
+        previewUrl: "https://example.com/media/879.jpg",
+        publicText: "公式公开了 新角色 。",
+      },
     });
     expect(items[0].excerpt).toContain("公式公开了 新角色 。");
     expect(items[0].excerpt).not.toContain("<strong>");

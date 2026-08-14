@@ -54,6 +54,7 @@ export type FeedRow = {
   creator_url: string | null;
   original_url: string | null;
   preview_url: string | null;
+  media_r2_key: string | null;
   presentation_mode: PresentationMode | null;
   media_safety_rating: SafetyRating | null;
   media_spoiler_level: SpoilerLevel | null;

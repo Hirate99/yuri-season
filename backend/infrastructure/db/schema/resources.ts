@@ -69,6 +69,8 @@ export const researchSourcesTable = sqliteTable("research_sources", {
   url: text("url").notNull().unique(),
   itemUrlTemplate: text("item_url_template"),
   trustLevel: text("trust_level", { enum: ["official", "verified_creator", "community", "unverified"] }).notNull(),
+  publicTextMode: text("public_text_mode", { enum: ["full", "full_with_translation", "excerpt", "summary_only", "link_only"] }).notNull().default("summary_only"),
+  maxPublicCharacters: integer("max_public_characters").notNull().default(1200),
   pollIntervalMin: integer("poll_interval_min").notNull(),
   cadenceProfile: text("cadence_profile", { enum: ["rapid", "standard", "local"] }).notNull(),
   urgencyUntil: text("urgency_until"),

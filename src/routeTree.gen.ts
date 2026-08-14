@@ -16,6 +16,7 @@ import { Route as FeedRouteImport } from './routes/feed'
 import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as AnimeSlugRouteImport } from './routes/anime.$slug'
 import { Route as SeasonSlugRouteImport } from './routes/season.$slug'
+import { Route as UpdatesIdRouteImport } from './routes/updates.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +53,11 @@ const SeasonSlugRoute = SeasonSlugRouteImport.update({
   path: '/season/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UpdatesIdRoute = UpdatesIdRouteImport.update({
+  id: '/updates/$id',
+  path: '/updates/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/seasons': typeof SeasonsRoute
   '/anime/$slug': typeof AnimeSlugRoute
   '/season/$slug': typeof SeasonSlugRoute
+  '/updates/$id': typeof UpdatesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/seasons': typeof SeasonsRoute
   '/anime/$slug': typeof AnimeSlugRoute
   '/season/$slug': typeof SeasonSlugRoute
+  '/updates/$id': typeof UpdatesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   '/seasons': typeof SeasonsRoute
   '/anime/$slug': typeof AnimeSlugRoute
   '/season/$slug': typeof SeasonSlugRoute
+  '/updates/$id': typeof UpdatesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +100,7 @@ export interface FileRouteTypes {
     | '/seasons'
     | '/anime/$slug'
     | '/season/$slug'
+    | '/updates/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/seasons'
     | '/anime/$slug'
     | '/season/$slug'
+    | '/updates/$id'
   id:
     | '__root__'
     | '/'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/seasons'
     | '/anime/$slug'
     | '/season/$slug'
+    | '/updates/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,6 +131,7 @@ export interface RootRouteChildren {
   SeasonsRoute: typeof SeasonsRoute
   AnimeSlugRoute: typeof AnimeSlugRoute
   SeasonSlugRoute: typeof SeasonSlugRoute
+  UpdatesIdRoute: typeof UpdatesIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -172,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SeasonSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/updates/$id': {
+      id: '/updates/$id'
+      path: '/updates/$id'
+      fullPath: '/updates/$id'
+      preLoaderRoute: typeof UpdatesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -183,6 +203,7 @@ const rootRouteChildren: RootRouteChildren = {
   SeasonsRoute: SeasonsRoute,
   AnimeSlugRoute: AnimeSlugRoute,
   SeasonSlugRoute: SeasonSlugRoute,
+  UpdatesIdRoute: UpdatesIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

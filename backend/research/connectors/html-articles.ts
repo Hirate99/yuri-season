@@ -30,6 +30,7 @@ export async function htmlArticleItems(raw: string, source: SourceRecord): Promi
     canonicalUrl: entry.canonicalUrl,
     title: entry.title,
     excerpt: entry.excerpt,
+    publicText: entry.excerpt,
     authorName: null,
     publishedAt: entry.publishedAt,
     contentHash: await stableFingerprint(`${entry.id ?? entry.canonicalUrl}|${entry.title}|${entry.excerpt}|${entry.publishedAt ?? ""}`),

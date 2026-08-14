@@ -66,6 +66,40 @@ export const feedItemsTable = sqliteTable("feed_items", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const publicationDocumentsTable = sqliteTable("publication_documents", {
+  feedItemId: text("feed_item_id").primaryKey(),
+  observationId: text("observation_id"),
+  sourceId: text("source_id"),
+  sourceTitle: text("source_title"),
+  authorName: text("author_name"),
+  sourceLanguage: text("source_language"),
+  publicText: text("public_text"),
+  textMode: text("text_mode", { enum: ["full", "full_with_translation", "excerpt", "summary_only", "link_only", "withdrawn"] }).notNull(),
+  sourceContentHash: text("source_content_hash"),
+  sourceStatus: text("source_status", { enum: ["active", "unavailable", "deleted", "private", "withdrawn"] }).notNull(),
+  capturedAt: text("captured_at").notNull(),
+  lastVerifiedAt: text("last_verified_at"),
+});
+
+export const mediaAssetsTable = sqliteTable("media_assets", {
+  id: text("id").primaryKey(),
+  mediaId: text("media_id").notNull(),
+  r2Key: text("r2_key").notNull().unique(),
+  sourceUrl: text("source_url").notNull(),
+  contentHash: text("content_hash").notNull(),
+  mimeType: text("mime_type").notNull(),
+  width: integer("width"),
+  height: integer("height"),
+  byteSize: integer("byte_size"),
+  variant: text("variant", { enum: ["original", "preview", "thumbnail"] }).notNull(),
+  altText: text("alt_text"),
+  rightsStatus: text("rights_status", { enum: ["licensed", "press_kit", "official_promo_reviewed", "embed_only", "link_only", "prohibited"] }).notNull(),
+  rightsBasis: text("rights_basis"),
+  status: text("status", { enum: ["active", "withdrawn", "purged"] }).notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  withdrawnAt: text("withdrawn_at"),
+});
+
 export const auditLogTable = sqliteTable("audit_log", {
   id: text("id").primaryKey(),
   actorType: text("actor_type", { enum: ["system", "llm", "admin", "local_skill"] }).notNull(),

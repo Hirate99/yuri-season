@@ -57,7 +57,8 @@ const FEED_SELECT = `
       WHERE asset.media_id = m.id
         AND asset.status = 'active' AND asset.withdrawn_at IS NULL
         AND asset.rights_status IN ('licensed', 'press_kit', 'official_promo_reviewed')
-      ORDER BY CASE asset.variant WHEN 'thumbnail' THEN 0 WHEN 'preview' THEN 1 ELSE 2 END,
+      ORDER BY asset.sort_order ASC,
+        CASE asset.variant WHEN 'thumbnail' THEN 0 WHEN 'preview' THEN 1 ELSE 2 END,
         asset.width ASC, asset.id ASC
       LIMIT 1) AS media_r2_key,
     m.presentation_mode, m.safety_rating AS media_safety_rating,

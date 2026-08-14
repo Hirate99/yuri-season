@@ -90,6 +90,7 @@ export type PublicationAsset = {
   mimeType: string;
   width: number | null;
   height: number | null;
+  sortOrder: number;
   variant: "original" | "preview" | "thumbnail";
   altText: string | null;
   rightsStatus: "licensed" | "press_kit" | "official_promo_reviewed";

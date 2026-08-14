@@ -51,6 +51,7 @@ export async function readPublicationAssets(
     mimeType: mediaAssetsTable.mimeType,
     width: mediaAssetsTable.width,
     height: mediaAssetsTable.height,
+    sortOrder: mediaAssetsTable.sortOrder,
     variant: mediaAssetsTable.variant,
     altText: mediaAssetsTable.altText,
     rightsStatus: mediaAssetsTable.rightsStatus,
@@ -61,9 +62,9 @@ export async function readPublicationAssets(
       isNull(mediaAssetsTable.withdrawnAt),
       inArray(mediaAssetsTable.rightsStatus, publicRights),
     ))
-    .orderBy(asc(mediaAssetsTable.width), mediaAssetsTable.id);
+    .orderBy(asc(mediaAssetsTable.sortOrder), asc(mediaAssetsTable.sourceUrl), mediaAssetsTable.id);
 
-  return rows.flatMap((row) => {
+  const publicAssets = rows.flatMap((row) => {
     const url = publicMediaUrl(row.r2Key);
     if (!url) return [];
     return [{
@@ -72,6 +73,22 @@ export async function readPublicationAssets(
       rightsStatus: row.rightsStatus as PublicationAsset["rightsStatus"],
     }];
   });
+  const variantPriority: Record<PublicationAsset["variant"], number> = {
+    thumbnail: 1,
+    original: 2,
+    preview: 3,
+  };
+  const preferred = new Map<string, (typeof publicAssets)[number]>();
+  for (const asset of publicAssets) {
+    const current = preferred.get(asset.sourceUrl);
+    if (!current
+      || variantPriority[asset.variant] > variantPriority[current.variant]
+      || (variantPriority[asset.variant] === variantPriority[current.variant]
+        && (asset.width ?? 0) > (current.width ?? 0))) {
+      preferred.set(asset.sourceUrl, asset);
+    }
+  }
+  return [...preferred.values()].sort((left, right) => left.sortOrder - right.sortOrder);
 }
 
 export async function readPublicationCorrections(

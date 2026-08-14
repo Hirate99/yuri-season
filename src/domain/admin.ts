@@ -378,7 +378,23 @@ export type CandidateDraft = {
     safetyRating?: SafetyRating;
     spoilerLevel?: SpoilerLevel;
     rightsNote?: string | null;
+    assets?: CandidateMediaAsset[];
   };
+};
+
+export type CandidateMediaAsset = {
+  r2Key: string;
+  sourceUrl: string;
+  contentHash: string;
+  mimeType: string;
+  width?: number | null;
+  height?: number | null;
+  byteSize?: number | null;
+  sortOrder: number;
+  variant: "original" | "preview" | "thumbnail";
+  altText?: string | null;
+  rightsStatus: "licensed" | "press_kit" | "official_promo_reviewed";
+  rightsBasis: string;
 };
 
 export type { AnimePatch };

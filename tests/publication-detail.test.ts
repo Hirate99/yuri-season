@@ -172,6 +172,35 @@ describe("publication details", () => {
     );
   });
 
+  test("returns multiple source images in editorial order and collapses size variants", async () => {
+    const publication = await publishedOfficialItem();
+    database.sqlite.query(`
+      INSERT INTO media_assets (
+        id, media_id, r2_key, source_url, content_hash, mime_type, width, height,
+        byte_size, sort_order, variant, alt_text, rights_status, rights_basis, status
+      ) VALUES
+        ('asset-first-original', ?, 'yuri/publications/first.jpg', ?, 'first-original-hash',
+          'image/jpeg', 2000, 2000, 50000, 0, 'original', '第一张原图', 'press_kit', '官方下载素材', 'active'),
+        ('asset-first-preview', ?, 'yuri/publications/first.webp', ?, 'first-preview-hash',
+          'image/webp', 1000, 1000, 20000, 0, 'preview', '第一张预览', 'press_kit', '官方下载素材', 'active'),
+        ('asset-second-preview', ?, 'yuri/publications/second.webp', ?, 'second-preview-hash',
+          'image/webp', 1000, 1000, 21000, 1, 'preview', '第二张预览', 'press_kit', '官方下载素材', 'active')
+    `).run(
+      publication.media_id,
+      "https://source.test/first.jpg",
+      publication.media_id,
+      "https://source.test/first.jpg",
+      publication.media_id,
+      "https://source.test/second.jpg",
+    );
+
+    const page = await readPublicationPage(database.binding(), publication.id);
+    expect(page?.assets.map((asset) => ({ id: asset.id, sortOrder: asset.sortOrder }))).toEqual([
+      { id: "asset-first-preview", sortOrder: 0 },
+      { id: "asset-second-preview", sortOrder: 1 },
+    ]);
+  });
+
   test("refreshes the public text snapshot when the same source item changes", async () => {
     const publication = await publishedOfficialItem();
     database.sqlite.query(`

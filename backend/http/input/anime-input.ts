@@ -57,6 +57,27 @@ const animeCreateSchema = z.object({
   ...animeFields,
 });
 
+const candidateMediaAssetSchema = z.object({
+  r2Key: requiredText(500, "media.asset.r2Key").refine(
+    (value) => !value.startsWith("/")
+      && !value.includes("\\")
+      && !value.includes("//")
+      && value.split("/").every((part) => part !== "." && part !== ".."),
+    "media.asset.r2Key 不是安全的对象路径。",
+  ),
+  sourceUrl: httpUrl("media.asset.sourceUrl"),
+  contentHash: requiredText(64, "media.asset.contentHash").regex(/^[a-f0-9]{64}$/i, "media.asset.contentHash 必须是 SHA-256。"),
+  mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"]),
+  width: nullableIntegerBetween(1, 100_000, "media.asset.width").optional(),
+  height: nullableIntegerBetween(1, 100_000, "media.asset.height").optional(),
+  byteSize: nullableIntegerBetween(1, 100_000_000, "media.asset.byteSize").optional(),
+  sortOrder: integerBetween(0, 1_000, "media.asset.sortOrder"),
+  variant: z.enum(["original", "preview", "thumbnail"]),
+  altText: optionalNullableText(500, "media.asset.altText"),
+  rightsStatus: z.enum(["licensed", "press_kit", "official_promo_reviewed"]),
+  rightsBasis: requiredText(1_000, "media.asset.rightsBasis"),
+});
+
 const candidateMediaSchema = z.object({
   contentClass: z.enum(["official_art", "creator_art", "fanart", "fan_video", "cosplay"]),
   title: requiredText(240, "media.title"),
@@ -68,7 +89,14 @@ const candidateMediaSchema = z.object({
   safetyRating: z.enum(["safe", "suggestive", "adult", "unknown"]).optional(),
   spoilerLevel: z.enum(["none", "mild", "major"]).optional(),
   rightsNote: optionalNullableText(1_000, "media.rightsNote"),
-});
+  assets: z.array(candidateMediaAssetSchema).max(20, "media.assets 最多包含 20 个资产变体。").optional(),
+}).refine(
+  (value) => !value.assets?.length || value.presentationMode === "mirrored_with_permission",
+  { message: "带站内资产的媒体必须使用 mirrored_with_permission。", path: ["presentationMode"] },
+).refine(
+  (value) => !value.assets?.length || new Set(value.assets.map((asset) => asset.r2Key)).size === value.assets.length,
+  { message: "media.assets 的 r2Key 不能重复。", path: ["assets"] },
+);
 
 export const candidateDraftSchema = z.object({
   observationId: optionalNullableText(160, "observationId"),

@@ -5,6 +5,9 @@ dist/
 .tmp/
 .research-cache/
 research-batches/
+!research-batches/
+research-batches/*
+!research-batches/2026-08-14-taiari-private-icons.json
 artifacts/
 .preview/
 .dev.vars

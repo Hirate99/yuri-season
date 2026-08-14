@@ -89,7 +89,7 @@ export function FeedPage({ initialPage, catalog }: { initialPage: FeedResponse; 
         items={feed.items}
         getKey={(item) => item.id}
         renderItem={(item) => <FeedCard item={item} />}
-        hasMore={Boolean(feed.nextCursor)}
+        hasMore={!feed.loading && !feed.refreshing && Boolean(feed.nextCursor)}
         loadingMore={feed.loadingMore}
         onLoadMore={feed.loadMore}
         wideLanes={2}

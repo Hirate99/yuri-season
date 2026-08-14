@@ -7,6 +7,7 @@ type CursorFeedState = {
   nextCursor: string | null;
   error: string | null;
   loading: boolean;
+  refreshing: boolean;
   loadingMore: boolean;
 };
 
@@ -15,6 +16,7 @@ const initialState: CursorFeedState = {
   nextCursor: null,
   error: null,
   loading: true,
+  refreshing: false,
   loadingMore: false,
 };
 
@@ -45,6 +47,7 @@ export function useCursorFeed(query: FeedQuery, initialPage?: FeedResponse) {
     nextCursor: initialPage.nextCursor,
     error: null,
     loading: false,
+    refreshing: false,
     loadingMore: false,
   } : initialState);
   const requestGeneration = useRef(0);
@@ -57,22 +60,35 @@ export function useCursorFeed(query: FeedQuery, initialPage?: FeedResponse) {
 
     const generation = ++requestGeneration.current;
     const controller = new AbortController();
-    setState(initialState);
+    const refreshing = loadedQueryKey.current !== null;
+    setState((current) => ({
+      ...current,
+      error: null,
+      loading: !refreshing,
+      refreshing,
+      loadingMore: false,
+    }));
     loadFeed(query, undefined, controller.signal)
       .then((page) => {
         if (requestGeneration.current !== generation) return;
         loadedQueryKey.current = queryKey;
-        setState({ items: page.items, nextCursor: page.nextCursor, error: null, loading: false, loadingMore: false });
+        setState({ items: page.items, nextCursor: page.nextCursor, error: null, loading: false, refreshing: false, loadingMore: false });
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted || requestGeneration.current !== generation) return;
-        setState({ items: [], nextCursor: null, error: error instanceof Error ? error.message : String(error), loading: false, loadingMore: false });
+        setState((current) => ({
+          ...current,
+          error: error instanceof Error ? error.message : String(error),
+          loading: false,
+          refreshing: false,
+          loadingMore: false,
+        }));
       });
     return () => controller.abort();
   }, [queryKey]);
 
   const loadMore = useCallback(() => {
-    if (!state.nextCursor || state.loading || state.loadingMore) return;
+    if (!state.nextCursor || state.loading || state.refreshing || state.loadingMore) return;
     const generation = requestGeneration.current;
     const cursor = state.nextCursor;
     setState((current) => ({ ...current, loadingMore: true, error: null }));
@@ -90,7 +106,7 @@ export function useCursorFeed(query: FeedQuery, initialPage?: FeedResponse) {
         if (requestGeneration.current !== generation) return;
         setState((current) => ({ ...current, error: error instanceof Error ? error.message : String(error), loadingMore: false }));
       });
-  }, [queryKey, state.loading, state.loadingMore, state.nextCursor]);
+  }, [queryKey, state.loading, state.refreshing, state.loadingMore, state.nextCursor]);
 
   return { ...state, loadMore };
 }

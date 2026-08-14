@@ -1,8 +1,13 @@
-import type { AnimePageResponse } from "@/domain";
+import type { AnimePageResponse, PublicationDetailResponse } from "@/domain";
 
 import { readCalendar, readCalendarForSeason, readCatalog, readCatalogForSeason, readSeasons } from "~/repositories/catalog";
 import { readAnimeDetail } from "~/repositories/detail";
-import { readDiscussions, readFeed, readMedia, type FeedOptions } from "~/repositories/feed";
+import { readDiscussions, readFeed, readFeedItem, readMedia, type FeedOptions } from "~/repositories/feed";
+import {
+  readPublicationAssets,
+  readPublicationCorrections,
+  readPublicationDocument,
+} from "~/repositories/publications";
 
 /** Shared application read model used by SSR and the public API. */
 export async function readAnimePage(db: D1Database, slug: string): Promise<AnimePageResponse | null> {
@@ -14,6 +19,20 @@ export async function readAnimePage(db: D1Database, slug: string): Promise<Anime
     readDiscussions(db, anime.id),
   ]);
   return { anime, feed: feed.items, media, discussions };
+}
+
+export async function readPublicationPage(
+  db: D1Database,
+  id: string,
+): Promise<PublicationDetailResponse | null> {
+  const item = await readFeedItem(db, id);
+  if (!item) return null;
+  const [document, assets, corrections] = await Promise.all([
+    readPublicationDocument(db, item.id),
+    readPublicationAssets(db, item.media?.id ?? null),
+    readPublicationCorrections(db, item.id),
+  ]);
+  return { item, document, assets, corrections };
 }
 
 export function createPublicService(env: Env) {
@@ -28,6 +47,7 @@ export function createPublicService(env: Env) {
       season: (slug: string) => readCatalogForSeason(env.DB, slug),
     },
     feed: (request: FeedOptions) => readFeed(env.DB, request),
+    publications: { page: (id: string) => readPublicationPage(env.DB, id) },
     seasons: () => readSeasons(env.DB),
   };
 }

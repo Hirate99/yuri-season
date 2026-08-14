@@ -14,6 +14,8 @@ export type SourceIdentity = "official" | "creator" | "cast" | "community" | "ed
 export type SafetyRating = "safe" | "suggestive" | "adult" | "unknown";
 export type SpoilerLevel = "none" | "mild" | "major";
 export type PresentationMode = "link_only" | "platform_embed" | "remote_preview" | "mirrored_with_permission";
+export type PublicTextMode = "full" | "full_with_translation" | "excerpt" | "summary_only" | "link_only" | "withdrawn";
+export type SourceStatus = "active" | "unavailable" | "deleted" | "private" | "withdrawn";
 
 export type MediaItem = {
   id: string;
@@ -67,6 +69,42 @@ export type FeedItem = {
 export type FeedResponse = {
   items: FeedItem[];
   nextCursor: string | null;
+};
+
+export type PublicationDocument = {
+  sourceTitle: string | null;
+  authorName: string | null;
+  sourceLanguage: string | null;
+  publicText: string | null;
+  textMode: PublicTextMode;
+  sourceStatus: SourceStatus;
+  capturedAt: string;
+  lastVerifiedAt: string | null;
+};
+
+export type PublicationAsset = {
+  id: string;
+  url: string;
+  sourceUrl: string;
+  mimeType: string;
+  width: number | null;
+  height: number | null;
+  variant: "original" | "preview" | "thumbnail";
+  altText: string | null;
+  rightsStatus: "licensed" | "press_kit" | "official_promo_reviewed";
+};
+
+export type PublicationCorrection = {
+  correctionType: "edit" | "withdraw" | "supersede";
+  reason: string;
+  createdAt: string;
+};
+
+export type PublicationDetailResponse = {
+  item: FeedItem;
+  document: PublicationDocument | null;
+  assets: PublicationAsset[];
+  corrections: PublicationCorrection[];
 };
 
 export type Discussion = {

@@ -10,7 +10,10 @@ import {
   discussionsTable,
   feedCandidatesTable,
   feedItemsTable,
+  publicationDocumentsTable,
+  researchSourcesTable,
   reviewDecisionsTable,
+  sourceObservationsTable,
 } from "~/infrastructure/db/schema";
 import { HttpError } from "~/shared/http-error";
 import { createId } from "~/shared/id";
@@ -127,6 +130,10 @@ function publicationQueries(
     ).onConflictDoNothing());
   }
 
+  const capturedText = sql<string | null>`COALESCE(
+    NULLIF(${sourceObservationsTable.publicText}, ''),
+    ${sourceObservationsTable.excerpt}
+  )`;
   queries.push(orm.insert(feedItemsTable).select(
     orm.select({
       id: sql<string>`${createId("feed")}`.as("id"),
@@ -160,6 +167,52 @@ function publicationQueries(
       .leftJoin(discussionsTable, eq(discussionsTable.url, feedCandidatesTable.url))
       .where(eq(feedCandidatesTable.id, candidate.id)),
   ).onConflictDoNothing());
+  queries.push(orm.insert(publicationDocumentsTable).select(
+    orm.select({
+      feedItemId: feedItemsTable.id,
+      observationId: sourceObservationsTable.id,
+      sourceId: sourceObservationsTable.sourceId,
+      sourceTitle: sourceObservationsTable.title,
+      authorName: sourceObservationsTable.authorName,
+      sourceLanguage: sourceObservationsTable.originalLanguage,
+      publicText: sql<string | null>`CASE
+        WHEN ${feedItemsTable.contentClass} IN ('fanwork', 'community_thread') THEN NULL
+        WHEN ${researchSourcesTable.publicTextMode} IN ('full', 'full_with_translation')
+          THEN SUBSTR(${capturedText}, 1, ${researchSourcesTable.maxPublicCharacters})
+        WHEN ${researchSourcesTable.publicTextMode} = 'excerpt'
+          THEN SUBSTR(${capturedText}, 1, MIN(${researchSourcesTable.maxPublicCharacters}, 800))
+        ELSE NULL
+      END`.as("public_text"),
+      textMode: sql<"full" | "full_with_translation" | "excerpt" | "summary_only" | "link_only">`CASE
+        WHEN ${feedItemsTable.contentClass} IN ('fanwork', 'community_thread') THEN 'summary_only'
+        WHEN ${sourceObservationsTable.id} IS NULL THEN 'summary_only'
+        ELSE COALESCE(${researchSourcesTable.publicTextMode}, 'summary_only')
+      END`.as("text_mode"),
+      sourceContentHash: sourceObservationsTable.contentHash,
+      sourceStatus: sql<"active">`'active'`.as("source_status"),
+      capturedAt: sql<string>`COALESCE(${sourceObservationsTable.capturedAt}, ${feedItemsTable.createdAt})`.as("captured_at"),
+      lastVerifiedAt: sourceObservationsTable.capturedAt,
+    }).from(feedItemsTable)
+      .leftJoin(feedCandidatesTable, eq(feedCandidatesTable.id, feedItemsTable.candidateId))
+      .leftJoin(sourceObservationsTable, eq(sourceObservationsTable.id, feedCandidatesTable.observationId))
+      .leftJoin(researchSourcesTable, eq(researchSourcesTable.id, sourceObservationsTable.sourceId))
+      .where(eq(feedItemsTable.candidateId, candidate.id)),
+  ).onConflictDoUpdate({
+    target: publicationDocumentsTable.feedItemId,
+    set: {
+      observationId: sql`excluded.observation_id`,
+      sourceId: sql`excluded.source_id`,
+      sourceTitle: sql`excluded.source_title`,
+      authorName: sql`excluded.author_name`,
+      sourceLanguage: sql`excluded.source_language`,
+      publicText: sql`excluded.public_text`,
+      textMode: sql`excluded.text_mode`,
+      sourceContentHash: sql`excluded.source_content_hash`,
+      sourceStatus: "active",
+      capturedAt: sql`excluded.captured_at`,
+      lastVerifiedAt: sql`excluded.last_verified_at`,
+    },
+  }));
   return queries;
 }
 
@@ -182,6 +235,11 @@ function withdrawalQueries(
     }),
     orm.update(feedItemsTable).set({ withdrawnAt: sql`CURRENT_TIMESTAMP` })
       .where(sql`${feedItemsTable.id} = ${feedItemId} AND ${feedItemsTable.withdrawnAt} IS NULL`),
+    orm.update(publicationDocumentsTable).set({
+      textMode: "withdrawn",
+      sourceStatus: "withdrawn",
+      publicText: null,
+    }).where(eq(publicationDocumentsTable.feedItemId, feedItemId)),
   ] as const;
 }
 

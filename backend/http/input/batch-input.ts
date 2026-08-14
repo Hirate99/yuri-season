@@ -73,6 +73,7 @@ const observationSchema = z.object({
   canonicalUrl: httpUrl("canonicalUrl"),
   title: optionalNullableText(300, "title"),
   excerpt: requiredText(24_000, "excerpt"),
+  publicText: optionalNullableText(24_000, "publicText"),
   authorName: optionalNullableText(200, "authorName"),
   publishedAt: temporal("publishedAt").optional(),
   contentType: requiredText(120, "contentType").optional(),

@@ -77,6 +77,7 @@ async function communityItem(raw: string, source: SourceRecord): Promise<Normali
     canonicalUrl,
     title,
     excerpt: `${title}${activity}`,
+    publicText: null,
     authorName: null,
     publishedAt: null,
     contentHash: await stableFingerprint(`${canonicalUrl}|${title}|${replyCount ?? ""}|${lastPostId ?? ""}`),
@@ -121,6 +122,7 @@ async function htmlItems(raw: string, source: SourceRecord): Promise<NormalizedS
       canonicalUrl: source.url,
       title: source.label,
       excerpt,
+      publicText: excerpt,
       authorName: null,
       publishedAt: null,
       contentHash: await stableFingerprint(excerpt),
@@ -136,6 +138,7 @@ async function htmlItems(raw: string, source: SourceRecord): Promise<NormalizedS
       canonicalUrl: item.url,
       title: normalized.title,
       excerpt: normalized.title,
+      publicText: null,
       authorName: null,
       publishedAt: normalized.publishedAt,
       contentHash: await stableFingerprint(`${item.url}|${normalized.title}|${normalized.publishedAt ?? ""}`),
@@ -167,6 +170,7 @@ async function feedItems(raw: string, source: SourceRecord): Promise<NormalizedS
       canonicalUrl: link,
       title,
       excerpt: excerpt.slice(0, 24_000),
+      publicText: excerpt.slice(0, 24_000),
       authorName: xmlValue(entry, ["author", "dc:creator"]),
       publishedAt,
       contentHash: await stableFingerprint(`${sourceItemId}|${title}|${excerpt}|${publishedAt}`),
@@ -208,6 +212,10 @@ async function jsonItems(raw: string, source: SourceRecord): Promise<NormalizedS
           : field,
       ]));
     const excerpt = JSON.stringify(stableObject).slice(0, 24_000);
+    const publicText = ["body", "content", "description", "summary", "text"]
+      .map((key) => object[key])
+      .find((field): field is string => typeof field === "string" && textFromHtml(field).length > 0);
+    const normalizedPublicText = publicText ? textFromHtml(publicText).slice(0, 24_000) : title;
     const rawDirectUrl = typeof object.directLinkUrl === "string"
       ? object.directLinkUrl
       : typeof object.link === "string"
@@ -244,12 +252,17 @@ async function jsonItems(raw: string, source: SourceRecord): Promise<NormalizedS
       canonicalUrl: url,
       title,
       excerpt,
+      publicText: normalizedPublicText,
       authorName: typeof object.author === "string" ? object.author : null,
       publishedAt,
       contentHash: await stableFingerprint(`${sourceItemId}|${excerpt}`),
       contentType: "application/json",
       language: null,
-      metadata: { normalization: "json-record", previewUrl },
+      metadata: {
+        normalization: "json-record",
+        previewUrl,
+        publicText: normalizedPublicText,
+      },
     };
   }));
 }

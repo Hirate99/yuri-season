@@ -6,6 +6,7 @@ import { allRows, placeholders } from "./statement";
 type FeedCursor = { pinned: number; publishedAt: string; id: string };
 
 export type NativeFeedFilter = {
+  id?: string;
   animeId?: string;
   animeSlug?: string;
   contentClasses?: ContentClass[];
@@ -52,6 +53,13 @@ const FEED_SELECT = `
     fi.auto_published, fi.is_pinned,
     m.id AS media_id, m.content_class AS media_content_class, m.title AS media_title,
     m.creator_name, m.creator_url, m.original_url, m.preview_url,
+    (SELECT asset.r2_key FROM media_assets asset
+      WHERE asset.media_id = m.id
+        AND asset.status = 'active' AND asset.withdrawn_at IS NULL
+        AND asset.rights_status IN ('licensed', 'press_kit', 'official_promo_reviewed')
+      ORDER BY CASE asset.variant WHEN 'thumbnail' THEN 0 WHEN 'preview' THEN 1 ELSE 2 END,
+        asset.width ASC, asset.id ASC
+      LIMIT 1) AS media_r2_key,
     m.presentation_mode, m.safety_rating AS media_safety_rating,
     m.spoiler_level AS media_spoiler_level, m.rights_note,
     m.published_at AS media_published_at
@@ -66,6 +74,11 @@ const FEED_SELECT = `
 function buildWhere(filter: NativeFeedFilter) {
   const clauses = [PUBLIC_FEED_ITEM, "fi.safety_rating != 'adult'", "fi.content_class != 'editorial'"];
   const bindings: Array<string | number> = [];
+
+  if (filter.id) {
+    clauses.push("fi.id = ?");
+    bindings.push(filter.id);
+  }
 
   if (filter.animeId) {
     clauses.push(`(fi.anime_id = ? OR (fi.content_class = 'community_thread' AND EXISTS (

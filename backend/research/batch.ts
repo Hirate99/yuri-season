@@ -74,7 +74,9 @@ export async function ingestResearchBatch(db: D1Database, batch: ResearchBatch):
   try {
     for (const observation of batch.observations) {
       const source = await resolveObservationSource(db, observation);
-      const contentHash = await stableFingerprint(`${observation.sourceItemId ?? observation.canonicalUrl}|${observation.excerpt}`);
+      const contentHash = await stableFingerprint(
+        `${observation.sourceItemId ?? observation.canonicalUrl}|${observation.excerpt}|${observation.publicText ?? ""}`,
+      );
       const existing = await orm.select({ id: sourceObservationsTable.id }).from(sourceObservationsTable)
         .where(sql`${sourceObservationsTable.sourceId} = ${source.id} AND ${sourceObservationsTable.contentHash} = ${contentHash}`)
         .get();
@@ -94,6 +96,7 @@ export async function ingestResearchBatch(db: D1Database, batch: ResearchBatch):
           sourceItemId: observation.sourceItemId ?? null,
           title: observation.title ?? null,
           excerpt: observation.excerpt,
+          publicText: observation.publicText ?? null,
           authorName: observation.authorName ?? null,
           publishedAt: observation.publishedAt ?? null,
           capturedAt: sql`CURRENT_TIMESTAMP`,

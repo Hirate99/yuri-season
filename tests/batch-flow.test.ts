@@ -29,6 +29,7 @@ function batch(sourceId = "source-kimi-news", batchId = "batch-integration-1"): 
       sourceId,
       sourceItemId: "20260811_01",
       canonicalUrl: "https://www.kimishinu-anime.com/news/20260811_01.html",
+      publicText: "Complete official announcement body.",
       title: "公式公开新角色视觉",
       excerpt: "公式网站公开新角色视觉。",
       publishedAt: "2026-08-11T12:00:00+09:00",
@@ -87,6 +88,15 @@ describe("local research batch", () => {
         (SELECT COUNT(*) FROM feed_items WHERE auto_published = 1) AS published
     `).get() as { observations: number; candidates: number; published: number };
     expect(counts).toEqual({ observations: 1, candidates: 1, published: 1 });
+    expect(database.sqlite.query(`
+      SELECT observation.public_text AS source_text, document.public_text AS published_text
+      FROM source_observations observation
+      JOIN publication_documents document ON document.observation_id = observation.id
+      WHERE observation.source_item_id = '20260811_01'
+    `).get()).toEqual({
+      source_text: "Complete official announcement body.",
+      published_text: "Complete official announcement body.",
+    });
     expect(database.sqlite.query(`
       SELECT outcome, observation_id IS NOT NULL AS has_observation,
         candidate_id IS NOT NULL AS has_candidate

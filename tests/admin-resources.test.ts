@@ -140,7 +140,12 @@ describe("Admin anime resources", () => {
       ) AND event_type = 'birthday'
     `).get(animeId, castId)).toEqual({ count: 0 });
     expect(resources.accounts.find((account) => account.id === accountId)).toMatchObject({ verified: true, monitorMode: "local" });
-    expect(resources.sources.find((source) => source.id === sourceId)).toMatchObject({ pollIntervalMin: 1440, enabled: true });
+    expect(resources.sources.find((source) => source.id === sourceId)).toMatchObject({
+      pollIntervalMin: 1440,
+      enabled: true,
+      publicTextMode: "full_with_translation",
+      maxPublicCharacters: 24000,
+    });
 
     await updateAdminResource(database.binding(), animeId, "source", sourceId,
       parseResourceWrite("source", { ...sourceWrite.value, enabled: false }));

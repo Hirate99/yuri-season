@@ -42,6 +42,7 @@ export type BatchObservation = {
   canonicalUrl: string;
   title?: string | null;
   excerpt: string;
+  publicText?: string | null;
   authorName?: string | null;
   publishedAt?: string | null;
   contentType?: string;

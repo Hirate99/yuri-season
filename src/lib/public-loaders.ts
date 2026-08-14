@@ -1,5 +1,5 @@
 import { createIsomorphicFn } from "@tanstack/react-start";
-import type { AnimePageResponse } from "@/domain";
+import type { AnimePageResponse, PublicationDetailResponse } from "@/domain";
 import type { ServerRequestContext } from "@/server-context";
 import { apiClient, rpcData } from "./api";
 
@@ -85,6 +85,16 @@ export const loadAnimeData = createIsomorphicFn()
   })
   .client((input: PublicLoadContext & { slug: string }) =>
     rpcData(apiClient.api.anime[":slug"].$get({ param: { slug: input.slug } })));
+
+export const loadPublicationData = createIsomorphicFn()
+  .server(async (input: PublicLoadContext & { id: string }): Promise<PublicationDetailResponse> => {
+    const { readPublicationPage } = await import("~/application/public/service");
+    const page = await readPublicationPage(database(input), input.id);
+    if (!page) throw new Error("没有找到这条情报。");
+    return page;
+  })
+  .client((input: PublicLoadContext & { id: string }) =>
+    rpcData(apiClient.api.updates[":id"].$get({ param: { id: input.id } })));
 
 export const loadSeasonsData = createIsomorphicFn()
   .server(async (input: PublicLoadContext) => {

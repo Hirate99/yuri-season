@@ -170,7 +170,8 @@ describe("discovery query planning", () => {
       sources: [{
         id: "source-work", accountId: null, sourceType: "official_page", changeKind: "feed_candidate",
         label: "公式 NEWS", url: "https://example.com/news", itemUrlTemplate: null,
-        trustLevel: "official", pollIntervalMin: 1440, cadenceProfile: "local", enabled: true,
+        trustLevel: "official", publicTextMode: "full_with_translation", maxPublicCharacters: 24000,
+        pollIntervalMin: 1440, cadenceProfile: "local", enabled: true,
       }],
     };
     const queries = buildDiscoveryPlan({
@@ -444,7 +445,8 @@ describe("discovery query planning", () => {
       sources: [{
         id: "source-account", accountId: "account-sourced", sourceType: "bluesky", changeKind: "feed_candidate",
         label: "声优 Bluesky", url: "https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=voice.example",
-        itemUrlTemplate: null, trustLevel: "verified_creator", pollIntervalMin: 1440,
+        itemUrlTemplate: null, trustLevel: "verified_creator", publicTextMode: "full_with_translation",
+        maxPublicCharacters: 6000, pollIntervalMin: 1440,
         cadenceProfile: "local", enabled: true,
       }],
     };

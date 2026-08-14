@@ -18,7 +18,12 @@
 
 @layer base {
   * { box-sizing: border-box; }
-  html { @apply bg-paper text-ink antialiased; }
+  html {
+    @apply bg-paper text-ink antialiased;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar { display: none; }
   body { @apply m-0 min-w-80 bg-paper font-sans; }
   button, select { @apply cursor-pointer; }
   button:disabled { @apply cursor-wait opacity-55; }

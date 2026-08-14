@@ -74,6 +74,20 @@ async function publishedOfficialItem() {
 }
 
 describe("publication details", () => {
+  test("purges mirrored text from legacy withdrawn publications", () => {
+    const result = database.sqlite.query(`
+      SELECT
+        COUNT(*) AS withdrawn,
+        COALESCE(SUM(public_text IS NOT NULL), 0) AS retained_text,
+        COALESCE(SUM(text_mode <> 'withdrawn'), 0) AS incorrect_mode
+      FROM publication_documents
+      WHERE source_status = 'withdrawn'
+    `).get() as { withdrawn: number; retained_text: number; incorrect_mode: number };
+
+    expect(result.withdrawn).toBeGreaterThan(0);
+    expect(result).toMatchObject({ retained_text: 0, incorrect_mode: 0 });
+  });
+
   test("materializes the source policy into a stable public text snapshot", async () => {
     const publication = await publishedOfficialItem();
     const page = await readPublicationPage(database.binding(), publication.id);

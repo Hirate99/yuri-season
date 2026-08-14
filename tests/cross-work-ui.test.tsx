@@ -88,7 +88,10 @@ describe("cross-work discussion UI", () => {
     expect(html).toContain("作品 A");
     expect(html).toContain("作品 B");
     expect(html).not.toContain("作品 A 封面");
-    expect(html.match(/href="\/updates\/feed-shared"/g)).toHaveLength(1);
-    expect(html).toContain("aria-label=\"查看详情：");
+    expect(html).not.toContain("/updates/feed-shared");
+    expect(html).not.toContain("/feed/feed-shared");
+    expect(html.match(/href="https:\/\/bbs\.example\.test\/shared"/g)).toHaveLength(2);
+    expect(html).toContain("aria-label=\"打开讨论：");
+    expect(html).toContain("讨论串");
   });
 });

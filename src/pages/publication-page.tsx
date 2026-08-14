@@ -7,7 +7,7 @@ import { contentLabel } from "@/lib/format";
 
 const textModeLabel = {
   full: "完整原文",
-  full_with_translation: "原文＋中文整理",
+  full_with_translation: "完整原文",
   excerpt: "原文节选",
   summary_only: "中文整理",
   link_only: "原文链接",
@@ -51,7 +51,7 @@ export function PublicationPage({ data }: { data: PublicationDetailResponse }) {
               <figure className="mb-10 overflow-hidden rounded-2xl bg-raised">
                 <img className="max-h-[720px] w-full object-contain" src={heroUrl} alt={hero?.altText ?? item.media?.title ?? item.title} decoding="async" referrerPolicy="no-referrer" />
                 <figcaption className="flex flex-wrap items-center justify-between gap-2 bg-[#f7f7f9] px-4 py-3 text-[10px] text-muted">
-                  <span>{hero ? (hero.rightsStatus === "licensed" ? "获授权镜像" : hero.rightsStatus === "press_kit" ? "官方媒体素材" : "经审核的官方宣传素材") : item.media?.rightsNote ?? "来源预览"}</span>
+                  <span>{hero?.rightsStatus === "press_kit" ? "官方图片" : "图片来自原帖"}</span>
                   <a className="transition hover:text-ink" href={hero?.sourceUrl ?? item.media?.originalUrl ?? item.url} target="_blank" rel="noreferrer">图片来源 ↗</a>
                 </figcaption>
               </figure>
@@ -72,9 +72,21 @@ export function PublicationPage({ data }: { data: PublicationDetailResponse }) {
               </section>
             )}
 
+            {document?.publicTranslation && (
+              <section className="mt-10" aria-labelledby="source-translation-heading">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-4 w-1 rounded-full bg-signal-coral" aria-hidden="true" />
+                  <h2 id="source-translation-heading" className="text-sm font-bold">中文翻译</h2>
+                </div>
+                <div className="mt-5 space-y-5 text-[15px] leading-8 text-[#454a52] md:text-base md:leading-9">
+                  {paragraphs(document.publicTranslation).map((paragraph, index) => <p key={index} className="whitespace-pre-wrap">{paragraph}</p>)}
+                </div>
+              </section>
+            )}
+
             {!document?.publicText && (
               <section className="rounded-2xl bg-raised px-5 py-4" aria-label="来源正文状态">
-                <p className="text-xs font-semibold text-ink">本站暂未镜像来源正文</p>
+                <p className="text-xs font-semibold text-ink">本站暂未收录来源正文</p>
                 <p className="mt-1 text-xs leading-6 text-muted">这里保留经过核对的中文摘要，完整内容可前往来源页面查看。</p>
               </section>
             )}

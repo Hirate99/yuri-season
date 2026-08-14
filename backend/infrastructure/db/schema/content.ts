@@ -74,6 +74,7 @@ export const publicationDocumentsTable = sqliteTable("publication_documents", {
   authorName: text("author_name"),
   sourceLanguage: text("source_language"),
   publicText: text("public_text"),
+  publicTranslation: text("public_translation"),
   textMode: text("text_mode", { enum: ["full", "full_with_translation", "excerpt", "summary_only", "link_only", "withdrawn"] }).notNull(),
   sourceContentHash: text("source_content_hash"),
   sourceStatus: text("source_status", { enum: ["active", "unavailable", "deleted", "private", "withdrawn"] }).notNull(),

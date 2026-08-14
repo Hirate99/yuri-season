@@ -74,6 +74,7 @@ const observationSchema = z.object({
   title: optionalNullableText(300, "title"),
   excerpt: requiredText(24_000, "excerpt"),
   publicText: optionalNullableText(24_000, "publicText"),
+  publicTranslation: optionalNullableText(24_000, "publicTranslation"),
   authorName: optionalNullableText(200, "authorName"),
   publishedAt: temporal("publishedAt").optional(),
   contentType: requiredText(120, "contentType").optional(),

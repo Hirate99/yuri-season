@@ -76,6 +76,7 @@ export type PublicationDocument = {
   authorName: string | null;
   sourceLanguage: string | null;
   publicText: string | null;
+  publicTranslation: string | null;
   textMode: PublicTextMode;
   sourceStatus: SourceStatus;
   capturedAt: string;

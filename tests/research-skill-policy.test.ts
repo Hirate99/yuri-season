@@ -14,6 +14,10 @@ describe("research skill policy", () => {
       expect(content).not.toContain("Never lease more than 12 queries");
       expect(content).toContain("Main-character coverage means the recurring protagonist group");
       expect(content).toContain("Moegirl is a translation reference only");
+      expect(content).toContain("`publicTranslation`");
+      expect(content).toContain("A translation must never replace the original");
+      expect(content).toContain("never expose bucket names");
+      expect(content).toContain("missing media is a preflight failure");
       expect(content).toContain("expected main-group count");
       expect(content).toContain("research:audit:birthdays");
       expect(content).toContain("first_party_source_change");
@@ -33,6 +37,7 @@ describe("research skill policy", () => {
     const schema = await Bun.file(".agent/skills/yuri-season-research/references/batch-schema.md").text();
     const discovery = await Bun.file(".agent/skills/yuri-season-research/references/discovery-results.md").text();
     expect(schema).toContain('"animeIds": ["anime-anchor", "anime-second", "anime-third"]');
+    expect(schema).toContain('"publicTranslation"');
     expect(schema).toContain("do not emit one duplicate candidate per work");
     expect(discovery).toContain("`animeIds` for a cross-work thread");
   });

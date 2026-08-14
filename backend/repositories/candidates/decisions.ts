@@ -131,6 +131,7 @@ function publicationQueries(
   }
 
   const capturedText = sql<string | null>`NULLIF(${sourceObservationsTable.publicText}, '')`;
+  const capturedTranslation = sql<string | null>`NULLIF(${sourceObservationsTable.publicTranslation}, '')`;
   const capturedTextMode = sql<string | null>`NULLIF(json_extract(${sourceObservationsTable.metadataJson}, '$.publicTextMode'), '')`;
   queries.push(orm.insert(feedItemsTable).select(
     orm.select({
@@ -183,12 +184,20 @@ function publicationQueries(
           THEN SUBSTR(${capturedText}, 1, MIN(${researchSourcesTable.maxPublicCharacters}, 800))
         ELSE NULL
       END`.as("public_text"),
+      publicTranslation: sql<string | null>`CASE
+        WHEN ${feedItemsTable.contentClass} IN ('fanwork', 'community_thread') THEN NULL
+        WHEN ${capturedText} IS NULL THEN NULL
+        WHEN ${researchSourcesTable.publicTextMode} = 'full_with_translation'
+          THEN SUBSTR(${capturedTranslation}, 1, ${researchSourcesTable.maxPublicCharacters})
+        ELSE NULL
+      END`.as("public_translation"),
       textMode: sql<"full" | "full_with_translation" | "excerpt" | "summary_only" | "link_only">`CASE
         WHEN ${feedItemsTable.contentClass} IN ('fanwork', 'community_thread') THEN 'summary_only'
         WHEN ${sourceObservationsTable.id} IS NULL THEN 'summary_only'
         WHEN ${researchSourcesTable.publicTextMode} = 'link_only' THEN 'link_only'
         WHEN ${capturedText} IS NULL THEN 'summary_only'
         WHEN ${capturedTextMode} = 'excerpt' THEN 'excerpt'
+        WHEN ${researchSourcesTable.publicTextMode} = 'full_with_translation' AND ${capturedTranslation} IS NULL THEN 'full'
         ELSE COALESCE(${researchSourcesTable.publicTextMode}, 'summary_only')
       END`.as("text_mode"),
       sourceContentHash: sourceObservationsTable.contentHash,
@@ -209,6 +218,7 @@ function publicationQueries(
       authorName: sql`excluded.author_name`,
       sourceLanguage: sql`excluded.source_language`,
       publicText: sql`excluded.public_text`,
+      publicTranslation: sql`excluded.public_translation`,
       textMode: sql`excluded.text_mode`,
       sourceContentHash: sql`excluded.source_content_hash`,
       sourceStatus: "active",
@@ -242,6 +252,7 @@ function withdrawalQueries(
       textMode: "withdrawn",
       sourceStatus: "withdrawn",
       publicText: null,
+      publicTranslation: null,
     }).where(eq(publicationDocumentsTable.feedItemId, feedItemId)),
   ] as const;
 }

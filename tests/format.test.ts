@@ -15,6 +15,11 @@ describe("event date formatting", () => {
   test("does not invent a local time for a date-only feed item", () => {
     expect(dateTime("2026-08-10")).toBe("8月10日");
   });
+
+  test("renders every feed instant in the requested viewer timezone", () => {
+    expect(dateTime("2026-08-14T06:48:00.000Z", "America/Los_Angeles"))
+      .toBe("8月13日 23:48");
+  });
 });
 
 describe("public content labels", () => {

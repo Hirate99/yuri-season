@@ -36,7 +36,8 @@ Natural-language requests such as “增量查找”“日常更新” or “看
 2. Lease work with `bun run research -- next --limit=<n>`. Execute only leased tasks and obey each task's structured `operation`, required surfaces, cursor, and completion policy.
 3. Open originals, record every inspected stable object ID, build any traceable batch, then submit the result with `bun run research -- submit <results.json>`.
 4. Import verified candidates through the normal batch workflow and reconcile every supported projection affected by the evidence. A feed card alone is not completion when the same source supports media, events, accounts, schedule, cast, or music.
-5. Repeat until `bun run research -- finish` reports convergence. A result chunk or lease size is never a stop condition.
+5. Pass the reader-facing completion gate below for every published item. An accepted batch or populated database row is not proof that the public result works.
+6. Repeat until `bun run research -- finish` reports convergence. A result chunk, lease size, or successful import is never a stop condition.
 
 The legacy `research:diff`, `research:discover:*`, `research:import`, and specialist audit commands remain compatibility or maintenance entry points; routine operation should use the unified CLI.
 
@@ -56,6 +57,14 @@ The legacy `research:diff`, `research:discover:*`, `research:import`, and specia
 - If public copy says an image, illustration, photo, visual, or video was posted, missing linked media is a preflight failure unless the media is unavailable or policy requires link-only.
 - Public rights copy stays human-readable (`图片来自原帖` or `官方图片`). Storage, object-key, bucket, and byte-cache details are internal.
 - Use local CLI/Admin APIs for imports and state. Never fall back to UI automation for routine writes, and never change production credentials merely to make a local command pass.
+
+## Reader-facing completion gate
+
+- For every published item, read back the public API or page and verify title, summary, original text, Chinese translation, source link, related work, attribution, timestamps, and every projection supported by the evidence.
+- When an original contains publishable media, completion requires the actual source asset: inspect it, preserve its provenance and dimensions, upload it to remote production storage, link the resulting media record, then confirm the public URL returns the expected media type and the public item points to it. A cover fallback, external hotlink, local Wrangler object, or merely populated `media` input does not pass.
+- Use the Cloudflare and Wrangler skills for production media work. Require explicit remote R2/D1 operations and verify the command reports the remote resource before accepting success. If reuse is unsupported, keep the item link-only with a clear policy reason instead of uploading it.
+- Do not run `research -- finish` while any published item has a missing, placeholder, inaccessible, or incorrectly attributed asset. Repair it or record an evidence-backed link-only exception first.
+- Treat stored datetimes as instants. Publicly returned timestamps must include `Z` or an explicit offset, and `publishedAt`, `capturedAt`, and correction times must all render in the same viewer timezone. A zone-less SQLite `CURRENT_TIMESTAMP` value must be normalized before it reaches the client.
 
 ## Learning and stop conditions
 

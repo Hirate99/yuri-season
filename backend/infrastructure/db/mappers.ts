@@ -5,6 +5,7 @@ import type {
 } from "@/domain";
 import { resolveCurrentEpisode } from "@/lib/episode-progress";
 import { publicMediaUrl } from "@/lib/media-url";
+import { canonicalInstant } from "~/shared/time";
 import type { AnimeSummaryRecord } from "./read-models/anime";
 import type {
   FeedRow,
@@ -80,7 +81,7 @@ export function mapMedia(row: MediaRow): MediaItem {
     safetyRating: row.safety_rating,
     spoilerLevel: row.spoiler_level,
     rightsNote: row.rights_note,
-    publishedAt: row.published_at,
+    publishedAt: canonicalInstant(row.published_at),
   };
 }
 
@@ -122,7 +123,7 @@ export function mapFeed(row: FeedRow): FeedItem {
     sourceName: row.source_name,
     sourceAccount: row.source_account,
     importance: row.importance,
-    publishedAt: row.published_at,
+    publishedAt: canonicalInstant(row.published_at),
     safetyRating: row.safety_rating,
     spoilerLevel: row.spoiler_level,
     autoPublished: row.auto_published === 1,

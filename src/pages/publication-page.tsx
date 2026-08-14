@@ -40,7 +40,7 @@ export function PublicationPage({ data }: { data: PublicationDetailResponse }) {
           <span aria-hidden="true">·</span>
           <LocalDateTime value={item.publishedAt} />
         </div>
-        <h1 className="mt-5 max-w-4xl text-3xl leading-[1.16] font-black tracking-[-0.035em] md:text-5xl">{item.title}</h1>
+        <h1 className="mt-5 max-w-4xl text-2xl leading-[1.2] font-black tracking-[-0.03em] sm:text-3xl lg:text-4xl">{item.title}</h1>
         <p className="mt-5 max-w-3xl text-sm leading-7 text-[#50545b] md:text-base md:leading-8">{item.summary}</p>
       </header>
 

@@ -26,15 +26,16 @@ async function publishedOfficialItem() {
   database.sqlite.query(`
     INSERT INTO source_observations (
       id, source_id, anime_id, canonical_url, source_item_id, title, excerpt,
-      author_name, published_at, captured_at, connector_version,
+      public_text, author_name, published_at, captured_at, connector_version,
       original_language, content_type, http_status, content_hash, metadata_json
-    ) VALUES (?, 'source-kimi-news', 'anime-kimishinu', ?, ?, ?, ?, ?, ?, ?,
+    ) VALUES (?, 'source-kimi-news', 'anime-kimishinu', ?, ?, ?, ?, ?, ?, ?, ?,
       'test@1', 'ja', 'text/plain', 200, ?, '{}')
   `).run(
     "observation-publication-detail",
     "https://www.kimishinu-anime.com/news/detail-test",
     "detail-test",
     "公式ニュース原題",
+    "官网公开了新的官方新闻。",
     "これは公開する公式ニュースの本文です。",
     "アニメ公式",
     "2026-08-13T12:00:00Z",
@@ -141,10 +142,10 @@ describe("publication details", () => {
     database.sqlite.query(`
       INSERT INTO source_observations (
         id, source_id, anime_id, canonical_url, source_item_id, title, excerpt,
-        author_name, published_at, captured_at, connector_version,
+        public_text, author_name, published_at, captured_at, connector_version,
         original_language, content_type, http_status, content_hash, metadata_json
       ) VALUES ('observation-publication-refresh', 'source-kimi-news', 'anime-kimishinu', ?,
-        'detail-test', '公式ニュース原題', '更新された公式ニュース本文です。', 'アニメ公式',
+        'detail-test', '公式ニュース原題', '官网更新了这条新闻。', '更新された公式ニュース本文です。', 'アニメ公式',
         '2026-08-13T12:00:00Z', '2026-08-13T13:05:00Z', 'test@1', 'ja',
         'text/plain', 200, 'publication-refresh-hash', '{}')
     `).run("https://www.kimishinu-anime.com/news/detail-test");
@@ -168,6 +169,20 @@ describe("publication details", () => {
     expect((await readPublicationPage(database.binding(), publication.id))?.document).toMatchObject({
       publicText: "更新された公式ニュース本",
       capturedAt: "2026-08-13T13:05:00Z",
+    });
+  });
+
+  test("does not expose an evidence paraphrase as source text", async () => {
+    const publication = await publishedOfficialItem();
+    database.sqlite.query(`
+      UPDATE source_observations SET public_text = NULL
+      WHERE id = 'observation-publication-detail'
+    `).run();
+    await applyCandidateDecision(database.binding(), publication.candidateId, "publish", { reviewerType: "admin" });
+
+    expect((await readPublicationPage(database.binding(), publication.id))?.document).toMatchObject({
+      publicText: null,
+      textMode: "summary_only",
     });
   });
 

@@ -37,7 +37,7 @@ Discovery searches for unknown sources; it is separate from registered-source sy
 1. Run `bun run research:discover:status`, then resume the active campaign or create one with `bun run research:discover` when needed. Before planning searches, treat verified database resources, registered canonical URLs, and durable `exhausted` memory as satisfied. Do not browse again merely because a field is part of the discovery catalog. Only an explicit user scope or `--force` may override this satisfaction check.
 2. Lease matching due work with `bun run research:discover:next`. For explicit platform work use `--platform=X,Instagram`; `--kind=<comma-separated kinds>` can narrow a search lane. A smaller positional size is allowed only to fit the actual execution window; after recording it, lease again until the due scope converges.
 3. Execute only leased queries and reuse `knownHits`. Preserve the query context in every result: `contentLane`, `animeId`, `personId`, `characterIds`, `accountId`, and `platform` when supplied.
-4. Treat search results as leads. Open the original page and verify identity, entity match, date, authorship, and original-post status. Never turn a snippet into an observation.
+4. Treat search results as leads. Open the original page and verify identity, entity match, date, authorship, and original-post status. Never turn a snippet into an observation. When redistribution is allowed, preserve the readable original-language body as `publicText`; keep `excerpt` as a separate internal paraphrase and never place a Chinese summary in `publicText`.
 5. Record every executed query, including zero-hit and blocked searches, using `references/discovery-results.md`, then run `bun run research:discover:record -- <results.json>` promptly.
 6. Put verified candidates into traceable batches. Keep extraction and review as separate passes and import through the normal batch workflow.
 
@@ -58,7 +58,7 @@ If a leased scope disappears before search, run `bun run research:discover:cance
 5. Extract atomic claims and match registered anime/person/character/account IDs. Do not infer identity from names alone.
 6. Review relevance, entailment, duplicate risk, source identity, safety, spoilers, attribution, and presentation separately from extraction.
 7. Create one JSON file in `research-batches/`, following `references/batch-schema.md`.
-   Before import, preflight every user-facing candidate: `title` and `summary` must be concise Chinese by default, while preserving necessary official proper nouns. Do not use English fallback copy merely to satisfy validation; stop and correct it before import.
+   Before import, preflight every user-facing candidate: `title` and `summary` must be concise Chinese by default, while preserving necessary official proper nouns. For official and verified-creator sources, open the canonical item and include its readable original-language body in `publicText` when redistribution is allowed. Do not use `excerpt`, a translated summary, or search snippets as source text. Do not use English fallback copy merely to satisfy validation; stop and correct it before import.
 8. Run `bun run research:import -- <batch.json>`. The server may downgrade `publish` to `hold`; never bypass policy.
 9. After successful or duplicate-safe import run `bun run research:commit`. Keep the pending diff when import fails.
 

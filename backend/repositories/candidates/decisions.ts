@@ -130,10 +130,8 @@ function publicationQueries(
     ).onConflictDoNothing());
   }
 
-  const capturedText = sql<string | null>`COALESCE(
-    NULLIF(${sourceObservationsTable.publicText}, ''),
-    ${sourceObservationsTable.excerpt}
-  )`;
+  const capturedText = sql<string | null>`NULLIF(${sourceObservationsTable.publicText}, '')`;
+  const capturedTextMode = sql<string | null>`NULLIF(json_extract(${sourceObservationsTable.metadataJson}, '$.publicTextMode'), '')`;
   queries.push(orm.insert(feedItemsTable).select(
     orm.select({
       id: sql<string>`${createId("feed")}`.as("id"),
@@ -177,6 +175,8 @@ function publicationQueries(
       sourceLanguage: sourceObservationsTable.originalLanguage,
       publicText: sql<string | null>`CASE
         WHEN ${feedItemsTable.contentClass} IN ('fanwork', 'community_thread') THEN NULL
+        WHEN ${capturedTextMode} = 'excerpt'
+          THEN SUBSTR(${capturedText}, 1, MIN(${researchSourcesTable.maxPublicCharacters}, 800))
         WHEN ${researchSourcesTable.publicTextMode} IN ('full', 'full_with_translation')
           THEN SUBSTR(${capturedText}, 1, ${researchSourcesTable.maxPublicCharacters})
         WHEN ${researchSourcesTable.publicTextMode} = 'excerpt'
@@ -186,6 +186,9 @@ function publicationQueries(
       textMode: sql<"full" | "full_with_translation" | "excerpt" | "summary_only" | "link_only">`CASE
         WHEN ${feedItemsTable.contentClass} IN ('fanwork', 'community_thread') THEN 'summary_only'
         WHEN ${sourceObservationsTable.id} IS NULL THEN 'summary_only'
+        WHEN ${researchSourcesTable.publicTextMode} = 'link_only' THEN 'link_only'
+        WHEN ${capturedText} IS NULL THEN 'summary_only'
+        WHEN ${capturedTextMode} = 'excerpt' THEN 'excerpt'
         ELSE COALESCE(${researchSourcesTable.publicTextMode}, 'summary_only')
       END`.as("text_mode"),
       sourceContentHash: sourceObservationsTable.contentHash,

@@ -42,15 +42,25 @@ function optionValues(arguments_: string[], name: string): Set<string> | null {
   return new Set(values);
 }
 
+function optionValue(arguments_: string[], name: string): string | null {
+  const prefix = `--${name}=`;
+  const raw = arguments_.find((argument) => argument.startsWith(prefix))?.slice(prefix.length).trim();
+  if (raw === undefined) return null;
+  if (!raw) throw new Error(`${prefix}<value> expected`);
+  return raw;
+}
+
 async function lease(): Promise<void> {
   const campaign = await loadCampaign();
   const arguments_ = process.argv.slice(3);
   const positionalLimit = arguments_.find((argument) => !argument.startsWith("--"));
   const platforms = optionValues(arguments_, "platform");
   const kinds = optionValues(arguments_, "kind");
+  const targetSuffix = optionValue(arguments_, "target-suffix");
   const queries = leaseCampaignQueries(campaign, batchLimit(positionalLimit), new Date(), (query) =>
     (!platforms || Boolean(query.platform && platforms.has(query.platform.toLowerCase())))
-    && (!kinds || kinds.has(query.searchKind.toLowerCase())));
+    && (!kinds || kinds.has(query.searchKind.toLowerCase()))
+    && (!targetSuffix || query.targetKey.endsWith(targetSuffix)));
   await saveCampaign(campaign);
   process.stdout.write(JSON.stringify({
     campaignId: campaign.campaignId,

@@ -10,6 +10,8 @@ export type AccountUpdateTarget = {
   characterIds: string[];
   platform: string;
   contentLane: "official" | "cast" | "creator";
+  projectPersona: boolean;
+  timelineMode: "official" | "project_persona" | null;
 };
 
 function hasRegisteredSource(resources: AdminAnimeResources, accountId: string) {
@@ -26,6 +28,18 @@ function priority(resources: AdminAnimeResources, account: AdminAccount) {
   return 2;
 }
 
+function normalizedIdentity(value: string | null | undefined) {
+  return value?.normalize("NFKC").trim().toLocaleLowerCase() || null;
+}
+
+function isProjectPersonaAccount(resources: AdminAnimeResources, account: AdminAccount) {
+  if (account.ownerType !== "person") return false;
+  return resources.cast.some((item) => item.isMainGroup
+    && item.personId === account.ownerId
+    && normalizedIdentity(item.personNameNative || item.personName)
+      === normalizedIdentity(item.characterNameNative || item.characterName));
+}
+
 export function accountUpdateTarget(
   resources: AdminAnimeResources,
   account: AdminAccount,
@@ -34,6 +48,10 @@ export function accountUpdateTarget(
   if (!account.verified || account.monitorMode === "disabled") return null;
   if (account.monitorMode !== "local" && hasRegisteredSource(resources, account.id)) return null;
   const cast = resources.cast.filter((item) => item.personId === account.ownerId);
+  const projectPersona = isProjectPersonaAccount(resources, account);
+  const timelineMode = account.ownerType === "anime"
+    ? "official" as const
+    : projectPersona ? "project_persona" as const : null;
   const contentLane = account.ownerType === "anime"
     ? "official" as const
     : cast.length > 0 ? "cast" as const : "creator" as const;
@@ -41,16 +59,18 @@ export function accountUpdateTarget(
     scopeType: account.ownerType === "person" ? "person" : "anime",
     scopeId: account.ownerType === "person" ? account.ownerId : animeId,
     targetKey: `updates:${animeId}:${account.id}`,
-    priority: priority(resources, account),
+    priority: projectPersona ? Math.max(4, priority(resources, account)) : priority(resources, account),
     accountId: account.id,
     personId: account.ownerType === "person" ? account.ownerId : null,
     characterIds: cast.map((item) => item.characterId),
     platform: account.platform,
     contentLane,
+    projectPersona,
+    timelineMode,
   };
 }
 
-function afterDate(searchedAt: string | null, now: Date) {
+export function afterDate(searchedAt: string | null, now: Date) {
   const previous = searchedAt ? Date.parse(searchedAt) : Number.NaN;
   const anchor = Number.isNaN(previous)
     ? now.valueOf() - 30 * 86_400_000
@@ -63,12 +83,19 @@ export function accountUpdateQuery(
   title: string,
   searchedAt: string | null,
   now: Date,
+  timelineMode: AccountUpdateTarget["timelineMode"] = null,
 ) {
   const after = afterDate(searchedAt, now);
   const accountName = account.handle?.trim() || account.platform.trim();
   try {
     const parsed = new URL(account.url);
     const pathname = parsed.pathname.replace(/^\/+|\/+$/g, "");
+    if (timelineMode === "project_persona" && pathname) {
+      return `${account.platform} account timeline: ${account.url}; inspect original posts after:${after}; include project/anime posts and public professional or creative activity; exclude private routine, unrelated ads/giveaways, and repost-only items`;
+    }
+    if (timelineMode === "official" && pathname) {
+      return `${account.platform} official account timeline: ${account.url}; inspect every original post after:${after}; extract official news, events, schedules, videos, art, and other visible media; create linked media records for eligible images and preserve stable post IDs`;
+    }
     if ((parsed.hostname === "x.com" || parsed.hostname === "twitter.com") && pathname) {
       return `site:x.com/${pathname.split("/")[0]} "${title}" after:${after}`;
     }

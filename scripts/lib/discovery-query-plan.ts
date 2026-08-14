@@ -4,7 +4,7 @@ import type {
   SearchMemoryHitSummary,
   SearchMemorySummary,
 } from "@/domain";
-import { accountUpdateQuery, accountUpdateTarget } from "./discovery-account-updates";
+import { accountUpdateQuery, accountUpdateTarget, afterDate } from "./discovery-account-updates";
 
 type SearchKind = SearchMemorySummary["searchKind"];
 type ScopeType = SearchMemorySummary["scopeType"];
@@ -71,6 +71,17 @@ function hasRegisteredOfficialSource(resources: AdminAnimeResources) {
   return resources.sources.some((source) => source.enabled
     && ["official", "verified_creator"].includes(source.trustLevel)
     && source.changeKind === "feed_candidate");
+}
+
+function hasAppleMusicTrackUrl(value: string | null): boolean {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.hostname === "music.apple.com"
+      && (Boolean(url.searchParams.get("i")) || /\/(?:album|song)\/[^/]+\/\d+$/.test(url.pathname));
+  } catch {
+    return false;
+  }
 }
 
 function hasWorkAccount(resources: AdminAnimeResources, animeId: string) {
@@ -160,15 +171,19 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
         queryText: `"${titleJa}" OP ED 主題歌 オープニング エンディング 公式`, priority: 5, cadenceDays: 14,
         reason: "从动画官网、唱片公司或官方音乐页面补齐主题曲、制作名单与页面已有的唱片封面；只接收明确字段" });
     } else {
-      const songsWithoutJackets = resources.themeSongs.filter((song) => song.verified && !song.coverUrl);
-      if (songsWithoutJackets.length > 0) {
-        const titles = [...new Set(songsWithoutJackets.map((song) => song.title))]
+      const incompleteSongs = resources.themeSongs.filter((song) => song.verified
+        && (!hasAppleMusicTrackUrl(song.officialUrl)
+          || !song.coverUrl
+          || song.coverSourceUrl !== song.officialUrl));
+      if (incompleteSongs.length > 0) {
+        const titles = [...new Set(incompleteSongs.map((song) => `${song.title} / ${song.artist}`))]
           .slice(0, 3)
           .map((title) => `"${title}"`)
           .join(" ");
-        add({ ...common, searchKind: "official_news", targetKey: "music:theme-song-jackets",
-          queryText: `"${titleJa}" ${titles} ジャケット 公式`, priority: 3, cadenceDays: 30,
-          reason: "已验证主题曲缺少封面；只从动画官网、唱片公司或官方发行页补图片 URL 与来源页" });
+        add({ ...common, searchKind: "official_news", targetKey: "music:theme-song-projection",
+          queryText: `reconcile verified theme songs for "${titleJa}": ${titles}; resolve an exact title+artist Apple Music track through the official Apple search/lookup API and fill the public action plus Apple artwork; if no exact Apple track exists, preserve first-party identity evidence and leave unsupported fields empty`,
+          priority: 4, cadenceDays: 7,
+          reason: "对账已验证主题曲的完整用户投影：曲目身份仍由第一方来源证明，精确 Apple Music 曲目补试听入口与封面；不存在或歧义时不猜测" });
       }
     }
 
@@ -178,9 +193,31 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
       const prior = remembered.get(memoryKey(target.scopeType, target.scopeId, "social", target.targetKey));
       add({ ...target, animeId: anime.id, animeTitle: anime.titleZh,
         searchKind: "social",
-        queryText: accountUpdateQuery(account, titleJa, prior?.searchedAt ?? null, input.now),
-        cadenceDays: 7,
-        reason: "检查已验证账号的作品相关新帖；只接受明确关联作品、角色、集数或活动的原始帖" });
+        queryText: accountUpdateQuery(account, titleJa, prior?.searchedAt ?? null, input.now, target.timelineMode),
+        cadenceDays: target.timelineMode ? 1 : 7,
+        reason: target.timelineMode === "project_persona"
+          ? "增量检查已验证的 2.5D 主角组成员／企划人格账号；收录企划、动画及公开职业或创作动态，排除纯日常、无关广告抽奖和仅转发"
+          : target.timelineMode === "official"
+            ? "每日增量检查已验证的作品官方账号全部原帖；提取官方新闻、活动、排期、视频、插画及其他可见媒体，并为合格图片建立关联媒体记录"
+          : "检查已验证账号的作品相关新帖；只接受明确关联作品、角色、集数或活动的原始帖" });
+    }
+    const officialXAccounts = resources.accounts.filter((account) => account.verified
+      && account.monitorMode !== "disabled"
+      && account.ownerType === "anime"
+      && account.ownerId === anime.id
+      && ["x", "twitter"].includes(account.platform.toLowerCase()));
+    if (officialXAccounts.length > 0) {
+      const targetKey = `updates:${anime.id}:x-tags`;
+      const prior = remembered.get(memoryKey("anime", anime.id, "social", targetKey));
+      const aliases = [...new Set([
+        anime.titleZh, anime.titleJa, anime.titleEn,
+        ...resources.cast.filter((item) => item.isMainGroup)
+          .flatMap((item) => [item.characterName, item.characterNameNative]),
+      ].filter((value): value is string => Boolean(value?.trim())))];
+      add({ ...common, searchKind: "social", targetKey,
+        queryText: `X latest hashtag timelines: inspect verified official profiles and recent original posts (${officialXAccounts.map((account) => account.url).join(", ")}) to recover current official work/anime/project hashtags; then inspect Latest results after:${afterDate(prior?.searchedAt ?? null, input.now)} for those tags plus aliases (${aliases.join(" / ")}); verify every original, record every stable post ID, and emit official/cast/creator/media candidates under their normal provenance rules`,
+        priority: 5, cadenceDays: 1, platform: "X", contentLane: "official",
+        reason: "每日增量检查每部当季作品正在使用的 X 官方标签、动画标签、企划简称及主角组名称；标签来自已验证官方资料与近期官方原帖，所有命中必须回到原帖并与账号监控共享 stable post ID 去重" });
     }
     add({ ...common, searchKind: "media", targetKey: "media:creator-art",
       queryText: `\"${titleJa}\" 描き下ろし 応援イラスト`, priority: 4, cadenceDays: 7,
@@ -250,6 +287,17 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
           reason: `补齐出演声优的可验证 ${accountPlatform.platform} 账号；名字相同不能作为验证` });
       }
     }
+  }
+
+  for (const query of planned.values()) {
+    if (query.searchKind !== "social" || query.platform?.toLowerCase() !== "x" || !query.animeId) continue;
+    const relatedPrefix = `updates:${query.animeId}:`;
+    const relatedHits = input.memory
+      .filter((item) => item.searchKind === "social" && item.targetKey.startsWith(relatedPrefix))
+      .flatMap((item) => hitsByMemory.get(item.id) ?? [])
+      .map((hit) => ({ canonicalUrl: hit.canonicalUrl, title: hit.title, outcome: hit.outcome, lastSeenAt: hit.lastSeenAt }));
+    query.knownHits = [...new Map([...query.knownHits, ...relatedHits]
+      .map((hit) => [hit.canonicalUrl, hit])).values()];
   }
 
   return [...planned.values()]

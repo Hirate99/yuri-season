@@ -181,8 +181,9 @@ describe("discovery query planning", () => {
     expect(queries.some((query) => query.targetKey === "official:work")).toBe(false);
     expect(queries.some((query) => query.targetKey === "social:work")).toBe(false);
     expect(queries.some((query) => query.targetKey === "updates:anime-1:account-work"
-      && query.queryText === 'site:x.com/work "作品日本語" after:2026-07-12'
-      && query.priority === 5)).toBe(true);
+      && query.queryText.toLowerCase().includes("x official account timeline: https://x.com/work")
+      && query.queryText.includes("after:2026-07-12")
+      && query.priority === 5 && query.cadenceDays === 1)).toBe(true);
     expect(queries.some((query) => query.scopeId === "person-1" && query.searchKind === "social")).toBe(true);
   });
 
@@ -226,7 +227,7 @@ describe("discovery query planning", () => {
       && query.targetKey === "account:official-instagram")).toBe(true);
   });
 
-  test("plans a low-frequency official jacket lookup for verified songs missing artwork", () => {
+  test("plans projection reconciliation for verified songs missing Apple action or artwork", () => {
     const resourcesWithMusic: AdminAnimeResources = {
       ...resources,
       themeSongs: [{
@@ -242,14 +243,15 @@ describe("discovery query planning", () => {
       resources: { "anime-1": resourcesWithMusic }, memory: [], memoryHits: [],
       now: new Date("2026-08-11T20:00:00Z"), force: false, limit: 100,
     });
-    const jacket = queries.find((query) => query.targetKey === "music:theme-song-jackets");
+    const reconciliation = queries.find((query) => query.targetKey === "music:theme-song-projection");
 
     expect(queries.some((query) => query.targetKey === "music:theme-songs")).toBe(false);
-    expect(jacket).toMatchObject({ searchKind: "official_news", priority: 3, cadenceDays: 30 });
-    expect(jacket?.queryText).toContain('"Blue Hour"');
+    expect(reconciliation).toMatchObject({ searchKind: "official_news", priority: 4, cadenceDays: 7 });
+    expect(reconciliation?.queryText).toContain('"Blue Hour / Example Artist"');
+    expect(reconciliation?.queryText).toContain("Apple Music");
   });
 
-  test("does not search again when every verified song already has an official jacket", () => {
+  test("still reconciles a verified song with artwork but no Apple action", () => {
     const completeMusic: AdminAnimeResources = {
       ...resources,
       themeSongs: [{
@@ -258,6 +260,28 @@ describe("discovery query planning", () => {
         episodeRange: null, sortOrder: 0, officialUrl: null,
         coverUrl: "https://music.example.test/afterglow.jpg",
         coverSourceUrl: "https://music.example.test/releases/afterglow",
+        sourceUrl: "https://anime.example.test/music", verified: true, sharedAnimeCount: 1,
+      }],
+    };
+    const queries = buildDiscoveryPlan({
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime],
+      resources: { "anime-1": completeMusic }, memory: [], memoryHits: [],
+      now: new Date("2026-08-11T20:00:00Z"), force: false, limit: 100,
+    });
+
+    expect(queries.some((query) => query.targetKey === "music:theme-song-projection")).toBe(true);
+  });
+
+  test("does not search again when every verified song has a complete Apple projection", () => {
+    const completeMusic: AdminAnimeResources = {
+      ...resources,
+      themeSongs: [{
+        id: "theme-song-ending", trackId: "track-ending", songKind: "ending", sequence: 1, title: "Afterglow",
+        artist: "Example Artist", lyricist: null, composer: null, arranger: null,
+        episodeRange: null, sortOrder: 0,
+        officialUrl: "https://music.apple.com/jp/album/afterglow/123?i=456",
+        coverUrl: "https://is1-ssl.mzstatic.com/afterglow.jpg",
+        coverSourceUrl: "https://music.apple.com/jp/album/afterglow/123?i=456",
         sourceUrl: "https://anime.example.test/music", verified: true, sharedAnimeCount: 1,
       }],
     };
@@ -320,7 +344,32 @@ describe("discovery query planning", () => {
       .some((query) => query.targetKey === "updates:anime-1:account-work")).toBe(false);
     expect(buildDiscoveryPlan({ ...input, force: true })
       .some((query) => query.targetKey === "updates:anime-1:account-work"
-        && query.queryText === 'site:x.com/work "作品日本語" after:2026-08-09')).toBe(true);
+        && query.queryText.includes("X official account timeline: https://x.com/work")
+        && query.queryText.includes("after:2026-08-09"))).toBe(true);
+  });
+
+  test("plans daily official X timeline and related-tag monitoring for every current work", () => {
+    const monitoredResources: AdminAnimeResources = {
+      ...resources,
+      accounts: [{
+        id: "account-work-x", ownerType: "anime", ownerId: anime.id, ownerLabel: anime.titleZh,
+        platform: "X", handle: "@work", url: "https://x.com/work", verified: true,
+        monitorMode: "local", verificationSourceUrl: "https://example.com/official", verifiedAt: "2026-08-11T00:00:00Z",
+      }],
+    };
+    const queries = buildDiscoveryPlan({
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime],
+      resources: { "anime-1": monitoredResources }, memory: [], memoryHits: [],
+      now: new Date("2026-08-11T20:00:00Z"), force: false, limit: 100,
+    });
+    const account = queries.find((query) => query.accountId === "account-work-x");
+    expect(account).toMatchObject({ cadenceDays: 1, priority: 5, contentLane: "official" });
+    expect(account?.queryText).toContain("X official account timeline: https://x.com/work");
+    const tags = queries.find((query) => query.targetKey === "updates:anime-1:x-tags");
+    expect(tags).toMatchObject({ cadenceDays: 1, priority: 5, platform: "X", contentLane: "official" });
+    expect(tags?.queryText).toContain("X latest hashtag timelines");
+    expect(tags?.queryText).toContain("verified official profiles");
+    expect(tags?.queryText).toContain("角色");
   });
 
   test("plans Instagram updates separately from X account coverage", () => {
@@ -349,6 +398,32 @@ describe("discovery query planning", () => {
       && query.platform === "Instagram" && query.contentLane === "cast")).toBe(true);
     expect(queries.some((query) => query.scopeId === "person-1"
       && query.targetKey.startsWith("account:official-"))).toBe(false);
+  });
+
+  test("monitors verified 2.5D project personas daily without requiring a title match", () => {
+    const monitoredResources: AdminAnimeResources = {
+      ...resources,
+      cast: resources.cast.map((item) => ({
+        ...item,
+        personName: item.characterName,
+        personNameNative: item.characterNameNative,
+      })),
+      accounts: [{
+        id: "account-persona-x", ownerType: "person", ownerId: "person-1", ownerLabel: "Project Persona",
+        platform: "X", handle: "@project_persona", url: "https://x.com/project_persona", verified: true,
+        monitorMode: "local", verificationSourceUrl: "https://example.com/project-member", verifiedAt: "2026-08-11T00:00:00Z",
+      }],
+    };
+    const queries = buildDiscoveryPlan({
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime],
+      resources: { "anime-1": monitoredResources }, memory: [], memoryHits: [],
+      now: new Date("2026-08-11T20:00:00Z"), force: false, limit: 100,
+    });
+    const query = queries.find((item) => item.accountId === "account-persona-x");
+    expect(query).toMatchObject({ cadenceDays: 1, priority: 4, contentLane: "cast" });
+    expect(query?.queryText).toContain("X account timeline: https://x.com/project_persona");
+    expect(query?.queryText).toContain("public professional or creative activity");
+    expect(query?.queryText).not.toContain(anime.titleJa);
   });
 
   test("skips account discovery when monitoring is disabled or a feed source exists", () => {

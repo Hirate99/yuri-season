@@ -496,6 +496,72 @@ describe("local research batch", () => {
     });
   });
 
+  test("ingests ordered official media assets and projects the first image to the feed", async () => {
+    const value = batch("source-kimi-news", "batch-official-gallery-1");
+    value.observations[0].publishedAt = "2026-08-14T12:00:00+09:00";
+    Object.assign(value.observations[0].candidates[0], {
+      contentClass: "official_art",
+      title: "公式头像素材",
+      publishedAt: "2026-08-14T12:00:00+09:00",
+      media: {
+        contentClass: "official_art",
+        title: "公式头像素材",
+        creatorName: "动画公式",
+        originalUrl: value.observations[0].canonicalUrl,
+        presentationMode: "mirrored_with_permission",
+        safetyRating: "safe",
+        spoilerLevel: "none",
+        rightsNote: "公式页面明确提供下载",
+        assets: [
+          {
+            r2Key: "yuri/official/gallery/second.jpg",
+            sourceUrl: "https://www.kimishinu-anime.com/media/second.jpg",
+            contentHash: "b".repeat(64),
+            mimeType: "image/jpeg",
+            width: 1000,
+            height: 1000,
+            byteSize: 12000,
+            sortOrder: 1,
+            variant: "original",
+            altText: "第二张头像",
+            rightsStatus: "press_kit",
+            rightsBasis: "公式页面明确提供下载",
+          },
+          {
+            r2Key: "yuri/official/gallery/first.jpg",
+            sourceUrl: "https://www.kimishinu-anime.com/media/first.jpg",
+            contentHash: "a".repeat(64),
+            mimeType: "image/jpeg",
+            width: 1000,
+            height: 1000,
+            byteSize: 11000,
+            sortOrder: 0,
+            variant: "original",
+            altText: "第一张头像",
+            rightsStatus: "press_kit",
+            rightsBasis: "公式页面明确提供下载",
+          },
+        ],
+      },
+    });
+
+    expect(await ingestResearchBatch(database.binding(), value as never))
+      .toMatchObject({ published: 1 });
+    expect(database.sqlite.query(`
+      SELECT COUNT(*) AS count, MIN(sort_order) AS first_order, MAX(sort_order) AS last_order
+      FROM media_assets
+      WHERE media_id = (SELECT media_id FROM feed_items WHERE url = ?)
+    `).get(value.observations[0].canonicalUrl)).toEqual({ count: 2, first_order: 0, last_order: 1 });
+    const item = (await readFeed(database.binding())).items.find(
+      (entry) => entry.url === value.observations[0].canonicalUrl,
+    );
+    expect(item?.publishedAt).toBe("2026-08-14T03:00:00.000Z");
+    expect(item?.media).toMatchObject({
+      publishedAt: "2026-08-14T03:00:00.000Z",
+      previewUrl: "https://r2.i-yuri.com/yuri/official/gallery/first.jpg",
+    });
+  });
+
   test("imports discovered cast accounts as unverified account claims", async () => {
     const value = batch("source-kimi-news", "batch-account-discovery-1");
     value.observations[0].candidates = [];

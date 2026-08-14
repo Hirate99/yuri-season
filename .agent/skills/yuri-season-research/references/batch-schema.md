@@ -159,6 +159,39 @@ Fanwork requires an inline creator source, original creator post, and media meta
 
 ## General candidate rules
 
+`publishedAt` must always be an ISO datetime with `Z` or an explicit offset. If the original source supplies only a calendar date, use 12:00:00 in the source publisher's local IANA timezone on that date and resolve that date's actual offset; do not use midnight, UTC by default, or the runtime/viewer timezone. For example, a date-only Japanese official item on 2026-08-14 is `2026-08-14T12:00:00+09:00`. Keep `capturedAt` as the real capture instant rather than applying this fallback.
+
+For official downloadable galleries, create one candidate and one `media` object. Put every stored image or size variant in `media.assets`; do not create duplicate candidates or parallel URL/hash arrays. Assets sharing the same `sourceUrl` are variants of one logical image. `sortOrder` orders logical images, while `variant` identifies `original`, `preview`, or `thumbnail`. Every asset requires a verified production `r2Key`, SHA-256 `contentHash`, source URL, MIME type, rights status, and human-readable rights basis. A media object containing assets must use `mirrored_with_permission`.
+
+```json
+{
+  "media": {
+    "contentClass": "official_art",
+    "title": "公式头像素材",
+    "creatorName": "动画公式",
+    "originalUrl": "https://official.example/special/gallery.html",
+    "presentationMode": "mirrored_with_permission",
+    "rightsNote": "公式页面明确提供下载与分享",
+    "assets": [
+      {
+        "r2Key": "yuri/publications/work/gallery/image-01.jpg",
+        "sourceUrl": "https://official.example/special/image-01.jpg",
+        "contentHash": "64-character-lowercase-sha256",
+        "mimeType": "image/jpeg",
+        "width": 1000,
+        "height": 1000,
+        "byteSize": 123456,
+        "sortOrder": 0,
+        "variant": "original",
+        "altText": "角色名 官方头像",
+        "rightsStatus": "official_promo_reviewed",
+        "rightsBasis": "公式页面明确提供下载与分享"
+      }
+    ]
+  }
+}
+```
+
 Use `excerpt` for internal evidence and close paraphrase. When the source policy permits text redistribution, provide the source's readable original-language body in `publicText` (plain text, at most 24,000 characters). A faithful Chinese translation may be provided separately in `publicTranslation` (also at most 24,000 characters). The translation must preserve meaning, must not replace `publicText`, and must not be copied from `excerpt`, the candidate summary, or a search snippet. Omit both public fields for link-only, private, deleted, or prohibited content. The server still applies the registered source's public-text policy before publishing.
 
 Allowed content classes are `schedule`, `official_news`, `official_art`, `creator_art`, `cast_post`, `staff_post`, `fanwork`, `community_thread`, and `editorial`. Birthdays are never feed candidates: a verified birthday updates the character record and calendar event only; birthday-related celebration art enters the feed as `official_art` / `creator_art` (or `cast_post` for a cast birthday post) under that lane's rules. Use `presentationMode: link_only` in phase one. Every candidate needs a review object with `decision`, `confidence`, and evidence-based reasons.

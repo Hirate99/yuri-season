@@ -7,6 +7,8 @@ import {
   candidateAnimeTable,
   candidateEvidenceTable,
   feedCandidatesTable,
+  feedItemsTable,
+  mediaAssetsTable,
   mediaItemsTable,
 } from "~/infrastructure/db/schema";
 import { stableFingerprint } from "~/shared/fingerprint";
@@ -47,15 +49,14 @@ function evidenceQuery(db: D1Database, candidateId: string, draft: CandidateDraf
 }
 
 async function mediaWrite(db: D1Database, draft: CandidateDraft) {
-  if (!draft.media) return { id: null, query: null };
+  if (!draft.media) return { id: null, queries: [] as BatchItem<"sqlite">[] };
   const orm = database(db);
   const existing = await orm.select({ id: mediaItemsTable.id }).from(mediaItemsTable)
     .where(eq(mediaItemsTable.originalUrl, draft.media.originalUrl)).get();
-  if (existing) return { id: existing.id, query: null };
-  const id = createId("media");
-  return {
-    id,
-    query: orm.insert(mediaItemsTable).values({
+  const id = existing?.id ?? createId("media");
+  const queries: BatchItem<"sqlite">[] = [];
+  if (!existing) {
+    queries.push(orm.insert(mediaItemsTable).values({
       id,
       animeId: draft.animeId ?? null,
       personId: draft.personId ?? null,
@@ -71,8 +72,46 @@ async function mediaWrite(db: D1Database, draft: CandidateDraft) {
       spoilerLevel: draft.media.spoilerLevel ?? draft.spoilerLevel ?? "none",
       rightsNote: draft.media.rightsNote ?? null,
       publishedAt: draft.publishedAt,
-    }),
-  };
+    }));
+  }
+  for (const asset of draft.media.assets ?? []) {
+    queries.push(orm.insert(mediaAssetsTable).values({
+      id: createId("asset"),
+      mediaId: id,
+      r2Key: asset.r2Key,
+      sourceUrl: asset.sourceUrl,
+      contentHash: asset.contentHash.toLowerCase(),
+      mimeType: asset.mimeType,
+      width: asset.width ?? null,
+      height: asset.height ?? null,
+      byteSize: asset.byteSize ?? null,
+      sortOrder: asset.sortOrder,
+      variant: asset.variant,
+      altText: asset.altText ?? null,
+      rightsStatus: asset.rightsStatus,
+      rightsBasis: asset.rightsBasis,
+      status: "active",
+      withdrawnAt: null,
+    }).onConflictDoUpdate({
+      target: mediaAssetsTable.r2Key,
+      set: {
+        sourceUrl: asset.sourceUrl,
+        contentHash: asset.contentHash.toLowerCase(),
+        mimeType: asset.mimeType,
+        width: asset.width ?? null,
+        height: asset.height ?? null,
+        byteSize: asset.byteSize ?? null,
+        sortOrder: asset.sortOrder,
+        variant: asset.variant,
+        altText: asset.altText ?? null,
+        rightsStatus: asset.rightsStatus,
+        rightsBasis: asset.rightsBasis,
+        status: "active",
+        withdrawnAt: null,
+      },
+    }));
+  }
+  return { id, queries };
 }
 
 export async function createCandidate(db: D1Database, draft: CandidateDraft): Promise<string> {
@@ -82,6 +121,14 @@ export async function createCandidate(db: D1Database, draft: CandidateDraft): Pr
   const existingId = await existingCandidateId(db, draft, fingerprint);
   if (existingId) {
     const queries: BatchItem<"sqlite">[] = candidateAnimeQueries(db, existingId, draft);
+    const media = await mediaWrite(db, draft);
+    queries.push(...media.queries);
+    if (media.id) {
+      queries.push(orm.update(feedCandidatesTable).set({ mediaId: media.id })
+        .where(eq(feedCandidatesTable.id, existingId)));
+      queries.push(orm.update(feedItemsTable).set({ mediaId: media.id })
+        .where(eq(feedItemsTable.candidateId, existingId)));
+    }
     if (draft.observationId) {
       queries.push(orm.update(feedCandidatesTable).set({ observationId: draft.observationId })
         .where(eq(feedCandidatesTable.id, existingId)));
@@ -116,7 +163,7 @@ export async function createCandidate(db: D1Database, draft: CandidateDraft): Pr
   const id = createId("candidate");
   const media = await mediaWrite(db, draft);
   const queries: BatchItem<"sqlite">[] = [];
-  if (media.query) queries.push(media.query);
+  queries.push(...media.queries);
   queries.push(orm.insert(feedCandidatesTable).values({
     id,
     observationId: draft.observationId ?? null,

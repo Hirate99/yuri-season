@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 
 import type { PublicationDetailResponse } from "@/domain";
+import { publicationCarouselImages } from "@/components/publication-media-carousel";
 import { PublicationPage } from "@/pages/publication-page";
 
 const data: PublicationDetailResponse = {
@@ -60,6 +61,19 @@ const data: PublicationDetailResponse = {
 };
 
 describe("publication page presentation", () => {
+  test("groups image variants into one carousel slide per source image", () => {
+    const assets: PublicationDetailResponse["assets"] = [
+      { id: "second-preview", url: "https://cdn.test/second-preview.webp", sourceUrl: "https://source.test/second.jpg", mimeType: "image/webp", width: 1000, height: 1000, sortOrder: 1, variant: "preview", altText: "第二张", rightsStatus: "press_kit" },
+      { id: "first-thumb", url: "https://cdn.test/first-thumb.webp", sourceUrl: "https://source.test/first.jpg", mimeType: "image/webp", width: 320, height: 320, sortOrder: 0, variant: "thumbnail", altText: "第一张", rightsStatus: "press_kit" },
+      { id: "first-preview", url: "https://cdn.test/first-preview.webp", sourceUrl: "https://source.test/first.jpg", mimeType: "image/webp", width: 1000, height: 1000, sortOrder: 0, variant: "preview", altText: "第一张", rightsStatus: "press_kit" },
+    ];
+
+    expect(publicationCarouselImages(assets, null, "图片")).toEqual([
+      expect.objectContaining({ id: "first-preview", sourceUrl: "https://source.test/first.jpg" }),
+      expect.objectContaining({ id: "second-preview", sourceUrl: "https://source.test/second.jpg" }),
+    ]);
+  });
+
   test("shows original text and translation without storage implementation copy", async () => {
     const routeTree = createRootRoute({ component: () => <PublicationPage data={data} /> });
     const router = createRouter({

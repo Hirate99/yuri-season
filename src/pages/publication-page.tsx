@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowUpRight } from "lucide-react";
 
 import type { PublicationDetailResponse } from "@/domain";
 import { LocalDateTime } from "@/components/local-date-time";
+import { PublicationMediaCarousel } from "@/components/publication-media-carousel";
 import { contentLabel } from "@/lib/format";
 
 const textModeLabel = {
@@ -24,11 +25,6 @@ export function PublicationPage({ data, onBack, backLabel = "返回情报" }: {
   backLabel?: string;
 }) {
   const { item, document, assets, corrections } = data;
-  const hero = assets.find((asset) => asset.variant === "preview") ?? assets.at(-1);
-  const legacyPreview = item.media?.previewUrl && item.media.presentationMode !== "link_only"
-    ? item.media.previewUrl
-    : null;
-  const heroUrl = hero?.url ?? legacyPreview;
   const relatedAnime = item.relatedAnime ?? [];
 
   return (
@@ -57,15 +53,7 @@ export function PublicationPage({ data, onBack, backLabel = "返回情报" }: {
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,740px)_260px] lg:items-start lg:justify-between lg:gap-16">
           <div className="min-w-0">
-            {heroUrl && (
-              <figure className="mb-10 overflow-hidden rounded-2xl bg-raised">
-                <img className="max-h-[720px] w-full object-contain" src={heroUrl} alt={hero?.altText ?? item.media?.title ?? item.title} decoding="async" referrerPolicy="no-referrer" />
-                <figcaption className="flex flex-wrap items-center justify-between gap-2 bg-[#f7f7f9] px-4 py-3 text-[10px] text-muted">
-                  <span>{hero?.rightsStatus === "press_kit" ? "官方图片" : "图片来自原帖"}</span>
-                  <a className="transition hover:text-ink" href={hero?.sourceUrl ?? item.media?.originalUrl ?? item.url} target="_blank" rel="noreferrer">图片来源 ↗</a>
-                </figcaption>
-              </figure>
-            )}
+            <PublicationMediaCarousel assets={assets} media={item.media} fallbackAlt={item.title} />
 
             {document?.publicText && (
               <section aria-labelledby="source-text-heading">

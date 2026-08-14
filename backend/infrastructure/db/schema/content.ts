@@ -92,6 +92,7 @@ export const mediaAssetsTable = sqliteTable("media_assets", {
   width: integer("width"),
   height: integer("height"),
   byteSize: integer("byte_size"),
+  sortOrder: integer("sort_order").notNull().default(0),
   variant: text("variant", { enum: ["original", "preview", "thumbnail"] }).notNull(),
   altText: text("alt_text"),
   rightsStatus: text("rights_status", { enum: ["licensed", "press_kit", "official_promo_reviewed", "embed_only", "link_only", "prohibited"] }).notNull(),

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useCanGoBack, useRouter, useRouterState } from "@tanstack/react-router";
 
 import { loadPublicationData } from "@/lib/public-loaders";
 import { PublicationPage } from "@/pages/publication-page";
@@ -19,5 +19,17 @@ export const Route = createFileRoute("/updates/$id")({
 });
 
 function PublicationRoute() {
-  return <PublicationPage data={Route.useLoaderData()} />;
+  const router = useRouter();
+  const canGoBack = useCanGoBack();
+  const returnToPrevious = useRouterState({
+    select: (state) => state.location.state.yuriReturnToPrevious === true,
+  });
+
+  return (
+    <PublicationPage
+      data={Route.useLoaderData()}
+      onBack={returnToPrevious && canGoBack ? () => router.history.back() : undefined}
+      backLabel="返回上一页"
+    />
+  );
 }

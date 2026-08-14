@@ -41,6 +41,7 @@ export function FeedCard({ item, compact = false, preserveFeedContext = false }:
                 className="after:absolute after:inset-0 after:rounded-[10px] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-charcoal/50 group-hover:underline"
                 to="/updates/$id"
                 params={{ id: item.id }}
+                state={{ yuriReturnToPrevious: true }}
                 aria-label={`查看详情：${item.title}`}
               >{item.title}</Link>
             )}

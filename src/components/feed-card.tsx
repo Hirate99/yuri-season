@@ -11,6 +11,7 @@ export function FeedCard({ item, compact = false, preserveFeedContext = false }:
   preserveFeedContext?: boolean;
 }) {
   const relatedAnime = item.relatedAnime ?? [];
+  const isDiscussion = item.contentClass === "community_thread";
   const isCrossWork = item.contentClass === "community_thread" && relatedAnime.length > 1;
   const showPreview = Boolean(item.media?.previewUrl && item.media.presentationMode !== "link_only");
   const showCover = !showPreview && !isCrossWork && Boolean(item.animeCoverUrl);
@@ -27,7 +28,15 @@ export function FeedCard({ item, compact = false, preserveFeedContext = false }:
       <div className={showPreview || showCover ? "mt-4 grid grid-cols-[minmax(0,1fr)_68px] gap-4 sm:grid-cols-[minmax(0,1fr)_116px]" : "mt-4 min-w-0"}>
         <div className="min-w-0">
           <h3 className={compact ? "text-sm font-semibold" : "text-base font-semibold"}>
-            {preserveFeedContext ? (
+            {isDiscussion ? (
+              <a
+                className="after:absolute after:inset-0 after:rounded-[10px] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-charcoal/50 group-hover:underline"
+                href={item.url}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`打开讨论：${item.title}`}
+              >{item.title}</a>
+            ) : preserveFeedContext ? (
               <Link
                 className="after:absolute after:inset-0 after:rounded-[10px] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-charcoal/50 group-hover:underline"
                 to="/feed/$id"
@@ -50,7 +59,7 @@ export function FeedCard({ item, compact = false, preserveFeedContext = false }:
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
             <span>{item.sourceName}{item.sourceAccount ? ` · ${item.sourceAccount}` : ""}</span>
             {!isCrossWork && item.animeSlug && <Link className="relative z-10 text-ink hover:underline" to="/anime/$slug" params={{ slug: item.animeSlug }}>{item.animeTitle}</Link>}
-            <a className="relative z-10 inline-flex items-center gap-0.5 text-ink hover:underline" href={item.url} target="_blank" rel="noreferrer">原文<ArrowUpRight size={11} /></a>
+            <a className="relative z-10 inline-flex items-center gap-0.5 text-ink hover:underline" href={item.url} target="_blank" rel="noreferrer">{isDiscussion ? "讨论串" : "原文"}<ArrowUpRight size={11} /></a>
           </div>
           {isCrossWork && (
             <div className="mt-3 flex flex-wrap gap-1.5" aria-label="关联作品">

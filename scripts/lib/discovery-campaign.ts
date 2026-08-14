@@ -1,9 +1,9 @@
 import type { SearchMemoryWrite } from "@/domain";
 import { stableFingerprint } from "~/shared/fingerprint";
-import type { DiscoveryQuery } from "./discovery-query-plan";
+import type { DiscoveryQuery, DiscoverySurface } from "./discovery-query-plan";
 
 export type CampaignQuery = DiscoveryQuery & {
-  state: "pending" | "leased" | "completed" | "cancelled";
+  state: "pending" | "leased" | "completed" | "blocked" | "cancelled";
   attemptCount: number;
   leaseUntil: string | null;
   completedAt: string | null;
@@ -11,7 +11,7 @@ export type CampaignQuery = DiscoveryQuery & {
 };
 
 export type DiscoveryCampaign = {
-  schemaVersion: 2;
+  schemaVersion: 3;
   campaignId: string;
   createdAt: string;
   updatedAt: string;
@@ -25,7 +25,26 @@ export type DiscoveryCampaign = {
 export type DiscoveryResult = {
   queryId: string;
   searchedAt: string;
+  outcome: "complete" | "partial" | "blocked";
+  surface?: DiscoverySurface | null;
   status: SearchMemoryWrite["status"];
+  nextCheckAt?: string | null;
+  reasonCodes?: string[];
+  discoveredTerms?: Array<{
+    term: string;
+    kind: "official_tag" | "project_tag" | "unit" | "character" | "pair" | "alias";
+    sourceUrl: string;
+  }>;
+  coverage?: {
+    reachedPreviousCursor: boolean;
+    originalPostsInspected: number;
+    repostsInspected?: number;
+    newestPostId?: string | null;
+    newestPublishedAt?: string | null;
+    oldestPostId?: string | null;
+    oldestPublishedAt?: string | null;
+    resumeCursor?: Record<string, unknown>;
+  } | null;
   notes?: string | null;
   hits: SearchMemoryWrite["hits"];
 };
@@ -35,7 +54,7 @@ export function createCampaign(input: Omit<DiscoveryCampaign, "schemaVersion" | 
 }): DiscoveryCampaign {
   return {
     ...input,
-    schemaVersion: 2,
+    schemaVersion: 3,
     campaignId: `discovery-${crypto.randomUUID()}`,
     updatedAt: input.createdAt,
     mode: "discovery-campaign",
@@ -47,6 +66,102 @@ export function createCampaign(input: Omit<DiscoveryCampaign, "schemaVersion" | 
 
 export function hasUnfinishedQueries(campaign: DiscoveryCampaign): boolean {
   return campaign.queries.some((query) => query.state === "pending" || query.state === "leased");
+}
+
+function validTimestamp(value: string | null | undefined): value is string {
+  return Boolean(value && !Number.isNaN(Date.parse(value)));
+}
+
+function validateResult(query: CampaignQuery, result: DiscoveryResult): void {
+  if (query.state !== "leased") throw new Error(`query ${result.queryId} is not leased`);
+  if (!validTimestamp(result.searchedAt)) throw new Error(`invalid searchedAt for ${result.queryId}`);
+  if (result.nextCheckAt != null && !validTimestamp(result.nextCheckAt)) {
+    throw new Error(`invalid nextCheckAt for ${result.queryId}`);
+  }
+  if (result.outcome === "blocked" && result.status !== "blocked") {
+    throw new Error(`blocked result ${result.queryId} must use blocked status`);
+  }
+  if (result.outcome !== "blocked" && result.status === "blocked") {
+    throw new Error(`non-blocked result ${result.queryId} cannot use blocked status`);
+  }
+  if (result.outcome === "complete" && result.status !== "exhausted"
+    && !validTimestamp(result.nextCheckAt)) {
+    throw new Error(`complete result ${result.queryId} must choose nextCheckAt`);
+  }
+  if ((result.discoveredTerms?.length ?? 0) > 100) {
+    throw new Error(`too many discoveredTerms for ${result.queryId}`);
+  }
+  for (const term of result.discoveredTerms ?? []) {
+    if (!term.term.trim()) throw new Error(`empty discovered term for ${result.queryId}`);
+    try {
+      const url = new URL(term.sourceUrl);
+      if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error();
+    } catch {
+      throw new Error(`invalid discovered term sourceUrl for ${result.queryId}`);
+    }
+  }
+  if (result.outcome !== "complete" || query.operation === "search") return;
+
+  if (!result.surface) throw new Error(`${query.operation} ${result.queryId} requires a surface`);
+  if (!query.completionPolicy.searchEngineCanComplete && result.surface === "search_engine") {
+    throw new Error(`search_engine cannot complete ${query.operation} ${result.queryId}`);
+  }
+  if (query.completionPolicy.allowedCompleteSurfaces.length > 0
+    && !query.completionPolicy.allowedCompleteSurfaces.includes(result.surface)) {
+    throw new Error(`${result.surface} cannot complete ${query.operation} ${result.queryId}`);
+  }
+  const coverage = result.coverage;
+  if (!coverage) throw new Error(`${query.operation} ${result.queryId} requires coverage`);
+  if (!Number.isInteger(coverage.originalPostsInspected) || coverage.originalPostsInspected < 0) {
+    throw new Error(`invalid originalPostsInspected for ${result.queryId}`);
+  }
+  if (query.completionPolicy.mustReachPreviousCursor && !coverage.reachedPreviousCursor) {
+    throw new Error(`${query.operation} ${result.queryId} did not reach the previous cursor`);
+  }
+  if (query.completionPolicy.recordEveryOriginal) {
+    const stableHits = result.hits.filter((hit) =>
+      typeof hit.metadata?.platformObjectId === "string" && hit.metadata.platformObjectId.length > 0);
+    if (stableHits.length < coverage.originalPostsInspected) {
+      throw new Error(`${query.operation} ${result.queryId} must record every inspected original with a stable platformObjectId`);
+    }
+  }
+}
+
+function cursorForResult(query: CampaignQuery, result: DiscoveryResult): Record<string, unknown> {
+  const prior = query.cursor ?? {};
+  if (result.outcome === "partial") {
+    return {
+      ...prior,
+      resume: result.coverage?.resumeCursor ?? null,
+      lastPartialAt: new Date(result.searchedAt).toISOString(),
+      lastSurface: result.surface ?? null,
+    };
+  }
+  if (result.outcome !== "complete" || query.operation === "search") return prior;
+  const committed = {
+    ...prior,
+    committedPostId: result.coverage?.newestPostId ?? prior.committedPostId ?? null,
+    committedPublishedAt: result.coverage?.newestPublishedAt ?? prior.committedPublishedAt ?? null,
+    completedAt: new Date(result.searchedAt).toISOString(),
+    lastSurface: result.surface ?? null,
+    lastOriginalPostsInspected: result.coverage?.originalPostsInspected ?? 0,
+    lastUsefulHits: result.hits.filter((hit) => !["seen", "ignored", "rejected"].includes(hit.outcome)).length,
+    resume: null,
+  };
+  if (query.operation !== "tag_scan" || !result.discoveredTerms?.length) return committed;
+  return {
+    ...committed,
+    activeTerms: [...new Set(result.discoveredTerms.map((item) => item.term.trim()).filter(Boolean))].slice(0, 50),
+    termEvidence: result.discoveredTerms.slice(0, 50),
+  };
+}
+
+function nextSearchAt(query: CampaignQuery, result: DiscoveryResult): string {
+  const searched = Date.parse(result.searchedAt);
+  if (result.outcome === "partial") return new Date(searched).toISOString();
+  const latestAllowed = searched + query.maxFreshHours * 60 * 60_000;
+  const requested = validTimestamp(result.nextCheckAt) ? Date.parse(result.nextCheckAt) : latestAllowed;
+  return new Date(Math.max(searched, Math.min(requested, latestAllowed))).toISOString();
 }
 
 export function cancelCampaignQueries(
@@ -109,8 +224,7 @@ export async function memoryRecordsForResults(
     resultIds.add(result.queryId);
     const query = campaign.queries.find((item) => item.id === result.queryId);
     if (!query) throw new Error(`unknown campaign query ${result.queryId}`);
-    if (query.state === "pending") throw new Error(`query ${result.queryId} is not leased`);
-    if (Number.isNaN(Date.parse(result.searchedAt))) throw new Error(`invalid searchedAt for ${result.queryId}`);
+    validateResult(query, result);
     const hitKey = result.hits.map((hit) => `${hit.canonicalUrl}\u0000${hit.contentHash ?? ""}`).sort().join("\u0001");
     const useful = result.hits.filter((hit) => !["seen", "ignored", "rejected"].includes(hit.outcome)).length;
     return {
@@ -120,13 +234,14 @@ export async function memoryRecordsForResults(
       targetKey: query.targetKey,
       queryText: query.queryText,
       status: result.status,
-      cursor: {},
+      cursor: cursorForResult(query, result),
       lastResultHash: await stableFingerprint(hitKey),
       lastResultCount: result.hits.length,
       usefulResultCount: useful,
       searchedAt: new Date(result.searchedAt).toISOString(),
-      nextSearchAt: new Date(Date.parse(result.searchedAt) + query.cadenceDays * 86_400_000).toISOString(),
-      notes: result.notes ?? null,
+      nextSearchAt: nextSearchAt(query, result),
+      notes: [result.notes, result.reasonCodes?.length ? `schedule:${result.reasonCodes.join(",")}` : null]
+        .filter(Boolean).join(" | ") || null,
       hits: result.hits,
     };
   }));
@@ -140,9 +255,12 @@ export function completeCampaignResults(
   for (const result of results) {
     const query = campaign.queries.find((item) => item.id === result.queryId);
     if (!query) throw new Error(`unknown campaign query ${result.queryId}`);
-    query.state = "completed";
+    validateResult(query, result);
+    query.cursor = cursorForResult(query, result);
+    query.state = result.outcome === "complete" ? "completed"
+      : result.outcome === "blocked" ? "blocked" : "pending";
     query.leaseUntil = null;
-    query.completedAt = new Date(result.searchedAt).toISOString();
+    query.completedAt = result.outcome === "partial" ? null : new Date(result.searchedAt).toISOString();
   }
   campaign.updatedAt = now.toISOString();
 }
@@ -156,7 +274,25 @@ export function campaignSummary(campaign: DiscoveryCampaign) {
     pending: count("pending"),
     leased: count("leased"),
     completed: count("completed"),
+    blocked: count("blocked"),
     cancelled: count("cancelled"),
     updatedAt: campaign.updatedAt,
+  };
+}
+
+export function campaignCompletionAudit(campaign: DiscoveryCampaign) {
+  const officialTimelines = campaign.queries.filter((query) =>
+    query.operation === "timeline_scan" && query.contentLane === "official");
+  const completedOfficial = officialTimelines.filter((query) => query.state === "completed");
+  const zeroOriginals = completedOfficial.filter((query) => query.cursor.lastOriginalPostsInspected === 0);
+  const anomalies: string[] = [];
+  if (completedOfficial.length >= 3 && zeroOriginals.length === completedOfficial.length) {
+    anomalies.push("all_completed_official_timelines_reported_zero_originals");
+  }
+  return {
+    officialTimelineTasks: officialTimelines.length,
+    completedOfficialTimelines: completedOfficial.length,
+    zeroOriginalOfficialTimelines: zeroOriginals.length,
+    anomalies,
   };
 }

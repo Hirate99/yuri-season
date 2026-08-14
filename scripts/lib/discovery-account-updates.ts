@@ -12,6 +12,7 @@ export type AccountUpdateTarget = {
   contentLane: "official" | "cast" | "creator";
   projectPersona: boolean;
   timelineMode: "official" | "project_persona" | null;
+  socialAuditEligible: boolean;
 };
 
 function hasRegisteredSource(resources: AdminAnimeResources, accountId: string) {
@@ -48,6 +49,7 @@ export function accountUpdateTarget(
   if (!account.verified || account.monitorMode === "disabled") return null;
   if (account.monitorMode !== "local" && hasRegisteredSource(resources, account.id)) return null;
   const cast = resources.cast.filter((item) => item.personId === account.ownerId);
+  const staff = resources.staff.find((item) => item.personId === account.ownerId);
   const projectPersona = isProjectPersonaAccount(resources, account);
   const timelineMode = account.ownerType === "anime"
     ? "official" as const
@@ -67,6 +69,11 @@ export function accountUpdateTarget(
     contentLane,
     projectPersona,
     timelineMode,
+    socialAuditEligible: account.ownerType === "anime"
+      || projectPersona
+      || cast.some((item) => item.isMainGroup)
+      || staff?.primaryKind === "author"
+      || staff?.primaryKind === "artist",
   };
 }
 

@@ -37,15 +37,15 @@ describe("discovery query planning", () => {
   test("plans database-aware community and account discovery without birthday polling", () => {
     const queries = plan();
     expect(queries.find((query) => query.targetKey === "music:theme-songs"))
-      .toMatchObject({ searchKind: "official_news", priority: 5, cadenceDays: 14 });
+      .toMatchObject({ searchKind: "official_news", priority: 5, maxFreshHours: 30 * 24 });
     expect(queries.filter((query) => query.targetKey === "community:yamibo-recent")).toHaveLength(1);
     expect(queries.find((query) => query.targetKey === "community:yamibo-recent"))
-      .toMatchObject({ scopeType: "season", searchKind: "community", cadenceDays: 1, priority: 5 });
+      .toMatchObject({ scopeType: "season", searchKind: "community", maxFreshHours: 30 * 24, priority: 5 });
     expect(queries.find((query) => query.targetKey === "community:yamibo-recent")?.queryText)
       .toContain("https://bbs.yamibo.com/forum-5-1.html");
     expect(queries.some((query) => query.targetKey === "community:tieba")).toBe(true);
     expect(queries.find((query) => query.targetKey === "community:moesen"))
-      .toMatchObject({ priority: 3, cadenceDays: 14 });
+      .toMatchObject({ priority: 3, maxFreshHours: 30 * 24 });
     expect(queries.some((query) => query.targetKey === "community:nga")).toBe(true);
     expect(queries.some((query) => query.scopeId === "character-1" && query.searchKind === "birthday")).toBe(false);
     expect(queries.some((query) => query.scopeId === "person-1"
@@ -55,11 +55,11 @@ describe("discovery query planning", () => {
     expect(queries.filter((query) => query.contentLane === "fanwork").map((query) => query.platform).sort())
       .toEqual(["Instagram", "Pixiv", "X"]);
     const pixivFanwork = queries.find((query) => query.targetKey === "media:fanwork:pixiv");
-    expect(pixivFanwork).toMatchObject({ priority: 3, cadenceDays: 7, platform: "Pixiv" });
+    expect(pixivFanwork).toMatchObject({ priority: 3, maxFreshHours: 30 * 24, platform: "Pixiv" });
     expect(pixivFanwork?.queryText).toContain("pixiv tag search: 作品日本語");
     expect(pixivFanwork?.queryText).toContain("ajax/search/artworks/");
     expect(queries.find((query) => query.targetKey === "media:fanwork:instagram"))
-      .toMatchObject({ priority: 1, cadenceDays: 30 });
+      .toMatchObject({ priority: 1, maxFreshHours: 30 * 24 });
   });
 
   test("plans birthday research only for an explicit audit", () => {
@@ -184,11 +184,11 @@ describe("discovery query planning", () => {
     expect(queries.some((query) => query.targetKey === "updates:anime-1:account-work"
       && query.queryText.toLowerCase().includes("x official account timeline: https://x.com/work")
       && query.queryText.includes("after:2026-07-12")
-      && query.priority === 5 && query.cadenceDays === 1)).toBe(true);
+      && query.priority === 5 && query.maxFreshHours === 24)).toBe(true);
     expect(queries.some((query) => query.scopeId === "person-1" && query.searchKind === "social")).toBe(true);
   });
 
-  test("treats existing unverified platform accounts as discovered unless forced", () => {
+  test("turns existing unverified accounts into first-party verification work", () => {
     const resourcesWithPendingAccounts: AdminAnimeResources = {
       ...resources,
       accounts: [
@@ -219,13 +219,17 @@ describe("discovery query planning", () => {
     expect(ordinary.some((query) => query.targetKey === "social:work")).toBe(false);
     expect(ordinary.some((query) => query.scopeId === "person-1"
       && query.targetKey.startsWith("account:official-"))).toBe(false);
+    expect(ordinary.filter((query) => query.targetKey.startsWith("verification:"))).toHaveLength(3);
+    expect(ordinary.find((query) => query.targetKey === "verification:account-work-pending"))
+      .toMatchObject({ stage: "people", socialAuditEligible: true, contentLane: "official" });
+    expect(ordinary.find((query) => query.targetKey === "verification:account-cast-x-pending")?.queryText)
+      .toContain("first-party");
 
     const forced = buildDiscoveryPlan({ ...common, force: true });
     expect(forced.some((query) => query.targetKey === "social:work")).toBe(true);
+    expect(forced.filter((query) => query.targetKey.startsWith("verification:"))).toHaveLength(3);
     expect(forced.some((query) => query.scopeId === "person-1"
-      && query.targetKey === "account:official-x")).toBe(true);
-    expect(forced.some((query) => query.scopeId === "person-1"
-      && query.targetKey === "account:official-instagram")).toBe(true);
+      && query.targetKey.startsWith("account:official-"))).toBe(false);
   });
 
   test("plans projection reconciliation for verified songs missing Apple action or artwork", () => {
@@ -247,7 +251,7 @@ describe("discovery query planning", () => {
     const reconciliation = queries.find((query) => query.targetKey === "music:theme-song-projection");
 
     expect(queries.some((query) => query.targetKey === "music:theme-songs")).toBe(false);
-    expect(reconciliation).toMatchObject({ searchKind: "official_news", priority: 4, cadenceDays: 7 });
+    expect(reconciliation).toMatchObject({ searchKind: "official_news", priority: 4, maxFreshHours: 30 * 24 });
     expect(reconciliation?.queryText).toContain('"Blue Hour / Example Artist"');
     expect(reconciliation?.queryText).toContain("Apple Music");
   });
@@ -295,7 +299,7 @@ describe("discovery query planning", () => {
     expect(queries.some((query) => query.targetKey.startsWith("music:"))).toBe(false);
   });
 
-  test("plans low-frequency work-related posts for verified cast accounts", () => {
+  test("plans work-related posts for verified cast accounts", () => {
     const monitoredResources: AdminAnimeResources = {
       ...resources,
       accounts: [{
@@ -312,7 +316,7 @@ describe("discovery query planning", () => {
     expect(queries.some((query) => query.targetKey === "updates:anime-1:account-cast"
       && query.scopeType === "person" && query.scopeId === "person-1"
       && query.queryText === 'site:x.com/voice_actor "作品日本語" after:2026-07-12'
-      && query.cadenceDays === 7 && query.priority === 3
+      && query.maxFreshHours === 30 * 24 && query.priority === 3
       && query.accountId === "account-cast" && query.personId === "person-1"
       && query.contentLane === "cast" && query.characterIds?.includes("character-1"))).toBe(true);
     expect(queries.some((query) => query.scopeId === "person-1"
@@ -349,7 +353,7 @@ describe("discovery query planning", () => {
         && query.queryText.includes("after:2026-08-09"))).toBe(true);
   });
 
-  test("plans daily official X timeline and related-tag monitoring for every current work", () => {
+  test("plans official X timeline and related-tag coverage for every current work", () => {
     const monitoredResources: AdminAnimeResources = {
       ...resources,
       accounts: [{
@@ -364,13 +368,76 @@ describe("discovery query planning", () => {
       now: new Date("2026-08-11T20:00:00Z"), force: false, limit: 100,
     });
     const account = queries.find((query) => query.accountId === "account-work-x");
-    expect(account).toMatchObject({ cadenceDays: 1, priority: 5, contentLane: "official" });
+    expect(account).toMatchObject({
+      priority: 5, contentLane: "official", operation: "timeline_scan",
+      stage: "official", maxFreshHours: 24, socialAuditEligible: true,
+      completionPolicy: { mustReachPreviousCursor: true, searchEngineCanComplete: false },
+    });
     expect(account?.queryText).toContain("X official account timeline: https://x.com/work");
     const tags = queries.find((query) => query.targetKey === "updates:anime-1:x-tags");
-    expect(tags).toMatchObject({ cadenceDays: 1, priority: 5, platform: "X", contentLane: "official" });
+    expect(tags).toMatchObject({
+      priority: 5, platform: "X", contentLane: "official",
+      operation: "tag_scan", stage: "tags", maxFreshHours: 24,
+    });
     expect(tags?.queryText).toContain("X latest hashtag timelines");
     expect(tags?.queryText).toContain("verified official profiles");
     expect(tags?.queryText).toContain("角色");
+  });
+
+  test("reuses terms learned from recent official posts in the next tag scan", () => {
+    const monitoredResources: AdminAnimeResources = {
+      ...resources,
+      accounts: [{
+        id: "account-work-x", ownerType: "anime", ownerId: anime.id, ownerLabel: anime.titleZh,
+        platform: "X", handle: "@work", url: "https://x.com/work", verified: true,
+        monitorMode: "local", verificationSourceUrl: "https://example.com/official", verifiedAt: "2026-08-11T00:00:00Z",
+      }],
+    };
+    const memory = [{
+      id: "memory-tags", scopeType: "anime", scopeId: anime.id, searchKind: "social",
+      targetKey: "updates:anime-1:x-tags", queryText: "old", status: "active",
+      lastResultHash: null, lastResultCount: 1, usefulResultCount: 1,
+      searchedAt: "2026-08-10T00:00:00Z", nextSearchAt: "2026-08-11T00:00:00Z", notes: null,
+      seenCount: 1, candidateCount: 1, publishedCount: 1, heldCount: 0,
+      rejectedCount: 0, ignoredCount: 0, cursor: { activeTerms: ["#新企划标签"] },
+    }] satisfies SearchMemorySummary[];
+
+    const queries = buildDiscoveryPlan({
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime],
+      resources: { "anime-1": monitoredResources }, memory, memoryHits: [],
+      now: new Date("2026-08-11T20:00:00Z"), force: false, limit: 100,
+    });
+
+    expect(queries.find((query) => query.targetKey === "updates:anime-1:x-tags")?.queryText)
+      .toContain("#新企划标签");
+  });
+
+  test("keeps a social audit focused and orders whole-season coverage before people", () => {
+    const monitoredResources: AdminAnimeResources = {
+      ...resources,
+      accounts: [
+        {
+          id: "account-work-x", ownerType: "anime", ownerId: anime.id, ownerLabel: anime.titleZh,
+          platform: "X", handle: "@work", url: "https://x.com/work", verified: true,
+          monitorMode: "local", verificationSourceUrl: "https://example.com/official", verifiedAt: "2026-08-11T00:00:00Z",
+        },
+        {
+          id: "account-main-cast", ownerType: "person", ownerId: "person-1", ownerLabel: "声优",
+          platform: "X", handle: "@voice", url: "https://x.com/voice", verified: true,
+          monitorMode: "local", verificationSourceUrl: "https://example.com/cast", verifiedAt: "2026-08-11T00:00:00Z",
+        },
+      ],
+    };
+    const queries = buildDiscoveryPlan({
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime],
+      resources: { "anime-1": monitoredResources }, memory: [], memoryHits: [],
+      now: new Date("2026-08-11T20:00:00Z"), force: false, profile: "social-audit", limit: 100,
+    });
+
+    expect(queries.map((query) => query.stage)).toEqual(["official", "tags", "people"]);
+    expect(queries.every((query) => query.searchKind === "social" && query.socialAuditEligible)).toBe(true);
+    expect(queries.some((query) => query.targetKey.startsWith("music:")
+      || query.targetKey.startsWith("media:") || query.targetKey.startsWith("community:"))).toBe(false);
   });
 
   test("plans Instagram updates separately from X account coverage", () => {
@@ -401,7 +468,7 @@ describe("discovery query planning", () => {
       && query.targetKey.startsWith("account:official-"))).toBe(false);
   });
 
-  test("monitors verified 2.5D project personas daily without requiring a title match", () => {
+  test("monitors verified 2.5D project personas without requiring a title match", () => {
     const monitoredResources: AdminAnimeResources = {
       ...resources,
       cast: resources.cast.map((item) => ({
@@ -421,7 +488,7 @@ describe("discovery query planning", () => {
       now: new Date("2026-08-11T20:00:00Z"), force: false, limit: 100,
     });
     const query = queries.find((item) => item.accountId === "account-persona-x");
-    expect(query).toMatchObject({ cadenceDays: 1, priority: 4, contentLane: "cast" });
+    expect(query).toMatchObject({ maxFreshHours: 24, priority: 4, contentLane: "cast" });
     expect(query?.queryText).toContain("X account timeline: https://x.com/project_persona");
     expect(query?.queryText).toContain("public professional or creative activity");
     expect(query?.queryText).not.toContain(anime.titleJa);

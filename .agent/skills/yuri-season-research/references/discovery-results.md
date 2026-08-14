@@ -1,6 +1,6 @@
 # Discovery result file
 
-Record one result for every executed leased query, including zero-hit and blocked searches:
+Record one result for every executed leased task, including zero-hit, partial, and blocked work. `outcome` describes execution completeness; `status` controls durable search memory.
 
 ```json
 {
@@ -9,7 +9,11 @@ Record one result for every executed leased query, including zero-hit and blocke
     {
       "queryId": "person:person-id:social:account:official-instagram",
       "searchedAt": "2026-08-11T22:00:00Z",
+      "outcome": "complete",
+      "surface": "official_page",
       "status": "active",
+      "nextCheckAt": "2026-08-18T22:00:00Z",
+      "reasonCodes": ["first_party_identity_checked"],
       "notes": "Opened the first-party profile and the original account.",
       "hits": [
         {
@@ -30,6 +34,48 @@ Record one result for every executed leased query, including zero-hit and blocke
           }
         }
       ]
+    }
+  ]
+}
+```
+
+Timeline and tag tasks require coverage evidence. The agent chooses `nextCheckAt` from current activity, events, unresolved leads, and prior yield; the CLI clamps it to the task's maximum freshness deadline.
+
+```json
+{
+  "queryId": "anime:anime-id:social:updates:anime-id:account-id",
+  "searchedAt": "2026-08-11T22:00:00Z",
+  "outcome": "complete",
+  "surface": "signed_in_timeline",
+  "status": "active",
+  "nextCheckAt": "2026-08-12T04:00:00Z",
+  "reasonCodes": ["recent_high_activity", "broadcast_window"],
+  "discoveredTerms": [
+    {
+      "term": "#作品公式タグ",
+      "kind": "official_tag",
+      "sourceUrl": "https://x.com/account/status/1954930000000000003"
+    }
+  ],
+  "coverage": {
+    "reachedPreviousCursor": true,
+    "originalPostsInspected": 3,
+    "repostsInspected": 1,
+    "newestPostId": "1954930000000000003",
+    "newestPublishedAt": "2026-08-11T21:45:00Z",
+    "oldestPostId": "1954930000000000000",
+    "oldestPublishedAt": "2026-08-11T12:00:00Z"
+  },
+  "hits": [
+    {
+      "canonicalUrl": "https://x.com/account/status/1954930000000000003",
+      "title": "Original post",
+      "contentHash": null,
+      "outcome": "candidate",
+      "metadata": {
+        "platformObjectId": "1954930000000000003",
+        "verifiedOriginal": true
+      }
     }
   ]
 }
@@ -66,6 +112,11 @@ For community-thread results preserve:
 ## Rules
 
 - Use `active` when the target should be searched again, `exhausted` after repeated targeted searches find no credible lead, and `blocked` for login, CAPTCHA, or inaccessible sources.
+- Use `complete` only after satisfying the leased task's completion policy. Use `partial` when more pages remain and include `coverage.resumeCursor`; use `blocked` with `status: blocked` when the required surface is unavailable.
+- Search-engine results cannot complete `timeline_scan` or `tag_scan`. Public embeds may complete an account timeline only when the task's previous cursor was reached; they cannot complete a global newest-first tag scan.
+- Every inspected original in a timeline or tag scan must be represented by a hit with a stable `metadata.platformObjectId`, including ignored and rejected posts.
+- `nextCheckAt` is the agent's scheduling decision, not a fixed lane cadence. Every completed active task must provide it and explain it with short `reasonCodes`; the CLI enforces only a missed-coverage deadline and prevents partial work from being deferred.
+- Put newly verified tags, aliases, units, characters, or pair terms in `discoveredTerms` with the original source URL so later tag scans can reuse them without waiting for a person to update the query.
 - Use canonical HTTP(S) original-page URLs. Search pages and snippets are not hits.
 - `outcome` is `seen`, `candidate`, `published`, `held`, `rejected`, or `ignored`. Do not claim `published` before a successful batch import.
 - Existing published, held, rejected, or ignored URLs are not new discoveries unless the original page materially changed.

@@ -103,6 +103,7 @@ export async function readSearchMemory(db: D1Database): Promise<SearchMemorySumm
     targetKey: searchMemoryTable.targetKey,
     queryText: searchMemoryTable.queryText,
     status: searchMemoryTable.status,
+    cursorJson: searchMemoryTable.cursorJson,
     lastResultHash: searchMemoryTable.lastResultHash,
     lastResultCount: searchMemoryTable.lastResultCount,
     usefulResultCount: searchMemoryTable.usefulResultCount,
@@ -120,8 +121,9 @@ export async function readSearchMemory(db: D1Database): Promise<SearchMemorySumm
     .groupBy(searchMemoryTable.id)
     .orderBy(desc(searchMemoryTable.lastSearchedAt), searchMemoryTable.id)
     .limit(300);
-  return rows.map((row) => ({
+  return rows.map(({ cursorJson, ...row }) => ({
     ...row,
+    cursor: JSON.parse(cursorJson || "{}") as Record<string, unknown>,
     scopeType: row.scopeType as SearchMemorySummary["scopeType"],
     searchKind: row.searchKind as SearchMemorySummary["searchKind"],
     status: row.status as SearchMemorySummary["status"],

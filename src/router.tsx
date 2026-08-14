@@ -17,3 +17,7 @@ export function getRouter() {
 declare module "@tanstack/react-router" {
   interface Register { router: ReturnType<typeof getRouter> }
 }
+
+declare module "@tanstack/history" {
+  interface HistoryState { yuriReturnToPrevious?: boolean }
+}

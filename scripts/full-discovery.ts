@@ -17,11 +17,16 @@ const outputPath = ".research-cache/discovery-plan.json";
 const force = process.argv.includes("--force");
 const replace = process.argv.includes("--replace");
 const includeBirthdays = process.argv.includes("--audit-birthdays");
+const profileArgument = process.argv.find((argument) => argument.startsWith("--profile="))?.slice("--profile=".length);
+if (profileArgument && !["routine", "social-audit"].includes(profileArgument)) {
+  throw new Error("--profile must be routine or social-audit");
+}
+const profile = (profileArgument ?? "routine") as "routine" | "social-audit";
 const limit = integerArgument("limit", Number.MAX_SAFE_INTEGER);
 const priorFile = Bun.file(outputPath);
 if (await priorFile.exists() && !replace) {
   const prior = await priorFile.json() as Partial<DiscoveryCampaign>;
-  if (prior.schemaVersion === 2 && prior.mode === "discovery-campaign" && hasUnfinishedQueries(prior as DiscoveryCampaign)) {
+  if (prior.schemaVersion === 3 && prior.mode === "discovery-campaign" && hasUnfinishedQueries(prior as DiscoveryCampaign)) {
     throw new Error("active discovery campaign still has unfinished queries; use campaign status/next or --replace");
   }
 }
@@ -40,6 +45,7 @@ const queries = buildDiscoveryPlan({
   now: createdAt,
   force,
   includeBirthdays,
+  profile,
   limit,
 });
 const result = createCampaign({
@@ -65,6 +71,7 @@ process.stdout.write(JSON.stringify({
   rememberedHits: context.memoryHits.length,
   force,
   includeBirthdays,
+  profile,
   replace,
   campaignId: result.campaignId,
   queries: queries.length,

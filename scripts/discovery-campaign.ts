@@ -17,7 +17,7 @@ async function loadCampaign(): Promise<DiscoveryCampaign> {
   const file = Bun.file(campaignPath);
   if (!await file.exists()) throw new Error("run research:discover before leasing queries");
   const campaign = await file.json() as DiscoveryCampaign;
-  if (campaign.schemaVersion !== 2 || campaign.mode !== "discovery-campaign") {
+  if (campaign.schemaVersion !== 3 || campaign.mode !== "discovery-campaign") {
     throw new Error("discovery plan is from an older version; regenerate it with --replace");
   }
   return campaign;

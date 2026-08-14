@@ -1,44 +1,55 @@
 import { describe, expect, test } from "bun:test";
 
-const skillPaths = [".agent/skills/yuri-season-research/SKILL.md"] as const;
+const skillPath = ".agent/skills/yuri-season-research/SKILL.md";
+const policyPath = ".agent/skills/yuri-season-research/references/research-policy.md";
+const resultsPath = ".agent/skills/yuri-season-research/references/discovery-results.md";
 
 describe("research skill policy", () => {
-  for (const path of skillPaths) {
-    test(`${path} keeps the protagonist and translation rules`, async () => {
-      const content = await Bun.file(path).text();
-      expect(content).toContain("`cycle`: default for scheduled and unattended work");
-      expect(content).toContain("there is no fixed query quota");
-      expect(content).toContain("Source errors block only the affected source");
-      expect(content).toContain("never stop conditions");
-      expect(content).not.toContain("Discovery stays capped at 4");
-      expect(content).not.toContain("Never lease more than 12 queries");
-      expect(content).toContain("Main-character coverage means the recurring protagonist group");
-      expect(content).toContain("Moegirl is a translation reference only");
-      expect(content).toContain("`publicTranslation`");
-      expect(content).toContain("A translation must never replace the original");
-      expect(content).toContain("never expose bucket names");
-      expect(content).toContain("missing media is a preflight failure");
-      expect(content).toContain("expected main-group count");
-      expect(content).toContain("research:audit:birthdays");
-      expect(content).toContain("first_party_source_change");
-      expect(content).toContain("real ship's launch date");
-      expect(content).toContain("萌战吧");
-      expect(content).toContain("AI-generated fanwork is out of scope");
-      expect(content).toContain("Require the platform AI status to be explicitly non-AI");
-      expect(content).toContain("Do not guess undocumented numeric enum meanings");
-      expect(content).toContain("do not put them into a research batch");
-      expect(content).toContain("`animeIds` to every materially covered work");
-      expect(content).toContain("never duplicate the candidate once per anime");
-      expect(content).toContain("remove the few unsupported exceptions");
-    });
-  }
+  test("keeps the skill concise and routes detailed policy progressively", async () => {
+    const content = await Bun.file(skillPath).text();
+    expect(content.split("\n").length).toBeLessThan(100);
+    expect(content).toContain("Read only what the task needs");
+    expect(content).toContain("references/research-policy.md");
+    expect(content).toContain("references/discovery-results.md");
+    expect(content).toContain("references/batch-schema.md");
+    expect(content).toContain("Operate like a strong human editor");
+    expect(content).toContain("bun run research -- cycle");
+    expect(content).toContain("bun run research -- next");
+    expect(content).toContain("bun run research -- submit");
+    expect(content).toContain("bun run research -- finish");
+  });
 
-  test("documents the cross-work community candidate shape", async () => {
+  test("gives scheduling judgment to the agent while code protects coverage", async () => {
+    const content = await Bun.file(skillPath).text();
+    expect(content).toContain("choose `nextCheckAt` from recent activity");
+    expect(content).toContain("Code enforces the maximum freshness deadline");
+    expect(content).toContain("Search-engine results cannot complete them");
+    expect(content).toContain("Only complete scans advance the committed cursor");
+    expect(content).toContain("Record every inspected original with a stable platform object ID");
+    expect(content).not.toContain("Treat every verified current-season work/project X account as a recurring one-day");
+  });
+
+  test("preserves detailed provenance, identity, media, and entity policy in references", async () => {
+    const policy = await Bun.file(policyPath).text();
+    expect(policy).toContain("Main-character coverage means the recurring protagonist group");
+    expect(policy).toContain("Moegirl may provide Chinese display-name provenance only");
+    expect(policy).toContain("real ship's launch date");
+    expect(policy).toContain("AI-generated fanwork is out of scope");
+    expect(policy).toContain("require the platform AI status to be explicitly non-AI");
+    expect(policy).toContain("one anchor `animeId`");
+    expect(policy).toContain("all materially covered `animeIds`");
+    expect(policy).toContain("萌战吧");
+  });
+
+  test("documents verifiable result coverage and the cross-work candidate shape", async () => {
     const schema = await Bun.file(".agent/skills/yuri-season-research/references/batch-schema.md").text();
-    const discovery = await Bun.file(".agent/skills/yuri-season-research/references/discovery-results.md").text();
+    const discovery = await Bun.file(resultsPath).text();
     expect(schema).toContain('"animeIds": ["anime-anchor", "anime-second", "anime-third"]');
     expect(schema).toContain('"publicTranslation"');
-    expect(schema).toContain("do not emit one duplicate candidate per work");
-    expect(discovery).toContain("`animeIds` for a cross-work thread");
+    expect(discovery).toContain('"outcome": "complete"');
+    expect(discovery).toContain('"surface": "signed_in_timeline"');
+    expect(discovery).toContain('"reachedPreviousCursor": true');
+    expect(discovery).toContain('"platformObjectId"');
+    expect(discovery).toContain("Search-engine results cannot complete");
   });
 });

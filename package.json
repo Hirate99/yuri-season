@@ -19,6 +19,7 @@
     "deploy:cloudflare:admin": "bun run cf-typegen && bun test && bun run deploy:admin",
     "dev": "vite dev",
     "preview": "vite preview",
+    "research": "bun scripts/research.ts",
     "research:commit": "bun scripts/source-diff.ts commit",
     "research:diff": "bun scripts/source-diff.ts check",
     "research:discard": "bun scripts/source-diff.ts discard",

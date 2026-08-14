@@ -7,7 +7,7 @@ import { EventTime } from "@/components/event-time";
 import { eventPresentation, eventTitle } from "@/lib/event-presentation";
 import { DataSources } from "./data-sources";
 
-export function AnimeSidebar({ anime }: { anime: AnimeDetail }) {
+export function AnimeSidebar({ anime, viewerTimeZone }: { anime: AnimeDetail; viewerTimeZone: string }) {
   const verifiedEvents = anime.events.filter((event) => event.verified);
   return (
     <aside className="space-y-3 text-xs lg:sticky lg:top-24 lg:self-start">
@@ -16,7 +16,7 @@ export function AnimeSidebar({ anime }: { anime: AnimeDetail }) {
         <div className="mt-3 space-y-1">
           {anime.broadcasts.map((slot) => (
             <a className="block rounded-xl bg-white p-3 shadow-sm transition hover:shadow-md" key={slot.id} href={slot.platformUrl ?? anime.officialUrl ?? "#"} target="_blank" rel="noreferrer">
-              <span className="flex items-start justify-between gap-3"><strong>{weekdayLabel(slot.weekday)}</strong><BroadcastTime slot={slot} align="end" /></span>
+              <span className="flex items-start justify-between gap-3"><strong>{weekdayLabel(slot.weekday)}</strong><BroadcastTime slot={slot} align="end" viewerTimeZone={viewerTimeZone} /></span>
               <span className="mt-1 block text-[10px] text-muted">{slot.label}</span>
             </a>
           ))}
@@ -31,7 +31,7 @@ export function AnimeSidebar({ anime }: { anime: AnimeDetail }) {
               const presentation = eventPresentation(event.eventType);
               return (
                 <a className="grid grid-cols-[76px_1fr_auto] items-center gap-2 rounded-xl bg-white p-3 shadow-sm" key={event.id} href={event.sourceUrl ?? "#"} target="_blank" rel="noreferrer">
-                  <EventTime event={event} /><span><Badge tone={presentation.tone}>{presentation.label}</Badge><span className="mt-1.5 block">{eventTitle(event)}</span></span><ArrowUpRight size={12} />
+                  <EventTime event={event} viewerTimeZone={viewerTimeZone} /><span><Badge tone={presentation.tone}>{presentation.label}</Badge><span className="mt-1.5 block">{eventTitle(event)}</span></span><ArrowUpRight size={12} />
                 </a>
               );
             })}

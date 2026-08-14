@@ -30,7 +30,7 @@ export function PublicationPage({ data }: { data: PublicationDetailResponse }) {
 
   return (
     <div className={`${page} pb-24`}>
-      <header className="border-b border-line py-7 md:py-10">
+      <header className="py-7 md:pt-10 md:pb-6">
         <Link className="inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-ink" to="/feed">
           <ArrowLeft size={14} />返回情报
         </Link>
@@ -44,7 +44,7 @@ export function PublicationPage({ data }: { data: PublicationDetailResponse }) {
         <p className="mt-5 max-w-3xl text-sm leading-7 text-[#50545b] md:text-base md:leading-8">{item.summary}</p>
       </header>
 
-      <div className="grid gap-12 py-10 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+      <div className="grid gap-12 pt-8 pb-10 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
         <main className="min-w-0">
           {heroUrl && (
             <figure className="mb-10 overflow-hidden rounded-[10px] border border-black/[0.06] bg-raised">
@@ -58,11 +58,11 @@ export function PublicationPage({ data }: { data: PublicationDetailResponse }) {
 
           {document?.publicText && (
             <section aria-labelledby="source-text-heading">
-              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line pb-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
                 <h2 id="source-text-heading" className="text-lg font-bold">来源原文</h2>
                 <span className="text-[10px] text-muted">{textModeLabel[document.textMode]}{document.sourceLanguage ? ` · ${document.sourceLanguage}` : ""}</span>
               </div>
-              <div className="mt-6 space-y-5 text-sm leading-8 text-[#30343a]">
+              <div className="mt-5 space-y-5 text-sm leading-8 text-[#30343a]">
                 {paragraphs(document.publicText).map((paragraph, index) => <p key={index} className="whitespace-pre-wrap">{paragraph}</p>)}
               </div>
             </section>

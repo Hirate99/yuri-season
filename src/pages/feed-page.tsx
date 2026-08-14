@@ -88,7 +88,7 @@ export function FeedPage({ initialPage, catalog }: { initialPage: FeedResponse; 
       <VirtualWindowGrid
         items={feed.items}
         getKey={(item) => item.id}
-        renderItem={(item) => <FeedCard item={item} />}
+        renderItem={(item) => <FeedCard item={item} preserveFeedContext />}
         hasMore={!feed.loading && !feed.refreshing && Boolean(feed.nextCursor)}
         loadingMore={feed.loadingMore}
         onLoadMore={feed.loadMore}

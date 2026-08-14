@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { FeedPage } from "@/pages/feed-page";
 import { loadFeedData } from "@/lib/public-loaders";
 import { serverContextFromLoader } from "@/server-context";
@@ -10,5 +10,10 @@ export const Route = createFileRoute("/feed")({
 
 function FeedRoute() {
   const data = Route.useLoaderData();
-  return <FeedPage initialPage={data.feed} catalog={data.catalog} />;
+  return (
+    <>
+      <FeedPage initialPage={data.feed} catalog={data.catalog} />
+      <Outlet />
+    </>
+  );
 }

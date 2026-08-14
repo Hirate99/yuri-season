@@ -18,7 +18,7 @@ function paragraphs(value: string): string[] {
   return value.split(/\n{2,}/u).map((part) => part.trim()).filter(Boolean);
 }
 
-export function PublicationPage({ data }: { data: PublicationDetailResponse }) {
+export function PublicationPage({ data, onBack }: { data: PublicationDetailResponse; onBack?: () => void }) {
   const { item, document, assets, corrections } = data;
   const hero = assets.find((asset) => asset.variant === "preview") ?? assets.at(-1);
   const legacyPreview = item.media?.previewUrl && item.media.presentationMode !== "link_only"
@@ -29,9 +29,15 @@ export function PublicationPage({ data }: { data: PublicationDetailResponse }) {
 
   return (
     <div className="mx-auto w-[calc(100%-1.5rem)] max-w-[1120px] pt-6 pb-24 md:w-[calc(100%-3rem)] md:pt-8 md:pb-20">
-      <Link className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted transition hover:text-ink" to="/feed">
-        <ArrowLeft size={13} />返回情报
-      </Link>
+      {onBack ? (
+        <button className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted transition hover:text-ink" type="button" onClick={onBack}>
+          <ArrowLeft size={13} />返回情报
+        </button>
+      ) : (
+        <Link className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted transition hover:text-ink" to="/feed">
+          <ArrowLeft size={13} />返回情报
+        </Link>
+      )}
 
       <article className="mt-8 md:mt-10">
         <header className="max-w-[820px]">

@@ -15,6 +15,7 @@ import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as AnimeSlugRouteImport } from './routes/anime.$slug'
+import { Route as FeedIdRouteImport } from './routes/feed.$id'
 import { Route as SeasonSlugRouteImport } from './routes/season.$slug'
 import { Route as UpdatesIdRouteImport } from './routes/updates.$id'
 
@@ -48,6 +49,11 @@ const AnimeSlugRoute = AnimeSlugRouteImport.update({
   path: '/anime/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FeedIdRoute = FeedIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => FeedRoute,
+} as any)
 const SeasonSlugRoute = SeasonSlugRouteImport.update({
   id: '/season/$slug',
   path: '/season/$slug',
@@ -63,9 +69,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/calendar': typeof CalendarRoute
-  '/feed': typeof FeedRoute
+  '/feed': typeof FeedRouteWithChildren
   '/seasons': typeof SeasonsRoute
   '/anime/$slug': typeof AnimeSlugRoute
+  '/feed/$id': typeof FeedIdRoute
   '/season/$slug': typeof SeasonSlugRoute
   '/updates/$id': typeof UpdatesIdRoute
 }
@@ -73,9 +80,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/calendar': typeof CalendarRoute
-  '/feed': typeof FeedRoute
+  '/feed': typeof FeedRouteWithChildren
   '/seasons': typeof SeasonsRoute
   '/anime/$slug': typeof AnimeSlugRoute
+  '/feed/$id': typeof FeedIdRoute
   '/season/$slug': typeof SeasonSlugRoute
   '/updates/$id': typeof UpdatesIdRoute
 }
@@ -84,9 +92,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/calendar': typeof CalendarRoute
-  '/feed': typeof FeedRoute
+  '/feed': typeof FeedRouteWithChildren
   '/seasons': typeof SeasonsRoute
   '/anime/$slug': typeof AnimeSlugRoute
+  '/feed/$id': typeof FeedIdRoute
   '/season/$slug': typeof SeasonSlugRoute
   '/updates/$id': typeof UpdatesIdRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/seasons'
     | '/anime/$slug'
+    | '/feed/$id'
     | '/season/$slug'
     | '/updates/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/seasons'
     | '/anime/$slug'
+    | '/feed/$id'
     | '/season/$slug'
     | '/updates/$id'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/seasons'
     | '/anime/$slug'
+    | '/feed/$id'
     | '/season/$slug'
     | '/updates/$id'
   fileRoutesById: FileRoutesById
@@ -127,7 +139,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   CalendarRoute: typeof CalendarRoute
-  FeedRoute: typeof FeedRoute
+  FeedRoute: typeof FeedRouteWithChildren
   SeasonsRoute: typeof SeasonsRoute
   AnimeSlugRoute: typeof AnimeSlugRoute
   SeasonSlugRoute: typeof SeasonSlugRoute
@@ -178,6 +190,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnimeSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/feed/$id': {
+      id: '/feed/$id'
+      path: '/$id'
+      fullPath: '/feed/$id'
+      preLoaderRoute: typeof FeedIdRouteImport
+      parentRoute: typeof FeedRoute
+    }
     '/season/$slug': {
       id: '/season/$slug'
       path: '/season/$slug'
@@ -195,11 +214,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface FeedRouteChildren {
+  FeedIdRoute: typeof FeedIdRoute
+}
+
+const FeedRouteChildren: FeedRouteChildren = {
+  FeedIdRoute: FeedIdRoute,
+}
+
+const FeedRouteWithChildren = FeedRoute._addFileChildren(FeedRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   CalendarRoute: CalendarRoute,
-  FeedRoute: FeedRoute,
+  FeedRoute: FeedRouteWithChildren,
   SeasonsRoute: SeasonsRoute,
   AnimeSlugRoute: AnimeSlugRoute,
   SeasonSlugRoute: SeasonSlugRoute,

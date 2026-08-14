@@ -1,4 +1,5 @@
 import useEmblaCarousel from "embla-carousel-react";
+import AutoHeight from "embla-carousel-auto-height";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -10,6 +11,8 @@ type CarouselImage = {
   sourceUrl: string;
   altText: string;
   rightsStatus: PublicationAsset["rightsStatus"] | null;
+  width: number | null;
+  height: number | null;
 };
 
 function MediaCaption({ image }: { image: CarouselImage }) {
@@ -68,6 +71,8 @@ export function publicationCarouselImages(
       sourceUrl: asset.sourceUrl,
       altText: asset.altText ?? media?.title ?? fallbackAlt,
       rightsStatus: asset.rightsStatus,
+      width: asset.width,
+      height: asset.height,
     }));
 
   if (images.length === 0 && media?.previewUrl && media.presentationMode !== "link_only") {
@@ -77,13 +82,18 @@ export function publicationCarouselImages(
       sourceUrl: media.originalUrl,
       altText: media.title || fallbackAlt,
       rightsStatus: null,
+      width: null,
+      height: null,
     });
   }
   return images;
 }
 
 function MultiplePublicationImages({ images }: { images: CarouselImage[] }) {
-  const [viewportRef, api] = useEmblaCarousel({ loop: true, align: "start" });
+  const [viewportRef, api] = useEmblaCarousel(
+    { loop: true, align: "start" },
+    [AutoHeight()],
+  );
   const [selectedIndex, setSelectedIndex] = useState(0);
   const active = images[selectedIndex] ?? images[0];
 
@@ -104,10 +114,24 @@ function MultiplePublicationImages({ images }: { images: CarouselImage[] }) {
     <figure className="mb-10 overflow-hidden rounded-2xl bg-white shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
       <div className="relative isolate">
         <div className="overflow-hidden" ref={viewportRef} aria-roledescription="carousel" aria-label={`图片轮播，共 ${images.length} 张`}>
-          <div className="flex touch-pan-y items-start">
+          <div className="flex touch-pan-y items-start transition-[height] duration-300 ease-out">
             {images.map((image, index) => (
-              <div className="min-w-0 flex-[0_0_100%]" key={image.id} role="group" aria-roledescription="slide" aria-label={`${index + 1} / ${images.length}`}>
-                <img className="block h-auto w-full select-none" src={image.url} alt={image.altText} draggable={false} decoding="async" referrerPolicy="no-referrer" />
+              <div
+                className="min-w-0 flex-[0_0_100%] overflow-hidden"
+                key={image.id}
+                role="group"
+                aria-roledescription="slide"
+                aria-label={`${index + 1} / ${images.length}`}
+                style={image.width && image.height ? { aspectRatio: `${image.width} / ${image.height}` } : undefined}
+              >
+                <img
+                  className={image.width && image.height ? "block h-full w-full select-none object-contain" : "block h-auto w-full select-none"}
+                  src={image.url}
+                  alt={image.altText}
+                  draggable={false}
+                  decoding="async"
+                  referrerPolicy="no-referrer"
+                />
               </div>
             ))}
           </div>

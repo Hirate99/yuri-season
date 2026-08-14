@@ -74,6 +74,7 @@ describe("publication page presentation", () => {
     expect(html).toContain("私たち運命ですね");
     expect(html).toContain("我们命中注定呢");
     expect(html).toContain("图片来自原帖");
+    expect(html).toContain("w-[calc(100%-2.5rem)]");
     expect(html).not.toContain("R2 仅缓存相同公开图片字节");
   });
 });

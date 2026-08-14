@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { broadcastInstantOnViewerDate, localBroadcastDisplay, nextBroadcastInstant } from "@/lib/timezone";
+import { broadcastInstantOnViewerDate, localBroadcastDisplay, nextBroadcastInstant, weekdayInTimeZone } from "@/lib/timezone";
 
 describe("broadcast timezone conversion", () => {
+  test("finds the calendar weekday in its source timezone", () => {
+    const now = new Date("2026-08-16T16:30:00Z");
+    expect(weekdayInTimeZone("America/Los_Angeles", now)).toBe(0);
+    expect(weekdayInTimeZone("Asia/Tokyo", now)).toBe(1);
+  });
+
   test("keeps Japanese extended-hour notation on the following calendar day", () => {
     const slot = { weekday: 2, localTime: "24:30", timezone: "Asia/Tokyo" };
     const instant = nextBroadcastInstant(slot, new Date("2026-08-10T00:00:00Z"));

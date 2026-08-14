@@ -5,7 +5,11 @@ import { contentLabel } from "@/lib/format";
 import { CoverImage } from "./cover-image";
 import { LocalDateTime } from "./local-date-time";
 
-export function FeedCard({ item, compact = false }: { item: FeedItem; compact?: boolean }) {
+export function FeedCard({ item, compact = false, preserveFeedContext = false }: {
+  item: FeedItem;
+  compact?: boolean;
+  preserveFeedContext?: boolean;
+}) {
   const relatedAnime = item.relatedAnime ?? [];
   const isCrossWork = item.contentClass === "community_thread" && relatedAnime.length > 1;
   const showPreview = Boolean(item.media?.previewUrl && item.media.presentationMode !== "link_only");
@@ -23,11 +27,23 @@ export function FeedCard({ item, compact = false }: { item: FeedItem; compact?: 
       <div className={showPreview || showCover ? "mt-4 grid grid-cols-[minmax(0,1fr)_68px] gap-4 sm:grid-cols-[minmax(0,1fr)_116px]" : "mt-4 min-w-0"}>
         <div className="min-w-0">
           <h3 className={compact ? "text-sm font-semibold" : "text-base font-semibold"}>
-            <a
-              className="after:absolute after:inset-0 after:rounded-[10px] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-charcoal/50 group-hover:underline"
-              href={`/updates/${encodeURIComponent(item.id)}`}
-              aria-label={`查看详情：${item.title}`}
-            >{item.title}</a>
+            {preserveFeedContext ? (
+              <Link
+                className="after:absolute after:inset-0 after:rounded-[10px] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-charcoal/50 group-hover:underline"
+                to="/feed/$id"
+                params={{ id: item.id }}
+                mask={{ to: "/updates/$id", params: { id: item.id }, unmaskOnReload: true }}
+                resetScroll={false}
+                aria-label={`查看详情：${item.title}`}
+              >{item.title}</Link>
+            ) : (
+              <Link
+                className="after:absolute after:inset-0 after:rounded-[10px] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-charcoal/50 group-hover:underline"
+                to="/updates/$id"
+                params={{ id: item.id }}
+                aria-label={`查看详情：${item.title}`}
+              >{item.title}</Link>
+            )}
           </h3>
           <p className="mt-2 text-xs leading-6 text-[#50545b]">{item.summary}</p>
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">

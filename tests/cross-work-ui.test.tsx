@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
+import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import type { AdminAnimeSummary, FeedItem } from "@/domain";
 import { FeedCard } from "@/components/feed-card";
 import { DiscussionsEditor } from "@/features/admin/discussions-editor";
@@ -48,7 +49,7 @@ describe("cross-work discussion UI", () => {
     expect(html).toContain("将从 3 部作品及 Feed 撤下");
   });
 
-  test("labels a shared thread without presenting one work as its sole owner", () => {
+  test("labels a shared thread without presenting one work as its sole owner", async () => {
     const item = {
       id: "feed-shared",
       animeId: "anime-a",
@@ -75,7 +76,13 @@ describe("cross-work discussion UI", () => {
       pinned: false,
       media: null,
     } satisfies FeedItem;
-    const html = renderToStaticMarkup(<FeedCard item={item} />);
+    const routeTree = createRootRoute({ component: () => <FeedCard item={item} /> });
+    const router = createRouter({
+      routeTree,
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+    await router.load();
+    const html = renderToStaticMarkup(<RouterProvider router={router} />);
 
     expect(html).toContain("跨作品 · 3 部");
     expect(html).toContain("作品 A");

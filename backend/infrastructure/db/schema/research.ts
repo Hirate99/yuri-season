@@ -10,6 +10,7 @@ export const sourceObservationsTable = sqliteTable("source_observations", {
   title: text("title"),
   excerpt: text("excerpt"),
   publicText: text("public_text"),
+  publicTranslation: text("public_translation"),
   authorName: text("author_name"),
   publishedAt: text("published_at"),
   capturedAt: text("captured_at").notNull(),

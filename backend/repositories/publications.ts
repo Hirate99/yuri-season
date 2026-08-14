@@ -24,6 +24,7 @@ export async function readPublicationDocument(
     authorName: publicationDocumentsTable.authorName,
     sourceLanguage: publicationDocumentsTable.sourceLanguage,
     publicText: publicationDocumentsTable.publicText,
+    publicTranslation: publicationDocumentsTable.publicTranslation,
     textMode: publicationDocumentsTable.textMode,
     sourceStatus: publicationDocumentsTable.sourceStatus,
     capturedAt: publicationDocumentsTable.capturedAt,

@@ -108,6 +108,27 @@ describe("publication details", () => {
     });
   });
 
+  test("keeps a Chinese translation separate from the original text", async () => {
+    const publication = await publishedOfficialItem();
+    database.sqlite.query(`
+      UPDATE research_sources
+      SET public_text_mode = 'full_with_translation', max_public_characters = 6000
+      WHERE id = 'source-kimi-news'
+    `).run();
+    database.sqlite.query(`
+      UPDATE source_observations
+      SET public_translation = '这是公开的官方新闻正文。'
+      WHERE id = 'observation-publication-detail'
+    `).run();
+    await applyCandidateDecision(database.binding(), publication.candidateId, "publish", { reviewerType: "admin" });
+
+    expect((await readPublicationPage(database.binding(), publication.id))?.document).toMatchObject({
+      publicText: "これは公開する公式ニュースの本文です。",
+      publicTranslation: "这是公开的官方新闻正文。",
+      textMode: "full_with_translation",
+    });
+  });
+
   test("serves only approved R2 assets and builds their public URL from the key", async () => {
     const publication = await publishedOfficialItem();
     database.sqlite.query(`
@@ -175,13 +196,15 @@ describe("publication details", () => {
   test("does not expose an evidence paraphrase as source text", async () => {
     const publication = await publishedOfficialItem();
     database.sqlite.query(`
-      UPDATE source_observations SET public_text = NULL
+      UPDATE source_observations
+      SET public_text = NULL, public_translation = '不应单独公开的翻译'
       WHERE id = 'observation-publication-detail'
     `).run();
     await applyCandidateDecision(database.binding(), publication.candidateId, "publish", { reviewerType: "admin" });
 
     expect((await readPublicationPage(database.binding(), publication.id))?.document).toMatchObject({
       publicText: null,
+      publicTranslation: null,
       textMode: "summary_only",
     });
   });
@@ -195,8 +218,13 @@ describe("publication details", () => {
 
     expect(await readPublicationPage(database.binding(), publication.id)).toBeNull();
     expect(database.sqlite.query(`
-      SELECT text_mode, source_status, public_text FROM publication_documents WHERE feed_item_id = ?
-    `).get(publication.id)).toEqual({ text_mode: "withdrawn", source_status: "withdrawn", public_text: null });
+      SELECT text_mode, source_status, public_text, public_translation FROM publication_documents WHERE feed_item_id = ?
+    `).get(publication.id)).toEqual({
+      text_mode: "withdrawn",
+      source_status: "withdrawn",
+      public_text: null,
+      public_translation: null,
+    });
   });
 
   test("rejects unsafe object keys when constructing R2 URLs", () => {

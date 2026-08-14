@@ -40,6 +40,7 @@ Use the verified account as observation provenance. The importer validates `cast
       "title": "Voice actor post about the episode",
       "excerpt": "Close paraphrase of the work-specific evidence.",
       "publicText": "The original post text, preserved as plain text when redistribution is allowed.",
+      "publicTranslation": "A faithful Chinese translation of publicText, never an editorial summary.",
       "authorName": "Voice Actor",
       "publishedAt": "2026-08-11T12:00:00+09:00",
       "contentType": "text/html",
@@ -158,7 +159,7 @@ Fanwork requires an inline creator source, original creator post, and media meta
 
 ## General candidate rules
 
-Use `excerpt` for internal evidence and close paraphrase. When the source policy permits text redistribution, also provide the source's readable body in `publicText` (plain text, at most 24,000 characters); omit it for link-only, private, deleted, or prohibited content. The server still applies the registered source's public-text policy before publishing.
+Use `excerpt` for internal evidence and close paraphrase. When the source policy permits text redistribution, provide the source's readable original-language body in `publicText` (plain text, at most 24,000 characters). A faithful Chinese translation may be provided separately in `publicTranslation` (also at most 24,000 characters). The translation must preserve meaning, must not replace `publicText`, and must not be copied from `excerpt`, the candidate summary, or a search snippet. Omit both public fields for link-only, private, deleted, or prohibited content. The server still applies the registered source's public-text policy before publishing.
 
 Allowed content classes are `schedule`, `official_news`, `official_art`, `creator_art`, `cast_post`, `staff_post`, `fanwork`, `community_thread`, and `editorial`. Birthdays are never feed candidates: a verified birthday updates the character record and calendar event only; birthday-related celebration art enters the feed as `official_art` / `creator_art` (or `cast_post` for a cast birthday post) under that lane's rules. Use `presentationMode: link_only` in phase one. Every candidate needs a review object with `decision`, `confidence`, and evidence-based reasons.
 

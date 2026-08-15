@@ -18,6 +18,17 @@ describe("research skill policy", () => {
     expect(content).toContain("bun run research -- submit");
     expect(content).toContain("bun run research -- finish");
     expect(content).toContain("original text as mandatory for every newly published social post");
+    expect(content).toContain("One-off audits, repair builders, data extracts, candidate inspectors, and batch generators");
+    expect(content).toContain("Do not add or commit a top-level `scripts/*.ts` file");
+  });
+
+  test("keeps top-level research scripts limited to maintained package entry points", async () => {
+    const packageJson = await Bun.file("package.json").json() as { scripts: Record<string, string> };
+    const maintained = new Set(Object.values(packageJson.scripts).flatMap((command) =>
+      [...command.matchAll(/scripts\/([^\s"']+\.ts)/gu)].map((match) => `scripts/${match[1]}`)
+    ));
+    const topLevel = [...new Bun.Glob("scripts/*.ts").scanSync()].map((path) => path.replaceAll("\\", "/"));
+    expect(topLevel.sort()).toEqual([...maintained].sort());
   });
 
   test("gives scheduling judgment to the agent while code protects coverage", async () => {

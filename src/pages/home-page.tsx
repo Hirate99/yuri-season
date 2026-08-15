@@ -6,6 +6,7 @@ import { FeedCard } from "@/components/feed-card";
 import { SectionHeading } from "@/components/section-heading";
 import { SeasonHero } from "@/components/season-hero";
 import { TodayPanel } from "@/components/today-panel";
+import { orderBannerForHome, orderWorksForToday } from "@/lib/home-ordering";
 import { page, textButton } from "@/lib/ui";
 
 export function HomePage({ catalog, feed, seasonSlug, viewerTimeZone, renderedAt }: {
@@ -16,11 +17,15 @@ export function HomePage({ catalog, feed, seasonSlug, viewerTimeZone, renderedAt
   renderedAt?: string;
 }) {
   const renderedNow = renderedAt ? new Date(renderedAt) : undefined;
+  const timeZone = viewerTimeZone ?? "Asia/Tokyo";
+  const now = renderedNow ?? new Date(catalog.generatedAt);
+  const bannerAnime = orderBannerForHome(catalog.anime, timeZone, now);
+  const worksAnime = orderWorksForToday(catalog.anime, timeZone, now);
   return (
     <div className={page}>
       <SeasonHero
         season={catalog.season}
-        anime={catalog.anime}
+        anime={bannerAnime}
         archived={Boolean(seasonSlug)}
       />
 
@@ -35,7 +40,7 @@ export function HomePage({ catalog, feed, seasonSlug, viewerTimeZone, renderedAt
       <section className="mt-12 md:mt-16">
         <SectionHeading title="作品" />
         <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-3 md:gap-x-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-          {catalog.anime.map((anime) => (
+          {worksAnime.map((anime) => (
             <AnimeCard
               key={anime.id}
               anime={anime}

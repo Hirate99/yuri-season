@@ -94,6 +94,8 @@ const baseObservationSchema = z.object({
   excerpt: requiredText(24_000, "excerpt"),
   publicText: optionalNullableText(24_000, "publicText"),
   publicTranslation: optionalNullableText(24_000, "publicTranslation"),
+  mediaDisposition: z.enum(["none", "attached", "unavailable", "link_only_policy"]).optional(),
+  mediaDispositionReason: optionalNullableText(1_000, "mediaDispositionReason"),
   authorName: optionalNullableText(200, "authorName"),
   publishedAt: temporal("publishedAt").optional(),
   contentType: requiredText(120, "contentType").optional(),
@@ -115,6 +117,33 @@ const observationSchema = baseObservationSchema.superRefine((value, context) => 
       code: "custom",
       message: "自动发布社交帖子必须保存原帖正文 publicText；无法保存正文时只能 hold 或 reject。",
       path: ["publicText"],
+    });
+  }
+  if (publishesSocialPost && !value.mediaDisposition) {
+    context.addIssue({
+      code: "custom",
+      message: "自动发布社交帖子必须声明 mediaDisposition，明确原帖是否包含媒体及其处理结果。",
+      path: ["mediaDisposition"],
+    });
+  }
+  if (publishesSocialPost && value.mediaDisposition === "attached") {
+    value.candidates.forEach((candidate, index) => {
+      if (candidate.review.decision === "publish" && !candidate.media?.assets?.length) {
+        context.addIssue({
+          code: "custom",
+          message: "mediaDisposition=attached 的自动发布社交帖子必须包含已上传的 media.assets。",
+          path: ["candidates", index, "media", "assets"],
+        });
+      }
+    });
+  }
+  if (publishesSocialPost
+    && (value.mediaDisposition === "unavailable" || value.mediaDisposition === "link_only_policy")
+    && !value.mediaDispositionReason) {
+    context.addIssue({
+      code: "custom",
+      message: "媒体不可用或仅链接展示时必须记录 mediaDispositionReason。",
+      path: ["mediaDispositionReason"],
     });
   }
 });

@@ -94,7 +94,12 @@ export async function prepareBatchCandidate(
     };
   }
 
-  return common;
+  const platformObjectId = normalizedPlatformObjectId(candidate, observation);
+  return {
+    ...common,
+    platformObjectId,
+    originKey: candidate.originKey ?? (platformObjectId ? `source:${source.id}:${platformObjectId}` : null),
+  };
 }
 
 export async function storeAccountDiscovery(

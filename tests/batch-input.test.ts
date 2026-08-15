@@ -15,6 +15,7 @@ function socialBatch(decision: "publish" | "hold" | "reject", publicText?: strin
       canonicalUrl: "https://x.com/example/status/2088253407593373725",
       excerpt: "Close internal paraphrase.",
       publicText,
+      mediaDisposition: "none",
       publishedAt: "2026-08-14T13:16:24.000Z",
       candidates: [{
         animeId: "anime-test",
@@ -47,6 +48,24 @@ describe("research batch social-post text invariant", () => {
   test("accepts an auto-published social post with original text", () => {
     expect(parseResearchBatch(socialBatch("publish", "Original post text.")))
       .toMatchObject({ observations: [{ publicText: "Original post text." }] });
+  });
+
+  test("rejects an auto-published social post without an explicit media disposition", () => {
+    const value = socialBatch("publish", "Original post text.");
+    delete (value.observations[0] as { mediaDisposition?: string }).mediaDisposition;
+    expect(() => parseResearchBatch(value)).toThrow("必须声明 mediaDisposition");
+  });
+
+  test("requires uploaded assets when the original has attached media", () => {
+    const value = socialBatch("publish", "Original post text.");
+    value.observations[0].mediaDisposition = "attached";
+    expect(() => parseResearchBatch(value)).toThrow("必须包含已上传的 media.assets");
+  });
+
+  test("requires a reason for a media policy exception", () => {
+    const value = socialBatch("publish", "Original post text.");
+    value.observations[0].mediaDisposition = "link_only_policy";
+    expect(() => parseResearchBatch(value)).toThrow("必须记录 mediaDispositionReason");
   });
 
   test("allows a text-unavailable social post to remain held", () => {

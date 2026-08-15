@@ -44,6 +44,8 @@ export type BatchObservation = {
   excerpt: string;
   publicText?: string | null;
   publicTranslation?: string | null;
+  mediaDisposition?: "none" | "attached" | "unavailable" | "link_only_policy";
+  mediaDispositionReason?: string | null;
   authorName?: string | null;
   publishedAt?: string | null;
   contentType?: string;

@@ -196,6 +196,10 @@ Use `excerpt` for internal evidence and close paraphrase. When the source policy
 
 For a newly published social post, `publicText` is required even when `presentationMode` is `link_only`. If the source is private, deleted, inaccessible, or its text cannot be preserved under policy, set the review decision to `hold` or `reject`; do not publish a title-and-summary-only social card.
 
+Every newly published social observation must also provide `mediaDisposition`: `none` when the opened original has no media, `attached` when its actual assets are linked, `unavailable` when the source asset cannot be recovered, or `link_only_policy` when reuse policy forbids mirroring. `attached` requires non-empty `candidate.media.assets`; the two exception values require `mediaDispositionReason`. Do not use an anime cover as the post's media.
+
+Before translating, read the related anime/person/character resources and use their canonical public names verbatim in candidate titles, summaries, `publicTranslation`, and any translated hashtags. A literal translation that conflicts with an existing canonical name fails preflight.
+
 Allowed content classes are `schedule`, `official_news`, `official_art`, `creator_art`, `cast_post`, `staff_post`, `fanwork`, `community_thread`, and `editorial`. Birthdays are never feed candidates: a verified birthday updates the character record and calendar event only; birthday-related celebration art enters the feed as `official_art` / `creator_art` (or `cast_post` for a cast birthday post) under that lane's rules. Use `presentationMode: link_only` in phase one. Every candidate needs a review object with `decision`, `confidence`, and evidence-based reasons.
 
 Structured `themeSongs` are allowed only on a registered first-party observation. `songKind` is one of `opening`, `ending`, `theme`, `insert`, or `image`. Use `theme` when the official source supplies only a generic numbered theme-song label; keep its sequence and do not infer OP/ED. Automatic writes require an official source, matching anime ID, `publish`, and confidence at least 0.92. Never overwrite a conflicting occupied slot.

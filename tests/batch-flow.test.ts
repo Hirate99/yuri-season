@@ -496,6 +496,33 @@ describe("local research batch", () => {
     });
   });
 
+  test("updates one stable source object instead of duplicating it when editorial text changes", async () => {
+    const first = batch("source-kimi-news", "batch-stable-object-1");
+    first.observations[0].candidates[0].platformObjectId = "stable-news-object";
+    expect(await ingestResearchBatch(database.binding(), first as never))
+      .toMatchObject({ published: 1 });
+
+    const repair = batch("source-kimi-news", "batch-stable-object-2");
+    repair.observations[0].candidates[0].platformObjectId = "stable-news-object";
+    repair.observations[0].candidates[0].title = "使用数据库规范名的新标题";
+    repair.observations[0].candidates[0].summary = "使用数据库规范名的新摘要。";
+    repair.observations[0].publicTranslation = "使用数据库规范名的新翻译。";
+    expect(await ingestResearchBatch(database.binding(), repair as never))
+      .toMatchObject({ published: 1 });
+
+    expect(database.sqlite.query(`
+      SELECT
+        (SELECT COUNT(*) FROM feed_candidates WHERE platform_object_id = 'stable-news-object') AS candidates,
+        (SELECT COUNT(*) FROM feed_items WHERE platform_object_id = 'stable-news-object' AND withdrawn_at IS NULL) AS items
+    `).get()).toEqual({ candidates: 1, items: 1 });
+    expect(database.sqlite.query(`
+      SELECT title, summary FROM feed_items WHERE platform_object_id = 'stable-news-object'
+    `).get()).toEqual({
+      title: "使用数据库规范名的新标题",
+      summary: "使用数据库规范名的新摘要。",
+    });
+  });
+
   test("ingests ordered official media assets and projects the first image to the feed", async () => {
     const value = batch("source-kimi-news", "batch-official-gallery-1");
     value.observations[0].publishedAt = "2026-08-14T12:00:00+09:00";

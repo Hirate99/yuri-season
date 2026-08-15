@@ -1,6 +1,6 @@
 import type { CandidateDraft } from "@/domain";
 import type { BatchItem } from "drizzle-orm/batch";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, isNull, ne, or, sql } from "drizzle-orm";
 
 import { database } from "~/infrastructure/db/client";
 import {
@@ -34,7 +34,18 @@ async function existingCandidateId(
   const field = draft.originKey ? feedCandidatesTable.originKey : feedCandidatesTable.fingerprint;
   const row = await database(db).select({ id: feedCandidatesTable.id }).from(feedCandidatesTable)
     .where(eq(field, draft.originKey ?? fingerprint)).get();
-  return row?.id ?? null;
+  if (row?.id) return row.id;
+  if (!draft.platformObjectId || !draft.animeId) return null;
+  const stableObject = await database(db).select({ id: feedCandidatesTable.id })
+    .from(feedCandidatesTable)
+    .leftJoin(feedItemsTable, eq(feedItemsTable.candidateId, feedCandidatesTable.id))
+    .where(and(
+      eq(feedCandidatesTable.platformObjectId, draft.platformObjectId),
+      eq(feedCandidatesTable.animeId, draft.animeId),
+      eq(feedCandidatesTable.url, draft.url),
+      or(isNull(feedItemsTable.id), isNull(feedItemsTable.withdrawnAt)),
+    )).get();
+  return stableObject?.id ?? null;
 }
 
 function evidenceQuery(db: D1Database, candidateId: string, draft: CandidateDraft) {
@@ -123,16 +134,39 @@ export async function createCandidate(db: D1Database, draft: CandidateDraft): Pr
     const queries: BatchItem<"sqlite">[] = candidateAnimeQueries(db, existingId, draft);
     const media = await mediaWrite(db, draft);
     queries.push(...media.queries);
-    if (media.id) {
-      queries.push(orm.update(feedCandidatesTable).set({ mediaId: media.id })
-        .where(eq(feedCandidatesTable.id, existingId)));
-      queries.push(orm.update(feedItemsTable).set({ mediaId: media.id })
-        .where(eq(feedItemsTable.candidateId, existingId)));
-    }
-    if (draft.observationId) {
-      queries.push(orm.update(feedCandidatesTable).set({ observationId: draft.observationId })
-        .where(eq(feedCandidatesTable.id, existingId)));
-    }
+    queries.push(orm.update(feedCandidatesTable).set({
+      observationId: sql`COALESCE(${draft.observationId ?? null}, ${feedCandidatesTable.observationId})`,
+      mediaId: sql`COALESCE(${media.id}, ${feedCandidatesTable.mediaId})`,
+      platformObjectId: sql`COALESCE(${draft.platformObjectId ?? null}, ${feedCandidatesTable.platformObjectId})`,
+      originKey: sql`COALESCE(${draft.originKey ?? null}, ${feedCandidatesTable.originKey})`,
+      title: draft.title,
+      summary: draft.summary,
+      url: draft.url,
+      sourceName: draft.sourceName,
+      sourceAccount: draft.sourceAccount ?? null,
+      importance: draft.importance ?? 2,
+      publishedAt: draft.publishedAt,
+      presentationMode: draft.presentationMode ?? "link_only",
+      safetyRating: draft.safetyRating ?? "unknown",
+      spoilerLevel: draft.spoilerLevel ?? "none",
+      confidence: draft.confidence ?? 0,
+      extractorVersion: draft.extractorVersion ?? "manual@1",
+      policyVersion: draft.policyVersion ?? "publish-policy@1",
+    }).where(eq(feedCandidatesTable.id, existingId)));
+    queries.push(orm.update(feedItemsTable).set({
+      mediaId: sql`COALESCE(${media.id}, ${feedItemsTable.mediaId})`,
+      platformObjectId: sql`COALESCE(${draft.platformObjectId ?? null}, ${feedItemsTable.platformObjectId})`,
+      originKey: sql`COALESCE(${draft.originKey ?? null}, ${feedItemsTable.originKey})`,
+      title: draft.title,
+      summary: draft.summary,
+      url: draft.url,
+      sourceName: draft.sourceName,
+      sourceAccount: draft.sourceAccount ?? null,
+      importance: draft.importance ?? 2,
+      publishedAt: draft.publishedAt,
+      safetyRating: draft.safetyRating ?? "unknown",
+      spoilerLevel: draft.spoilerLevel ?? "none",
+    }).where(eq(feedItemsTable.candidateId, existingId)));
     if (draft.contentClass === "community_thread") {
       queries.push(orm.update(feedCandidatesTable).set({
         observationId: sql`COALESCE(${draft.observationId ?? null}, ${feedCandidatesTable.observationId})`,

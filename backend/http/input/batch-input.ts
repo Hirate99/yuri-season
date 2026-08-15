@@ -45,6 +45,25 @@ const accountDiscoverySchema = z.object({
   review: reviewSchema,
 });
 
+const socialPostHosts = new Set([
+  "x.com",
+  "twitter.com",
+  "instagram.com",
+  "bsky.app",
+  "threads.net",
+]);
+
+function isSocialPostUrl(value: string) {
+  const url = new URL(value);
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  if (!socialPostHosts.has(host)) return false;
+  if (host === "x.com" || host === "twitter.com") return /^\/[^/]+\/status\/[^/]+/.test(url.pathname);
+  if (host === "instagram.com") return /^\/(p|reel|tv)\/[^/]+/.test(url.pathname);
+  if (host === "bsky.app") return /^\/profile\/[^/]+\/post\/[^/]+/.test(url.pathname);
+  if (host === "threads.net") return /^\/@[^/]+\/post\/[^/]+/.test(url.pathname);
+  return false;
+}
+
 const themeSongSchema = z.object({
   animeId: requiredText(120, "themeSong.animeId"),
   songKind: z.enum(["opening", "ending", "theme", "insert", "image"]),
@@ -65,7 +84,7 @@ const themeSongSchema = z.object({
   path: ["coverSourceUrl"],
 });
 
-const observationSchema = z.object({
+const baseObservationSchema = z.object({
   sourceId: optionalNullableText(120, "sourceId"),
   accountId: optionalNullableText(120, "accountId"),
   source: inlineSourceSchema.nullable().optional(),
@@ -87,6 +106,18 @@ const observationSchema = z.object({
   (value) => [value.sourceId, value.accountId, value.source].filter((item) => item != null).length === 1,
   "每条 observation 必须且只能提供 sourceId、accountId 或内联 source 中的一种。",
 );
+
+const observationSchema = baseObservationSchema.superRefine((value, context) => {
+  const publishesSocialPost = isSocialPostUrl(value.canonicalUrl)
+    && value.candidates.some((candidate) => candidate.review.decision === "publish");
+  if (publishesSocialPost && !value.publicText) {
+    context.addIssue({
+      code: "custom",
+      message: "自动发布社交帖子必须保存原帖正文 publicText；无法保存正文时只能 hold 或 reject。",
+      path: ["publicText"],
+    });
+  }
+});
 
 const researchBatchSchema = z.object({
   schemaVersion: z.literal("1", "不支持这个 batch 版本。"),

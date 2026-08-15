@@ -54,6 +54,7 @@ The legacy `research:diff`, `research:discover:*`, `research:import`, and specia
 
 - Verify identity, authorship, entity match, date, original-post status, safety, spoilers, attribution, reuse policy, and duplicate risk separately.
 - Keep `excerpt` as an internal paraphrase. When allowed, keep readable original-language text in `publicText` and a faithful Chinese translation in `publicTranslation`; neither an editorial summary nor a search snippet is a translation.
+- Treat original text as mandatory for every newly published social post. `link_only` controls navigation and media presentation; it never permits an empty `publicText`. If the original text cannot be preserved, hold or reject the candidate instead of publishing it.
 - If public copy says an image, illustration, photo, visual, or video was posted, missing linked media is a preflight failure unless the media is unavailable or policy requires link-only.
 - Public rights copy stays human-readable (`图片来自原帖` or `官方图片`). Storage, object-key, bucket, and byte-cache details are internal.
 - Use local CLI/Admin APIs for imports and state. Never fall back to UI automation for routine writes, and never change production credentials merely to make a local command pass.

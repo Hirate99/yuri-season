@@ -17,6 +17,7 @@ describe("research skill policy", () => {
     expect(content).toContain("bun run research -- next");
     expect(content).toContain("bun run research -- submit");
     expect(content).toContain("bun run research -- finish");
+    expect(content).toContain("original text as mandatory for every newly published social post");
   });
 
   test("gives scheduling judgment to the agent while code protects coverage", async () => {
@@ -46,6 +47,7 @@ describe("research skill policy", () => {
     const discovery = await Bun.file(resultsPath).text();
     expect(schema).toContain('"animeIds": ["anime-anchor", "anime-second", "anime-third"]');
     expect(schema).toContain('"publicTranslation"');
+    expect(schema).toContain("do not publish a title-and-summary-only social card");
     expect(discovery).toContain('"outcome": "complete"');
     expect(discovery).toContain('"surface": "signed_in_timeline"');
     expect(discovery).toContain('"reachedPreviousCursor": true');

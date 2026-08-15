@@ -89,6 +89,19 @@ describe("publication page presentation", () => {
     expect(html).toContain("transition-[height]");
   });
 
+  test("reserves carousel height while image dimensions are still unknown", () => {
+    const assets: PublicationDetailResponse["assets"] = [
+      { id: "unknown-first", url: "https://cdn.test/first.webp", sourceUrl: "https://source.test/first.jpg", mimeType: "image/webp", width: null, height: null, sortOrder: 0, variant: "preview", altText: "第一张", rightsStatus: "press_kit" },
+      { id: "unknown-second", url: "https://cdn.test/second.webp", sourceUrl: "https://source.test/second.jpg", mimeType: "image/webp", width: null, height: null, sortOrder: 1, variant: "preview", altText: "第二张", rightsStatus: "press_kit" },
+    ];
+    const html = renderToStaticMarkup(
+      <PublicationMediaCarousel assets={assets} media={null} fallbackAlt="图片" />,
+    );
+
+    expect(html.match(/aspect-ratio:1 \/ 1/g)).toHaveLength(2);
+    expect(html).toContain("h-full w-full select-none object-contain");
+  });
+
   test("renders one image directly without carousel chrome or a fixed black square", () => {
     const html = renderToStaticMarkup(
       <PublicationMediaCarousel

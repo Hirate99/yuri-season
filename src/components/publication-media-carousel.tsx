@@ -95,6 +95,7 @@ function MultiplePublicationImages({ images }: { images: CarouselImage[] }) {
     [AutoHeight()],
   );
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [measuredAspectRatios, setMeasuredAspectRatios] = useState<Record<string, string>>({});
   const active = images[selectedIndex] ?? images[0];
 
   const updateSelection = useCallback(() => {
@@ -110,6 +111,10 @@ function MultiplePublicationImages({ images }: { images: CarouselImage[] }) {
     };
   }, [api, updateSelection]);
 
+  useEffect(() => {
+    api?.reInit();
+  }, [api, measuredAspectRatios]);
+
   return (
     <figure className="mb-10 overflow-hidden rounded-2xl bg-white shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
       <div className="relative isolate">
@@ -122,15 +127,28 @@ function MultiplePublicationImages({ images }: { images: CarouselImage[] }) {
                 role="group"
                 aria-roledescription="slide"
                 aria-label={`${index + 1} / ${images.length}`}
-                style={image.width && image.height ? { aspectRatio: `${image.width} / ${image.height}` } : undefined}
+                style={{
+                  aspectRatio: image.width && image.height
+                    ? `${image.width} / ${image.height}`
+                    : measuredAspectRatios[image.id] ?? "1 / 1",
+                }}
               >
                 <img
-                  className={image.width && image.height ? "block h-full w-full select-none object-contain" : "block h-auto w-full select-none"}
+                  className="block h-full w-full select-none object-contain"
                   src={image.url}
                   alt={image.altText}
                   draggable={false}
                   decoding="async"
                   referrerPolicy="no-referrer"
+                  onLoad={(event) => {
+                    if (image.width && image.height) return;
+                    const { naturalWidth, naturalHeight } = event.currentTarget;
+                    if (!naturalWidth || !naturalHeight) return;
+                    const ratio = `${naturalWidth} / ${naturalHeight}`;
+                    setMeasuredAspectRatios((current) => current[image.id] === ratio
+                      ? current
+                      : { ...current, [image.id]: ratio });
+                  }}
                 />
               </div>
             ))}

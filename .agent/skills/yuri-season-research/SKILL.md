@@ -72,4 +72,6 @@ The legacy `research:diff`, `research:discover:*`, `research:import`, and specia
 
 When an operation exposes a reusable failure, first add a typed invariant, validator, deterministic reconciler, anomaly check, or regression fixture. Update this skill only when the orchestration or semantic policy truly changes; do not accumulate event-specific fixes or transient URLs here.
 
+Keep repository tooling durable. One-off audits, repair builders, data extracts, candidate inspectors, and batch generators belong in the workspace temporary directory and must be removed after the verified import. Do not add or commit a top-level `scripts/*.ts` file unless it is a reusable maintained entry point exposed by `package.json` and covered by tests; use the unified CLI or existing importer for ordinary research work.
+
 Continue unrelated work when one source or platform fails. Stop only when due work converges, a global credential/configuration failure prevents all useful progress, or the execution window ends after recoverable state is saved.

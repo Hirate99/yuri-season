@@ -36,6 +36,8 @@ Model cast content as `character → cast credit → person → verified account
 - Use the original creator post, never an aggregator, mirror, search thumbnail, quote-post, or repost.
 - Fanwork discovery searches Pixiv, X, and Instagram separately. Fanwork remains community, link-only, and held in phase one without affirmative reuse permission.
 - AI-generated fanwork is out of scope. On Pixiv require the platform AI status to be explicitly non-AI; do not infer undocumented enum meanings or human authorship from style or missing tags. Explicit AI labels, disclosures, or generation-tool tags are rejected and remembered without creating a batch candidate.
+- Apply a quality gate before review. Ordinary fanwork needs at least 100 publicly visible platform-native positive engagements (likes, favorites, or bookmarks in the platform's own terms) plus a completed, legible, non-placeholder presentation. Below-threshold or visibly low-effort work is `ignored`, not held, and never consumes the review queue.
+- Give a post younger than 48 hours one maturity recheck instead of sending it to review below the threshold. Verified original authors/staff, an official campaign selection or award, and an explicit user-requested lead may bypass the engagement floor, but never the originality, AI, safety, or attribution checks. Do not add per-title thresholds.
 - When an original exposes a real image or official preview, create linked media as well as the feed candidate. Preserve the original post as `media.originalUrl`, creator attribution, upstream URL/hash in internal evidence, safety, spoilers, and correction/takedown path.
 - Never publish a placeholder, `NOW PRINTING` asset, unverified thumbnail, or media whose source prohibits reproduction/embedding. Use link-only when reuse is not supported.
 
@@ -54,7 +56,8 @@ Model cast content as `character → cast credit → person → verified account
 - Query database discussions and durable hits before browsing. A cross-work thread is one canonical candidate with one anchor `animeId` and all materially covered `animeIds`.
 - For 百合会, scan the signed-in animation-board recent list and match current-season titles, aliases, project names, characters, units, and recognizable pair names. Dedicated threads and materially active topical discussions are valid; generic chatter and one-line reactions are not.
 - Treat 萌战吧 separately from a work's own Tieba. Preserve the platform exactly and reject bait, memes, snippets, and unrelated popularity contests.
+- A strong opinion, negative review, or polarizing tone is not by itself a reason to hold an otherwise safe, clearly related, materially active original discussion. Publish the canonical link and activity metadata when the automatic boundary passes; moderation may withdraw or correct it afterward.
 
 ## Automatic publication boundary
 
-Automatic publication requires verified provenance, direct entailment, safe content, no major spoiler, supported presentation, complete attribution, no identity conflict, and the category's confidence threshold. Otherwise hold. Reject irrelevant, duplicate, contradicted, unsafe, inaccessible, or provenance-free material.
+Automatic publication requires verified provenance, direct entailment, safe content, no major spoiler, supported presentation, complete attribution, no identity conflict, and the category's confidence threshold. Community threads that meet this boundary publish without prior human review even when their opinion is controversial; reserve holds for major spoilers, safety issues, ambiguous work association, source conflicts, or other failures of the boundary. Moderation remains reversible after publication. Reject irrelevant, duplicate, contradicted, unsafe, inaccessible, or provenance-free material.

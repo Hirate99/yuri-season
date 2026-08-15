@@ -66,7 +66,7 @@ Use the verified account as observation provenance. The importer validates `cast
           "publishedAt": "2026-08-11T12:00:00+09:00",
           "presentationMode": "link_only",
           "safetyRating": "safe",
-          "spoilerLevel": "minor",
+          "spoilerLevel": "mild",
           "confidence": 0.95,
           "review": {
             "decision": "publish",
@@ -193,6 +193,12 @@ For official downloadable galleries, create one candidate and one `media` object
 ```
 
 Use `excerpt` for internal evidence and close paraphrase. When the source policy permits text redistribution, provide the source's readable original-language body in `publicText` (plain text, at most 24,000 characters). A faithful Chinese translation may be provided separately in `publicTranslation` (also at most 24,000 characters). The translation must preserve meaning, must not replace `publicText`, and must not be copied from `excerpt`, the candidate summary, or a search snippet. Omit both public fields for link-only, private, deleted, or prohibited content. The server still applies the registered source's public-text policy before publishing.
+
+For a newly published social post, `publicText` is required even when `presentationMode` is `link_only`. If the source is private, deleted, inaccessible, or its text cannot be preserved under policy, set the review decision to `hold` or `reject`; do not publish a title-and-summary-only social card.
+
+Every newly published social observation must also provide `mediaDisposition`: `none` when the opened original has no media, `attached` when its actual assets are linked, `unavailable` when the source asset cannot be recovered, or `link_only_policy` when reuse policy forbids mirroring. `attached` requires non-empty `candidate.media.assets`; the two exception values require `mediaDispositionReason`. Do not use an anime cover as the post's media.
+
+Before translating, read the related anime/person/character resources and use their canonical public names verbatim in candidate titles, summaries, `publicTranslation`, and any translated hashtags. A literal translation that conflicts with an existing canonical name fails preflight.
 
 Allowed content classes are `schedule`, `official_news`, `official_art`, `creator_art`, `cast_post`, `staff_post`, `fanwork`, `community_thread`, and `editorial`. Birthdays are never feed candidates: a verified birthday updates the character record and calendar event only; birthday-related celebration art enters the feed as `official_art` / `creator_art` (or `cast_post` for a cast birthday post) under that lane's rules. Use `presentationMode: link_only` in phase one. Every candidate needs a review object with `decision`, `confidence`, and evidence-based reasons.
 

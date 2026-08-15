@@ -99,6 +99,8 @@ For fanwork results preserve:
 - `animeId` and `platform`
 - stable `platformObjectId` when available
 - `creatorName`, optional `creatorUrl`
+- observed platform-native `likeCount`, `favoriteCount`, or `bookmarkCount` when the platform exposes them
+- `qualityGate` as `passed`, `below_threshold`, `maturing`, or `trusted_exception`, plus the short reason used
 - `verifiedOriginal: true` only after confirming this is the creator's original post
 
 For community-thread results preserve:

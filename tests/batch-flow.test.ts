@@ -57,6 +57,22 @@ beforeEach(setupDatabase);
 afterEach(() => database.close());
 
 describe("local research batch", () => {
+  test("rejects duplicate candidate source URLs at the database boundary", () => {
+    const insert = database.sqlite.query(`
+      INSERT INTO feed_candidates (
+        id, content_class, source_identity, title, summary, url, source_name,
+        importance, published_at, presentation_mode, safety_rating, spoiler_level,
+        confidence, status, discovered_by, extractor_version, policy_version, fingerprint
+      ) VALUES (?, 'official_news', 'official', 'title', 'summary', ?, 'source',
+        2, '2026-08-11T12:00:00Z', 'link_only', 'safe', 'none',
+        0.95, 'pending', 'local_skill', 'manual@1', 'publish-policy@1', ?)
+    `);
+    const url = "https://example.test/original/unique-link";
+    insert.run("candidate-url-1", url, "fingerprint-url-1");
+    expect(() => insert.run("candidate-url-2", url, "fingerprint-url-2"))
+      .toThrow(/UNIQUE constraint failed: feed_candidates\.url/);
+  });
+
   test("publishes a safe official candidate and is idempotent by batch ID", async () => {
     await rememberSearch(database.binding(), [{
       scopeType: "source",

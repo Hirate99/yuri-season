@@ -98,7 +98,7 @@ export const feedCandidatesTable = sqliteTable("feed_candidates", {
   sourceIdentity: text("source_identity", { enum: ["official", "creator", "cast", "community", "editorial"] }).notNull(),
   title: text("title").notNull(),
   summary: text("summary").notNull(),
-  url: text("url").notNull(),
+  url: text("url").notNull().unique(),
   sourceName: text("source_name").notNull(),
   sourceAccount: text("source_account"),
   importance: integer("importance").notNull(),

@@ -9,7 +9,7 @@ import {
   type SourceChange,
 } from "./lib/source-change";
 import { changedItems, isReusableSourceState } from "./lib/source-state";
-import { rotatingSourceSelection } from "./lib/source-selection";
+import { isRoutineUpdateSource, rotatingSourceSelection } from "./lib/source-selection";
 
 type SourceState = {
   etag: string | null;
@@ -44,7 +44,12 @@ async function check(): Promise<void> {
   const errors: Array<{ sourceId: string; message: string }> = [];
 
   const budget = Number(process.env.YURI_SOURCE_LIMIT ?? "") || Infinity;
-  const selection = rotatingSourceSelection(data.sources.filter((item) => item.enabled), current.sourceCursor, budget);
+  const profile = process.argv.find((argument) => argument.startsWith("--profile="))?.slice("--profile=".length);
+  if (profile && profile !== "routine") throw new Error("source-diff --profile only supports routine");
+  const eligibleSources = profile === "routine"
+    ? data.sources.filter(isRoutineUpdateSource)
+    : data.sources.filter((item) => item.enabled);
+  const selection = rotatingSourceSelection(eligibleSources, current.sourceCursor, budget);
   next.sourceCursor = selection.cursor;
   for (const source of selection.selected) {
     const previous = current.sources[source.id];
@@ -80,6 +85,7 @@ async function check(): Promise<void> {
     await Bun.file(proposedPath).delete();
     process.stdout.write(JSON.stringify({
       baseline: Object.keys(current.sources).length === 0,
+      profile: profile ?? "all-enabled",
       checkedSources: selection.selected.length,
       remainingSources: selection.remaining,
       changes: 0,
@@ -96,6 +102,7 @@ async function check(): Promise<void> {
     errors,
   }, null, 2));
   process.stdout.write(JSON.stringify({
+    profile: profile ?? "all-enabled",
     changes: changes.length,
     checkedSources: selection.selected.length,
     remainingSources: selection.remaining,

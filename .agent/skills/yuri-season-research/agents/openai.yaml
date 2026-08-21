@@ -1,6 +1,6 @@
 interface:
   display_name: "Yuri Season Research"
-  short_description: "追踪当季百合作品、声优原帖与同人动态"
-  default_prompt: "Use $yuri-season-research to audit the current season's protagonist groups, align only explicitly matched Chinese names, and prepare traceable cast or content updates."
+  short_description: "增量更新官网及公式、声优、原作者与制作组 X 账号"
+  default_prompt: "Use $yuri-season-research to incrementally update registered official sources plus verified work, cast, original-creator, and production-staff X accounts, then verify every published projection."
 policy:
   allow_implicit_invocation: true

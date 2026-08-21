@@ -5,6 +5,7 @@ import {
   type SourceChange,
 } from "../scripts/lib/source-change";
 import { changedItems, isReusableSourceState } from "../scripts/lib/source-state";
+import { isRoutineUpdateSource } from "../scripts/lib/source-selection";
 
 describe("incremental source diff", () => {
   const item = (contentHash: string) => ({ contentHash, title: contentHash });
@@ -28,6 +29,24 @@ describe("source state compatibility", () => {
     expect(isReusableSourceState({ normalizerVersion: undefined }, "community", "community-thread@1")).toBe(false);
     expect(isReusableSourceState({ normalizerVersion: "community-thread@1" }, "community", "community-thread@1")).toBe(true);
     expect(isReusableSourceState({ normalizerVersion: undefined }, "official_page", "generic@1")).toBe(true);
+  });
+});
+
+describe("routine source boundary", () => {
+  const source = (sourceType: string, trustLevel: string, enabled = true) => ({ sourceType, trustLevel, enabled });
+
+  test("keeps registered first-party update surfaces", () => {
+    expect(isRoutineUpdateSource(source("official_page", "official"))).toBe(true);
+    expect(isRoutineUpdateSource(source("official_json", "official"))).toBe(true);
+    expect(isRoutineUpdateSource(source("rss", "verified_creator"))).toBe(true);
+    expect(isRoutineUpdateSource(source("social", "official"))).toBe(true);
+  });
+
+  test("leaves catalog, community, unverified, and disabled sources out of routine", () => {
+    expect(isRoutineUpdateSource(source("bangumi", "community"))).toBe(false);
+    expect(isRoutineUpdateSource(source("community", "community"))).toBe(false);
+    expect(isRoutineUpdateSource(source("rss", "unverified"))).toBe(false);
+    expect(isRoutineUpdateSource(source("official_page", "official", false))).toBe(false);
   });
 });
 

@@ -1,6 +1,7 @@
 import { buildDiscoveryPlan } from "./lib/discovery-query-plan";
 import { fetchDiscoveryContext } from "./lib/discovery-context";
 import { createCampaign, hasUnfinishedQueries, type DiscoveryCampaign } from "./lib/discovery-campaign";
+import { campaignPathForProfile, parseResearchProfile } from "./lib/research-profile";
 
 function integerArgument(name: string, fallback: number) {
   const prefix = `--${name}=`;
@@ -13,15 +14,27 @@ function integerArgument(name: string, fallback: number) {
   return value;
 }
 
-const outputPath = ".research-cache/discovery-plan.json";
 const force = process.argv.includes("--force");
 const replace = process.argv.includes("--replace");
 const includeBirthdays = process.argv.includes("--audit-birthdays");
 const profileArgument = process.argv.find((argument) => argument.startsWith("--profile="))?.slice("--profile=".length);
-if (profileArgument && !["routine", "social-audit"].includes(profileArgument)) {
-  throw new Error("--profile must be routine or social-audit");
+const profile = parseResearchProfile(profileArgument, "discovery");
+const outputPath = campaignPathForProfile(profile);
+
+function valuesArgument(name: string): Set<string> | null {
+  const prefix = `--${name}=`;
+  const raw = process.argv.find((argument) => argument.startsWith(prefix))?.slice(prefix.length);
+  if (!raw) return null;
+  const values = raw.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+  if (values.length === 0) throw new Error(`${prefix}<comma-separated values> expected`);
+  return new Set(values);
 }
-const profile = (profileArgument ?? "routine") as "routine" | "social-audit";
+const animeIds = valuesArgument("anime-id");
+const personIds = valuesArgument("person-id");
+const platforms = valuesArgument("platform");
+if (profile === "account-discovery" && !animeIds?.size && !personIds?.size) {
+  throw new Error("--profile=account-discovery requires --anime-id or --person-id");
+}
 const limit = integerArgument("limit", Number.MAX_SAFE_INTEGER);
 const priorFile = Bun.file(outputPath);
 if (await priorFile.exists() && !replace) {
@@ -46,11 +59,15 @@ const queries = buildDiscoveryPlan({
   force,
   includeBirthdays,
   profile,
+  animeIds,
+  personIds,
+  platforms,
   limit,
 });
 const result = createCampaign({
   createdAt: createdAt.toISOString(),
   force,
+  profile,
   season: { id: currentSeason.id, slug: currentSeason.slug, label: currentSeason.label },
   queryBudget: limit,
   queries,
@@ -72,6 +89,11 @@ process.stdout.write(JSON.stringify({
   force,
   includeBirthdays,
   profile,
+  scope: {
+    animeIds: animeIds ? [...animeIds] : [],
+    personIds: personIds ? [...personIds] : [],
+    platforms: platforms ? [...platforms] : [],
+  },
   replace,
   campaignId: result.campaignId,
   queries: queries.length,

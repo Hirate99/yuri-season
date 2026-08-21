@@ -34,6 +34,88 @@ function plan(memory: SearchMemorySummary[] = [], force = false) {
 }
 
 describe("discovery query planning", () => {
+  test("keeps routine updates to registered verified X timelines", () => {
+    const monitoredResources: AdminAnimeResources = {
+      ...resources,
+      staff: [
+        { id: "staff-author", personId: "person-author", name: "原作者", nameNative: null,
+          primaryKind: "author", role: "原作", profileUrl: null, sortOrder: 0 },
+        { id: "staff-director", personId: "person-director", name: "监督", nameNative: null,
+          primaryKind: "staff", role: "监督", profileUrl: null, sortOrder: 1 },
+      ],
+      accounts: [
+        {
+          id: "account-work-x", ownerType: "anime", ownerId: anime.id, ownerLabel: anime.titleZh,
+          platform: "X", handle: "@work", url: "https://x.com/work", verified: true,
+          monitorMode: "local", verificationSourceUrl: "https://example.com/official", verifiedAt: "2026-08-11T00:00:00Z",
+        },
+        {
+          id: "account-cast-x", ownerType: "person", ownerId: "person-1", ownerLabel: "声优",
+          platform: "X", handle: "@voice", url: "https://x.com/voice", verified: true,
+          monitorMode: "local", verificationSourceUrl: "https://example.com/cast", verifiedAt: "2026-08-11T00:00:00Z",
+        },
+        {
+          id: "account-author-x", ownerType: "person", ownerId: "person-author", ownerLabel: "原作者",
+          platform: "X", handle: "@author", url: "https://x.com/author", verified: true,
+          monitorMode: "local", verificationSourceUrl: "https://example.com/author", verifiedAt: "2026-08-11T00:00:00Z",
+        },
+        {
+          id: "account-director-x", ownerType: "person", ownerId: "person-director", ownerLabel: "监督",
+          platform: "X", handle: "@director", url: "https://x.com/director", verified: true,
+          monitorMode: "local", verificationSourceUrl: "https://example.com/director", verifiedAt: "2026-08-11T00:00:00Z",
+        },
+        {
+          id: "account-cast-instagram", ownerType: "person", ownerId: "person-1", ownerLabel: "声优",
+          platform: "Instagram", handle: "voice", url: "https://www.instagram.com/voice/", verified: true,
+          monitorMode: "local", verificationSourceUrl: "https://example.com/cast", verifiedAt: "2026-08-11T00:00:00Z",
+        },
+      ],
+    };
+    const queries = buildDiscoveryPlan({
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime],
+      resources: { "anime-1": monitoredResources }, memory: [], memoryHits: [],
+      now: new Date("2026-08-11T20:00:00Z"), force: false, profile: "routine", limit: 100,
+    });
+
+    expect(new Set(queries.map((query) => query.targetKey))).toEqual(new Set([
+      "updates:anime-1:account-work-x",
+      "updates:anime-1:account-cast-x",
+      "updates:anime-1:account-author-x",
+      "updates:anime-1:account-director-x",
+    ]));
+    expect(queries.every((query) => query.accountId && query.platform?.toLowerCase() === "x"
+      && query.operation === "timeline_scan")).toBe(true);
+    expect(queries.find((query) => query.accountId === "account-author-x")?.priority).toBe(4);
+    expect(queries.find((query) => query.accountId === "account-director-x")?.priority).toBe(3);
+    expect(queries.some((query) => query.operation === "tag_scan"
+      || query.targetKey.startsWith("account:") || query.targetKey.startsWith("community:")
+      || query.targetKey.startsWith("media:") || query.targetKey.startsWith("music:"))).toBe(false);
+  });
+
+  test("requires an explicit account-discovery profile and respects person/platform scope", () => {
+    const queries = buildDiscoveryPlan({
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime], resources: { "anime-1": resources },
+      memory: [], memoryHits: [], now: new Date("2026-08-11T20:00:00Z"), force: false,
+      profile: "account-discovery", personIds: new Set(["person-1"]), platforms: new Set(["x"]), limit: 100,
+    });
+
+    expect(queries.map((query) => query.targetKey)).toEqual(["account:official-x"]);
+    expect(queries[0]).toMatchObject({ scopeType: "person", scopeId: "person-1", platform: "X" });
+  });
+
+  test("keeps general discovery from expanding into account discovery", () => {
+    const queries = buildDiscoveryPlan({
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime], resources: { "anime-1": resources },
+      memory: [], memoryHits: [], now: new Date("2026-08-11T20:00:00Z"), force: false,
+      profile: "discovery", limit: 100,
+    });
+
+    expect(queries.some((query) => query.targetKey === "social:work"
+      || query.targetKey.startsWith("account:official-") || query.targetKey.startsWith("verification:"))).toBe(false);
+    expect(queries.some((query) => query.targetKey.startsWith("community:")
+      || query.targetKey.startsWith("media:"))).toBe(true);
+  });
+
   test("plans database-aware community and account discovery without birthday polling", () => {
     const queries = plan();
     expect(queries.find((query) => query.targetKey === "music:theme-songs"))
@@ -315,8 +397,9 @@ describe("discovery query planning", () => {
     });
     expect(queries.some((query) => query.targetKey === "updates:anime-1:account-cast"
       && query.scopeType === "person" && query.scopeId === "person-1"
-      && query.queryText === 'site:x.com/voice_actor "作品日本語" after:2026-07-12'
-      && query.maxFreshHours === 30 * 24 && query.priority === 3
+      && query.queryText.includes("X verified cast/creator/staff timeline: https://x.com/voice_actor")
+      && query.queryText.includes('explicitly connected to "作品日本語"')
+      && query.operation === "timeline_scan" && query.maxFreshHours === 24 && query.priority === 3
       && query.accountId === "account-cast" && query.personId === "person-1"
       && query.contentLane === "cast" && query.characterIds?.includes("character-1"))).toBe(true);
     expect(queries.some((query) => query.scopeId === "person-1"

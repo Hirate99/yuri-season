@@ -5,6 +5,7 @@ import type {
   SearchMemorySummary,
 } from "@/domain";
 import { accountUpdateQuery, accountUpdateTarget, afterDate } from "./discovery-account-updates";
+import type { ResearchProfile } from "./research-profile";
 
 type SearchKind = SearchMemorySummary["searchKind"];
 type ScopeType = SearchMemorySummary["scopeType"];
@@ -64,7 +65,10 @@ type PlanInput = {
   now: Date;
   force: boolean;
   includeBirthdays?: boolean;
-  profile?: "routine" | "social-audit";
+  profile?: ResearchProfile;
+  animeIds?: Set<string> | null;
+  personIds?: Set<string> | null;
+  platforms?: Set<string> | null;
   limit: number;
 };
 
@@ -212,6 +216,7 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
     if (input.force || !hasWorkAccount(resources, anime.id)) {
       add({ ...common, searchKind: "social", targetKey: "social:work",
         queryText: `\"${titleJa}\" 公式 X キャスト スタッフ`, priority: 4,
+        stage: "people", platform: "X", contentLane: "official",
         reason: "发现公式、制作组与声优相关账号；账号身份必须由公式交叉链接验证" });
     }
 
@@ -242,8 +247,7 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
         const staff = resources.staff.find((item) => item.personId === account.ownerId);
         const eligible = account.ownerType === "anime"
           || cast.some((item) => item.isMainGroup)
-          || staff?.primaryKind === "author"
-          || staff?.primaryKind === "artist";
+          || Boolean(staff);
         const ownerName = account.ownerLabel || account.handle || account.url;
         add({
           scopeType: account.ownerType === "person" ? "person" : "anime",
@@ -285,7 +289,9 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
           ? "增量检查已验证的 2.5D 主角组成员／企划人格账号；收录企划、动画及公开职业或创作动态，排除纯日常、无关广告抽奖和仅转发"
           : target.timelineMode === "official"
             ? "持续增量检查已验证的作品官方账号全部原帖；由当前活跃度、活动窗口和未结线索决定下次检查时间，并为合格图片建立关联媒体记录"
-          : "检查已验证账号的作品相关新帖；只接受明确关联作品、角色、集数或活动的原始帖" });
+          : target.timelineMode === "related_person"
+            ? "持续增量检查已验证的声优、原作者／创作者和制作组 X 时间线；逐条判断与作品、角色、集数、活动或署名制作工作的明确关系，并为合格图片建立关联媒体记录"
+            : "检查已验证账号的作品相关新帖；只接受明确关联作品、角色、集数或活动的原始帖" });
     }
     const officialXAccounts = resources.accounts.filter((account) => account.verified
       && account.monitorMode !== "disabled"
@@ -395,9 +401,40 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
       .map((hit) => [hit.canonicalUrl, hit])).values()];
   }
 
+  const isAccountDiscovery = (query: DiscoveryQuery) => query.targetKey === "social:work"
+    || query.targetKey.startsWith("account:official-")
+    || query.targetKey.startsWith("verification:");
+  const matchesRequestedScope = (query: DiscoveryQuery) => {
+    const hasEntityScope = Boolean(input.animeIds?.size || input.personIds?.size);
+    const matchesEntity = !hasEntityScope
+      || Boolean(query.animeId && input.animeIds?.has(query.animeId))
+      || Boolean(query.personId && input.personIds?.has(query.personId))
+      || (query.scopeType === "anime" && Boolean(input.animeIds?.has(query.scopeId)))
+      || (query.scopeType === "person" && Boolean(input.personIds?.has(query.scopeId)));
+    const matchesPlatform = !input.platforms?.size
+      || Boolean(query.platform && input.platforms.has(query.platform.toLowerCase()));
+    return matchesEntity && matchesPlatform;
+  };
+  const matchesProfile = (query: DiscoveryQuery) => {
+    // Omitted profiles preserve the low-level planner's legacy all-lanes behavior.
+    // Production entry points always pass an explicit profile.
+    if (!input.profile) return true;
+    if (input.profile === "routine") {
+      return Boolean(query.accountId)
+        && query.targetKey.startsWith("updates:")
+        && query.operation !== "tag_scan"
+        && ["x", "twitter"].includes(query.platform?.toLowerCase() ?? "");
+    }
+    if (input.profile === "account-discovery") return isAccountDiscovery(query);
+    if (input.profile === "social-audit") {
+      return !isAccountDiscovery(query)
+        && query.searchKind === "social"
+        && query.socialAuditEligible;
+    }
+    return !isAccountDiscovery(query);
+  };
   const stageRank: Record<DiscoveryStage, number> = { sources: 0, official: 1, tags: 2, people: 3, explore: 4 };
-  const selected = [...planned.values()].filter((query) => input.profile !== "social-audit"
-    || (query.searchKind === "social" && query.socialAuditEligible));
+  const selected = [...planned.values()].filter((query) => matchesProfile(query) && matchesRequestedScope(query));
   return selected
     .sort((a, b) => (input.profile === "social-audit" ? stageRank[a.stage] - stageRank[b.stage] : 0)
       || b.priority - a.priority

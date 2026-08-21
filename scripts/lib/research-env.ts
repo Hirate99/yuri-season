@@ -18,7 +18,7 @@ export function parseDevVars(text: string): Record<string, string> {
   return values;
 }
 
-function loadLocalDevVars(): void {
+export function loadResearchEnv(): void {
   if (devVarsLoaded) return;
   devVarsLoaded = true;
   const path = process.env.YURI_DEV_VARS_PATH?.trim() || ".dev.vars";
@@ -29,7 +29,7 @@ function loadLocalDevVars(): void {
 }
 
 export function requiredResearchEnv(name: string): string {
-  loadLocalDevVars();
+  loadResearchEnv();
   const aliases = name === "YURI_ADMIN_TOKEN" ? ["YURI_ADMIN_TOKEN", "ADMIN_TOKEN"] : [name];
   for (const alias of aliases) {
     const value = process.env[alias]?.trim();

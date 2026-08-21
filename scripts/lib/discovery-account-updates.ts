@@ -11,7 +11,7 @@ export type AccountUpdateTarget = {
   platform: string;
   contentLane: "official" | "cast" | "creator";
   projectPersona: boolean;
-  timelineMode: "official" | "project_persona" | null;
+  timelineMode: "official" | "project_persona" | "related_person" | null;
   socialAuditEligible: boolean;
 };
 
@@ -25,7 +25,7 @@ function priority(resources: AdminAnimeResources, account: AdminAccount) {
   if (account.ownerType === "anime") return 5;
   const staff = resources.staff.find((item) => item.personId === account.ownerId);
   if (staff?.primaryKind === "author" || staff?.primaryKind === "artist") return 4;
-  if (resources.cast.some((item) => item.personId === account.ownerId)) return 3;
+  if (staff || resources.cast.some((item) => item.personId === account.ownerId)) return 3;
   return 2;
 }
 
@@ -51,9 +51,11 @@ export function accountUpdateTarget(
   const cast = resources.cast.filter((item) => item.personId === account.ownerId);
   const staff = resources.staff.find((item) => item.personId === account.ownerId);
   const projectPersona = isProjectPersonaAccount(resources, account);
+  const isX = ["x", "twitter"].includes(account.platform.toLowerCase());
   const timelineMode = account.ownerType === "anime"
     ? "official" as const
-    : projectPersona ? "project_persona" as const : null;
+    : projectPersona ? "project_persona" as const
+      : isX && (cast.length > 0 || staff) ? "related_person" as const : null;
   const contentLane = account.ownerType === "anime"
     ? "official" as const
     : cast.length > 0 ? "cast" as const : "creator" as const;
@@ -72,8 +74,7 @@ export function accountUpdateTarget(
     socialAuditEligible: account.ownerType === "anime"
       || projectPersona
       || cast.some((item) => item.isMainGroup)
-      || staff?.primaryKind === "author"
-      || staff?.primaryKind === "artist",
+      || Boolean(staff),
   };
 }
 
@@ -102,6 +103,9 @@ export function accountUpdateQuery(
     }
     if (timelineMode === "official" && pathname) {
       return `${account.platform} official account timeline: ${account.url}; inspect every original post after:${after}; extract official news, events, schedules, videos, art, and other visible media; create linked media records for eligible images and preserve stable post IDs`;
+    }
+    if (timelineMode === "related_person" && pathname) {
+      return `${account.platform} verified cast/creator/staff timeline: ${account.url}; inspect every original post after:${after}; keep posts explicitly connected to "${title}", its characters, episodes, events, credited production work, or related creative material; record every inspected stable post ID, including ignored items`;
     }
     if ((parsed.hostname === "x.com" || parsed.hostname === "twitter.com") && pathname) {
       return `site:x.com/${pathname.split("/")[0]} "${title}" after:${after}`;

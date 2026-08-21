@@ -15,3 +15,12 @@ export function rotatingSourceSelection<T extends { id: string }>(
     remaining: Math.max(0, sorted.length - selected.length),
   };
 }
+
+export function isRoutineUpdateSource(source: {
+  enabled: boolean;
+  sourceType: string;
+  trustLevel: string;
+}): boolean {
+  if (!source.enabled || !["official", "verified_creator"].includes(source.trustLevel)) return false;
+  return ["official_page", "official_json", "rss", "youtube", "social"].includes(source.sourceType);
+}

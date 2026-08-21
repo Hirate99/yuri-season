@@ -110,8 +110,10 @@ const baseObservationSchema = z.object({
 );
 
 const observationSchema = baseObservationSchema.superRefine((value, context) => {
+  const publishedCandidates = value.candidates.filter((candidate) => candidate.review.decision === "publish");
+  const publishesObservation = publishedCandidates.length > 0;
   const publishesSocialPost = isSocialPostUrl(value.canonicalUrl)
-    && value.candidates.some((candidate) => candidate.review.decision === "publish");
+    && publishesObservation;
   if (publishesSocialPost && !value.publicText) {
     context.addIssue({
       code: "custom",
@@ -119,31 +121,47 @@ const observationSchema = baseObservationSchema.superRefine((value, context) => 
       path: ["publicText"],
     });
   }
-  if (publishesSocialPost && !value.mediaDisposition) {
+  if (publishesObservation && !value.mediaDisposition) {
     context.addIssue({
       code: "custom",
-      message: "自动发布社交帖子必须声明 mediaDisposition，明确原帖是否包含媒体及其处理结果。",
+      message: "自动发布条目必须声明 mediaDisposition，明确原始页面是否包含媒体及其处理结果。",
       path: ["mediaDisposition"],
     });
   }
-  if (publishesSocialPost && value.mediaDisposition === "attached") {
+  if (publishesObservation && value.mediaDisposition === "attached") {
     value.candidates.forEach((candidate, index) => {
       if (candidate.review.decision === "publish" && !candidate.media?.assets?.length) {
         context.addIssue({
           code: "custom",
-          message: "mediaDisposition=attached 的自动发布社交帖子必须包含已上传的 media.assets。",
+          message: "mediaDisposition=attached 的自动发布条目必须包含已上传的 media.assets。",
           path: ["candidates", index, "media", "assets"],
         });
       }
     });
   }
-  if (publishesSocialPost
+  if (publishesObservation
     && (value.mediaDisposition === "unavailable" || value.mediaDisposition === "link_only_policy")
     && !value.mediaDispositionReason) {
     context.addIssue({
       code: "custom",
       message: "媒体不可用或仅链接展示时必须记录 mediaDispositionReason。",
       path: ["mediaDispositionReason"],
+    });
+  }
+  if (publishesObservation && value.mediaDisposition === "link_only_policy"
+    && value.mediaDispositionReason && !/https?:\/\/\S+/i.test(value.mediaDispositionReason)) {
+    context.addIssue({
+      code: "custom",
+      message: "mediaDisposition=link_only_policy 必须在理由中提供明确禁止转载、再托管或嵌入的规则 URL。",
+      path: ["mediaDispositionReason"],
+    });
+  }
+  if (publishesObservation && value.mediaDisposition === "none"
+    && publishedCandidates.some((candidate) => Boolean(candidate.media?.assets?.length))) {
+    context.addIssue({
+      code: "custom",
+      message: "包含 media.assets 的自动发布条目不能声明 mediaDisposition=none。",
+      path: ["mediaDisposition"],
     });
   }
 });

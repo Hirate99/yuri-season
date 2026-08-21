@@ -3,6 +3,8 @@ import { describe, expect, test } from "bun:test";
 const skillPath = ".agent/skills/yuri-season-research/SKILL.md";
 const policyPath = ".agent/skills/yuri-season-research/references/research-policy.md";
 const resultsPath = ".agent/skills/yuri-season-research/references/discovery-results.md";
+const updatePath = ".agent/skills/yuri-season-research/references/update-policy.md";
+const publicationPath = ".agent/skills/yuri-season-research/references/publication-policy.md";
 
 describe("research skill policy", () => {
   test("keeps the skill concise and routes detailed policy progressively", async () => {
@@ -10,6 +12,8 @@ describe("research skill policy", () => {
     expect(content.split("\n").length).toBeLessThan(100);
     expect(content).toContain("Read only what the task needs");
     expect(content).toContain("references/research-policy.md");
+    expect(content).toContain("references/update-policy.md");
+    expect(content).toContain("references/publication-policy.md");
     expect(content).toContain("references/discovery-results.md");
     expect(content).toContain("references/batch-schema.md");
     expect(content).toContain("Operate like a strong human editor");
@@ -17,7 +21,9 @@ describe("research skill policy", () => {
     expect(content).toContain("bun run research -- next");
     expect(content).toContain("bun run research -- submit");
     expect(content).toContain("bun run research -- finish");
-    expect(content).toContain("original text as mandatory for every newly published social post");
+    expect(content).toContain("`routine`: default");
+    expect(content).toContain("`account-discovery`: explicit and scoped");
+    expect(content).toContain("Do not infer `discovery`, `social-audit`, or `account-discovery`");
     expect(content).toContain("One-off audits, repair builders, data extracts, candidate inspectors, and batch generators");
     expect(content).toContain("Do not add or commit a top-level `scripts/*.ts` file");
   });
@@ -43,6 +49,8 @@ describe("research skill policy", () => {
 
   test("preserves detailed provenance, identity, media, and entity policy in references", async () => {
     const policy = await Bun.file(policyPath).text();
+    const update = await Bun.file(updatePath).text();
+    const publication = await Bun.file(publicationPath).text();
     expect(policy).toContain("Main-character coverage means the recurring protagonist group");
     expect(policy).toContain("Moegirl may provide Chinese display-name provenance only");
     expect(policy).toContain("real ship's launch date");
@@ -51,6 +59,14 @@ describe("research skill policy", () => {
     expect(policy).toContain("one anchor `animeId`");
     expect(policy).toContain("all materially covered `animeIds`");
     expect(policy).toContain("萌战吧");
+    expect(policy).toContain("is not searched, verified, or enrolled unless the active profile is explicitly `account-discovery`");
+    expect(update).toContain("every due already verified, enabled X/Twitter account");
+    expect(update).toContain("cast accounts, original authors and other credited creators, and credited production staff");
+    expect(update).toContain("separate first-class editorial lanes");
+    expect(update).toContain("Do not run season-catalog searches");
+    expect(update).toContain("official-site or X update with media");
+    expect(publication).toContain("Every automatically published observation, including an official webpage");
+    expect(publication).toContain("readable original text as mandatory for every newly published social post");
   });
 
   test("documents verifiable result coverage and the cross-work candidate shape", async () => {

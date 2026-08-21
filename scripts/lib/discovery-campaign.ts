@@ -1,6 +1,7 @@
 import type { SearchMemoryWrite } from "@/domain";
 import { stableFingerprint } from "~/shared/fingerprint";
 import type { DiscoveryQuery, DiscoverySurface } from "./discovery-query-plan";
+import type { ResearchProfile } from "./research-profile";
 
 export type CampaignQuery = DiscoveryQuery & {
   state: "pending" | "leased" | "completed" | "blocked" | "cancelled";
@@ -16,6 +17,7 @@ export type DiscoveryCampaign = {
   createdAt: string;
   updatedAt: string;
   mode: "discovery-campaign";
+  profile?: ResearchProfile;
   force: boolean;
   season: { id: string; slug: string; label: string };
   queryBudget: number;
@@ -268,6 +270,7 @@ export function completeCampaignResults(
 export function campaignSummary(campaign: DiscoveryCampaign) {
   const count = (state: CampaignQuery["state"]) => campaign.queries.filter((query) => query.state === state).length;
   return {
+    profile: campaign.profile ?? null,
     campaignId: campaign.campaignId,
     season: campaign.season.label,
     total: campaign.queries.length,

@@ -46,4 +46,26 @@ describe("calendar event dates", () => {
     expect(eventOccursToday(birthday, "America/Los_Angeles", now)).toBe(true);
     expect(eventOccursToday(timed, "America/Los_Angeles", now)).toBe(true);
   });
+
+  test("ignores the stored occurrence year when matching a recurring birthday", () => {
+    const birthday = { ...event("birthday", "2027-02-07"), eventType: "birthday" as const };
+    expect(eventOccursToday(birthday, "America/Los_Angeles", new Date("2026-02-06T15:30:00Z"))).toBe(true);
+  });
+
+  test("groups recurring birthdays within the current year", () => {
+    const birthday = (id: string, startsAt: string) => ({
+      ...event(id, startsAt),
+      eventType: "birthday" as const,
+      recurrenceRule: "FREQ=YEARLY",
+    });
+    const groups = partitionCalendarEvents([
+      birthday("february", "2027-02-07"),
+      event("next-year-event", "2027-01-10"),
+      birthday("september", "2026-09-25"),
+      birthday("july", "2027-07-15"),
+    ], new Date("2026-08-22T19:00:00Z"));
+
+    expect(groups.upcoming.map(({ id }) => id)).toEqual(["september", "next-year-event"]);
+    expect(groups.past.map(({ id }) => id)).toEqual(["february", "july"]);
+  });
 });

@@ -130,6 +130,21 @@ export type AnimeSummary = {
   feedCount: number;
 };
 
+export type AnimeOption = Pick<AnimeSummary, "id" | "slug" | "titleZh" | "titleJa" | "titleEn">;
+
+export type CatalogAnime = Pick<
+  AnimeSummary,
+  | "id"
+  | "slug"
+  | "titleZh"
+  | "titleJa"
+  | "yuriKind"
+  | "yuriStatus"
+  | "currentEpisode"
+  | "coverUrl"
+  | "primarySlot"
+>;
+
 export type CalendarEntry = {
   animeId: string;
   animeSlug: string;
@@ -181,7 +196,7 @@ export type AnimePageResponse = {
 
 export type CatalogResponse = {
   season: Season;
-  anime: AnimeSummary[];
+  anime: CatalogAnime[];
   events: CalendarEvent[];
   generatedAt: string;
 };

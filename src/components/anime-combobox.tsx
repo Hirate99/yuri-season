@@ -1,18 +1,18 @@
 import { Check, ChevronDown, Search } from "lucide-react";
 import { useSelect } from "downshift";
 import { useMemo, useState } from "react";
-import type { CatalogResponse } from "@/domain";
+import type { AnimeOption } from "@/domain";
 
-type AnimeOption = { id: string; slug: string; label: string };
+type SelectOption = { id: string; slug: string; label: string };
 
-const allAnimeOption: AnimeOption = { id: "all", slug: "", label: "全部作品" };
+const allAnimeOption: SelectOption = { id: "all", slug: "", label: "全部作品" };
 
 export function AnimeCombobox({
   anime,
   value,
   onChange,
 }: {
-  anime: CatalogResponse["anime"];
+  anime: AnimeOption[];
   value: string;
   onChange: (slug: string) => void;
 }) {

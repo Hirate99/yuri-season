@@ -4,6 +4,7 @@ import { loadHomeData } from "@/lib/public-loaders";
 import { serverContextFromLoader } from "@/server-context";
 
 export const Route = createFileRoute("/")({
+  staleTime: 120_000,
   loader: (loaderContext) => loadHomeData({ serverContext: serverContextFromLoader(loaderContext) }),
   component: HomeRoute,
 });

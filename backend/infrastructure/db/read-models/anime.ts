@@ -48,6 +48,45 @@ function animeSummaryQuery(db: D1Database, where?: SQL) {
 
 export type AnimeSummaryRecord = Awaited<ReturnType<typeof readAllAnimeSummaries>>[number];
 
+const catalogAnimeSelection = {
+  id: animeTable.id,
+  slug: animeTable.slug,
+  titleZh: animeTable.titleZh,
+  titleJa: animeTable.titleJa,
+  yuriKind: animeTable.yuriKind,
+  yuriStatus: animeTable.yuriStatus,
+  status: animeTable.status,
+  premiereAt: animeTable.premiereAt,
+  episodeCount: animeTable.episodeCount,
+  premiereEpisodeCount: animeTable.premiereEpisodeCount,
+  latestVerifiedEpisode: animeTable.latestVerifiedEpisode,
+  coverUrl: animeTable.coverUrl,
+  slotId: broadcastSlotsTable.id,
+  slotLabel: broadcastSlotsTable.label,
+  slotWeekday: broadcastSlotsTable.weekday,
+  slotLocalTime: broadcastSlotsTable.localTime,
+  slotTimezone: broadcastSlotsTable.timezone,
+  slotPlatformUrl: broadcastSlotsTable.platformUrl,
+};
+
+export function readCatalogAnimeForSeason(db: D1Database, seasonId: string) {
+  return database(db).select(catalogAnimeSelection)
+    .from(animeTable)
+    .leftJoin(broadcastSlotsTable, and(
+      eq(broadcastSlotsTable.animeId, animeTable.id),
+      eq(broadcastSlotsTable.isPrimary, true),
+    ))
+    .where(eq(animeTable.seasonId, seasonId))
+    .orderBy(
+      desc(animeTable.featured),
+      asc(broadcastSlotsTable.weekday),
+      asc(broadcastSlotsTable.localTime),
+      asc(animeTable.titleZh),
+    );
+}
+
+export type CatalogAnimeRecord = Awaited<ReturnType<typeof readCatalogAnimeForSeason>>[number];
+
 export function readAnimeSummariesForSeason(db: D1Database, seasonId: string) {
   return animeSummaryQuery(db, eq(animeTable.seasonId, seasonId)).orderBy(
     desc(animeTable.featured),

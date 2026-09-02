@@ -4,6 +4,7 @@ import { loadHomeData } from "@/lib/public-loaders";
 import { serverContextFromLoader } from "@/server-context";
 
 export const Route = createFileRoute("/season/$slug")({
+  staleTime: 300_000,
   loader: (loaderContext) => loadHomeData({
     serverContext: serverContextFromLoader(loaderContext),
     seasonSlug: loaderContext.params.slug,

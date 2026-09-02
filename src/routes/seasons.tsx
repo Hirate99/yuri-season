@@ -4,6 +4,7 @@ import { loadSeasonsData } from "@/lib/public-loaders";
 import { serverContextFromLoader } from "@/server-context";
 
 export const Route = createFileRoute("/seasons")({
+  staleTime: 900_000,
   loader: (loaderContext) => loadSeasonsData({ serverContext: serverContextFromLoader(loaderContext) }),
   component: SeasonsRoute,
 });

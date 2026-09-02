@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import type { FeedItem } from "@/domain";
 import { contentLabel } from "@/lib/format";
+import { bangumiCoverUrl } from "@/lib/media-url";
 import { CoverImage } from "./cover-image";
 import { LocalDateTime } from "./local-date-time";
 
@@ -74,7 +75,7 @@ export function FeedCard({ item, compact = false, preserveFeedContext = false }:
           </div>
         ) : showCover ? (
           <div>
-            <CoverImage className="aspect-[3/4] w-full rounded-xl shadow-sm" src={item.animeCoverUrl} alt={`${item.animeTitle ?? "作品"} 封面`} />
+            <CoverImage className="aspect-[3/4] w-full rounded-xl shadow-sm" src={bangumiCoverUrl(item.animeCoverUrl, 200)} alt={`${item.animeTitle ?? "作品"} 封面`} />
           </div>
         ) : null}
       </div>

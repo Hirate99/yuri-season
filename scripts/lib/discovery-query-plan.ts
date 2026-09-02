@@ -88,9 +88,12 @@ function memoryKey(scopeType: ScopeType, scopeId: string, searchKind: SearchKind
   return `${scopeType}\u0000${scopeId}\u0000${searchKind}\u0000${targetKey}`;
 }
 
-function isDue(memory: SearchMemorySummary | undefined, now: Date) {
+function isDue(memory: SearchMemorySummary | undefined, now: Date, operation: DiscoveryOperation) {
   if (!memory) return true;
-  if (memory.status === "exhausted") return false;
+  // Exhaustion is durable only for bounded searches. A timeline is an ongoing
+  // watchlist surface, so a prior zero-result scan must still return when its
+  // scheduled freshness deadline arrives.
+  if (memory.status === "exhausted" && operation === "search") return false;
   if (!memory.nextSearchAt) return true;
   const next = Date.parse(memory.nextSearchAt);
   return Number.isNaN(next) || next <= now.valueOf();
@@ -151,8 +154,8 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
     const key = memoryKey(query.scopeType, query.scopeId, query.searchKind, query.targetKey);
     if (planned.has(key)) return;
     const prior = remembered.get(key);
-    if (!input.force && input.profile !== "social-audit" && !isDue(prior, input.now)) return;
     const operation = query.operation ?? "search";
+    if (!input.force && input.profile !== "social-audit" && !isDue(prior, input.now, operation)) return;
     planned.set(key, {
       ...query,
       operation,

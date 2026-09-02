@@ -29,8 +29,10 @@ function allowedMethods(requestPath: string): string[] {
 const app = new Hono<ApiEnvironment>();
 
 app.use("/api/*", async (context, next) => {
+  const startedAt = performance.now();
   context.set("services", createRequestServices(context.env));
   await next();
+  context.res.headers.append("server-timing", `api;dur=${(performance.now() - startedAt).toFixed(1)}`);
   if (!context.res.headers.has("cache-control")) context.res.headers.set("cache-control", "no-store");
 });
 

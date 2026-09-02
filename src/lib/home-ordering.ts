@@ -1,4 +1,4 @@
-import type { AnimeSummary } from "@/domain";
+import type { CatalogAnime } from "@/domain";
 import { broadcastInstantOnViewerDate } from "@/lib/timezone";
 
 const DAY_MS = 24 * 60 * 60 * 1_000;
@@ -16,7 +16,7 @@ export function localDayOrdinal(timeZone: string, now: Date): number {
 }
 
 function airingInstant(
-  anime: AnimeSummary,
+  anime: CatalogAnime,
   viewerTimeZone: string,
   now: Date,
 ): Date | null {
@@ -24,13 +24,13 @@ function airingInstant(
   return broadcastInstantOnViewerDate(anime.primarySlot, viewerTimeZone, now);
 }
 
-export function partitionByAiringToday(
-  anime: AnimeSummary[],
+export function partitionByAiringToday<T extends CatalogAnime>(
+  anime: T[],
   viewerTimeZone: string,
   now: Date,
-): { airingToday: AnimeSummary[]; rest: AnimeSummary[] } {
-  const airingToday: { anime: AnimeSummary; instant: Date }[] = [];
-  const rest: AnimeSummary[] = [];
+): { airingToday: T[]; rest: T[] } {
+  const airingToday: { anime: T; instant: Date }[] = [];
+  const rest: T[] = [];
   for (const item of anime) {
     const instant = airingInstant(item, viewerTimeZone, now);
     if (instant) airingToday.push({ anime: item, instant });
@@ -46,20 +46,20 @@ export function rotateList<T>(list: T[], seed: number): T[] {
   return [...list.slice(offset), ...list.slice(0, offset)];
 }
 
-export function orderWorksForToday(
-  anime: AnimeSummary[],
+export function orderWorksForToday<T extends CatalogAnime>(
+  anime: T[],
   viewerTimeZone: string,
   now: Date,
-): AnimeSummary[] {
+): T[] {
   const { airingToday, rest } = partitionByAiringToday(anime, viewerTimeZone, now);
   return [...airingToday, ...rest];
 }
 
-export function orderBannerForHome(
-  anime: AnimeSummary[],
+export function orderBannerForHome<T extends CatalogAnime>(
+  anime: T[],
   viewerTimeZone: string,
   now: Date,
-): AnimeSummary[] {
+): T[] {
   const { airingToday, rest } = partitionByAiringToday(anime, viewerTimeZone, now);
   return [...airingToday, ...rotateList(rest, localDayOrdinal(viewerTimeZone, now))];
 }

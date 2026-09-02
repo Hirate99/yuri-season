@@ -1,6 +1,13 @@
 import type { AnimePageResponse, PublicationDetailResponse } from "@/domain";
 
-import { readCalendar, readCalendarForSeason, readCatalog, readCatalogForSeason, readSeasons } from "~/repositories/catalog";
+import {
+  readCalendar,
+  readCalendarForSeason,
+  readCatalog,
+  readCatalogForSeason,
+  readCurrentAnimeOptions,
+  readSeasons,
+} from "~/repositories/catalog";
 import { readAnimeDetail } from "~/repositories/detail";
 import { readDiscussions, readFeed, readFeedItem, readMedia, type FeedOptions } from "~/repositories/feed";
 import {
@@ -44,6 +51,7 @@ export function createPublicService(env: Env) {
     },
     catalog: {
       current: () => readCatalog(env.DB),
+      options: () => readCurrentAnimeOptions(env.DB),
       season: (slug: string) => readCatalogForSeason(env.DB, slug),
     },
     feed: (request: FeedOptions) => readFeed(env.DB, request),

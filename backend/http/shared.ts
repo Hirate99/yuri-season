@@ -8,7 +8,7 @@ import { HttpError } from "~/shared/http-error";
 export type ApiEnvironment = { Bindings: Env; Variables: { services: RequestServices } };
 export type ApiContext = Context<ApiEnvironment>;
 
-const PUBLIC_CACHE = "public, max-age=0, must-revalidate";
+const PUBLIC_CACHE = "public, max-age=15, stale-while-revalidate=45";
 const JSON_CONTENT_TYPE = /^application\/(?:[\w.+-]+\+)?json(?:\s*;|$)/i;
 
 type ValidatedInput<Target extends "json" | "query", Input, Output> = {
@@ -42,16 +42,6 @@ export function cachedPublicData<T>(
   load: () => Promise<T>,
 ): Promise<T> {
   return readThroughPublicCache(context.env, key, load, { ttlSeconds });
-}
-
-export async function cachedPublicJson<T extends object>(
-  context: ApiContext,
-  key: string,
-  ttlSeconds: number,
-  load: () => Promise<T>,
-) {
-  const data = await cachedPublicData(context, key, ttlSeconds, load);
-  return publicJson(context, data);
 }
 
 export function invalidatePublicData(context: ApiContext): Promise<void> {

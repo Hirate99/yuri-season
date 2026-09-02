@@ -6,6 +6,7 @@ import {
   createCampaign,
   leaseCampaignQueries,
   memoryRecordsForResults,
+  recoverExpiredCampaignQueries,
 } from "../scripts/lib/discovery-campaign";
 import type { DiscoveryQuery } from "../scripts/lib/discovery-query-plan";
 
@@ -35,6 +36,19 @@ describe("resumable discovery campaigns", () => {
     expect(leaseCampaignQueries(campaign, 2, new Date("2026-08-11T23:00:00Z")).map((item) => item.id))
       .toEqual(["q1", "q2"]);
     expect(campaign.queries[0].attemptCount).toBe(2);
+  });
+
+  test("recovers expired leases before cycle or finish summaries", () => {
+    const campaign = createCampaign({
+      createdAt: "2026-08-11T20:00:00Z", force: false,
+      season: { id: "season-1", slug: "2026-summer", label: "2026 夏" },
+      queryBudget: 2, queries: [query("q1"), query("q2")],
+    });
+    leaseCampaignQueries(campaign, 2, new Date("2026-08-11T20:00:00Z"));
+    expect(recoverExpiredCampaignQueries(campaign, new Date("2026-08-11T23:00:00Z"))).toBe(2);
+    expect(campaign.queries.map((item) => item.state)).toEqual(["pending", "pending"]);
+    expect(campaign.queries.every((item) => item.leaseUntil === null)).toBe(true);
+    expect(campaign.updatedAt).toBe("2026-08-11T23:00:00.000Z");
   });
 
   test("prioritizes explicitly requested platforms without consuming unrelated work", () => {

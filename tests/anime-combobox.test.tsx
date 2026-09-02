@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { CatalogResponse } from "@/domain";
+import type { AnimeOption } from "@/domain";
 import { AnimeCombobox } from "@/components/anime-combobox";
 
 const anime = [{
@@ -9,7 +9,7 @@ const anime = [{
   titleZh: "示例作品",
   titleJa: "サンプル",
   titleEn: "Sample",
-}] as CatalogResponse["anime"];
+}] satisfies AnimeOption[];
 
 describe("anime combobox", () => {
   test("renders a button-triggered selector showing the current selection", () => {

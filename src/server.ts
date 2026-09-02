@@ -4,8 +4,18 @@ import { redirectPublicAdmin } from "~/platform/admin-boundary";
 import { laneForCron, runResearch } from "~/research/scheduler";
 import { viewerTimeZoneFromRequest, type ServerRequestContext } from "./server-context";
 
+function withServerTiming(response: Response, name: string, startedAt: number): Response {
+  const headers = new Headers(response.headers);
+  headers.append("server-timing", `${name};dur=${(performance.now() - startedAt).toFixed(1)}`);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
-  fetch(request, env, executionContext) {
+  async fetch(request, env, executionContext) {
     const adminRedirect = redirectPublicAdmin(request, env);
     if (adminRedirect) return adminRedirect;
 
@@ -13,12 +23,14 @@ export default {
       return api.fetch(request, env, executionContext);
     }
 
+    const startedAt = performance.now();
     const context: ServerRequestContext = {
       env,
       executionContext,
       viewerTimeZone: viewerTimeZoneFromRequest(request),
     };
-    return startHandler.fetch(request, { context });
+    const response = await startHandler.fetch(request, { context });
+    return withServerTiming(response, "ssr", startedAt);
   },
 
   scheduled(controller, env, executionContext): void {

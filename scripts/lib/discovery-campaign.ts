@@ -187,13 +187,17 @@ export function cancelCampaignQueries(
   return matches.length;
 }
 
-function recoverExpired(campaign: DiscoveryCampaign, now: Date): void {
+export function recoverExpiredCampaignQueries(campaign: DiscoveryCampaign, now: Date): number {
+  let recovered = 0;
   for (const query of campaign.queries) {
     if (query.state === "leased" && query.leaseUntil && Date.parse(query.leaseUntil) <= now.valueOf()) {
       query.state = "pending";
       query.leaseUntil = null;
+      recovered += 1;
     }
   }
+  if (recovered > 0) campaign.updatedAt = now.toISOString();
+  return recovered;
 }
 
 export function leaseCampaignQueries(
@@ -202,7 +206,7 @@ export function leaseCampaignQueries(
   now: Date,
   matches: (query: CampaignQuery) => boolean = () => true,
 ): CampaignQuery[] {
-  recoverExpired(campaign, now);
+  recoverExpiredCampaignQueries(campaign, now);
   const leaseUntil = new Date(now.valueOf() + 2 * 60 * 60_000).toISOString();
   const leased = campaign.queries
     .filter((query) => query.state === "pending" && matches(query))

@@ -1,11 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import type { AnimeSummary, Season } from "@/domain";
+import type { CatalogAnime, Season } from "@/domain";
 import { shortDate } from "@/lib/format";
 import { CoverImage } from "./cover-image";
 
 export function SeasonHero({ season, anime, archived = false }: {
   season: Season | undefined;
-  anime: AnimeSummary[];
+  anime: CatalogAnime[];
   archived?: boolean;
 }) {
   const featured = anime.filter((item) => item.coverUrl).slice(0, 3);
@@ -46,7 +46,7 @@ export function SeasonHero({ season, anime, archived = false }: {
                   className="aspect-[3/4] w-full rounded-[6px] shadow-[0_22px_45px_rgba(15,23,42,0.18)] ring-1 ring-black/[0.08] transition duration-300 hover:-translate-y-1"
                   src={item.coverUrl}
                   alt={`${item.titleZh} 封面`}
-                  eager
+                  eager={index === 0}
                 />
               </Link>
             ))}

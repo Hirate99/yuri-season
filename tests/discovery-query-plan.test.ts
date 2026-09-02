@@ -174,6 +174,32 @@ describe("discovery query planning", () => {
       .toBe(true);
   });
 
+  test("reschedules exhausted verified timelines when their next check is due", () => {
+    const timelineResources: AdminAnimeResources = {
+      ...resources,
+      accounts: [{
+        id: "account-work-x", ownerType: "anime", ownerId: anime.id, ownerLabel: anime.titleZh,
+        platform: "X", handle: "@work", url: "https://x.com/work", verified: true,
+        monitorMode: "local", verificationSourceUrl: "https://example.com/official", verifiedAt: "2026-08-10T00:00:00Z",
+      }],
+    };
+    const exhaustedTimeline = [{
+      id: "memory-work-x", scopeType: "anime", scopeId: "anime-1", searchKind: "social",
+      targetKey: "updates:anime-1:account-work-x", queryText: "checked", status: "exhausted",
+      lastResultHash: null, lastResultCount: 0, usefulResultCount: 0,
+      searchedAt: "2026-08-10T00:00:00Z", nextSearchAt: "2026-08-11T00:00:00Z", notes: null,
+      seenCount: 0, candidateCount: 0, publishedCount: 0, heldCount: 0,
+      rejectedCount: 0, ignoredCount: 0,
+    }] satisfies SearchMemorySummary[];
+    const queries = buildDiscoveryPlan({
+      seasonId: "season-1", seasonLabel: "2026 夏", anime: [anime],
+      resources: { "anime-1": timelineResources }, memory: exhaustedTimeline, memoryHits: [],
+      now: new Date("2026-08-11T20:00:00Z"), force: false, profile: "routine", limit: 100,
+    });
+    expect(queries.some((query) => query.accountId === "account-work-x"
+      && query.operation === "timeline_scan")).toBe(true);
+  });
+
   test("keeps Mengzhan Bar separate from an ordinary work Tieba thread", () => {
     const tiebaResources: AdminAnimeResources = {
       ...resources,

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { RadioTower } from "lucide-react";
-import type { AnimeSummary } from "@/domain";
+import type { CatalogAnime } from "@/domain";
 import { weekdayLabel, yuriDisplayLabel } from "@/lib/format";
 import { Badge } from "./badge";
 import { CoverImage } from "./cover-image";
@@ -8,7 +8,7 @@ import { BroadcastTime } from "./broadcast-time";
 import { EpisodeProgressBadge } from "./episode-progress-badge";
 
 export function AnimeCard({ anime, viewerTimeZone, now }: {
-  anime: AnimeSummary;
+  anime: CatalogAnime;
   viewerTimeZone?: string;
   now?: Date;
 }) {

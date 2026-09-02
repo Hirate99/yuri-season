@@ -2,6 +2,7 @@ import {
   campaignCompletionAudit,
   campaignSummary,
   hasUnfinishedQueries,
+  recoverExpiredCampaignQueries,
   type DiscoveryCampaign,
 } from "./lib/discovery-campaign";
 import { loadResearchEnv, requiredResearchEnv } from "./lib/research-env";
@@ -28,6 +29,10 @@ async function loadCampaign(campaignPath: string): Promise<DiscoveryCampaign | n
   return file.json() as Promise<DiscoveryCampaign>;
 }
 
+async function saveCampaign(campaignPath: string, campaign: DiscoveryCampaign): Promise<void> {
+  await Bun.write(campaignPath, JSON.stringify(campaign, null, 2));
+}
+
 function option(args: string[], name: string): string | null {
   const prefix = `--${name}=`;
   return args.find((argument) => argument.startsWith(prefix))?.slice(prefix.length) ?? null;
@@ -38,6 +43,9 @@ async function cycle(args: string[]): Promise<void> {
   const campaignPath = campaignPathForProfile(profile);
 
   const active = await loadCampaign(campaignPath);
+  if (active?.schemaVersion === 3 && recoverExpiredCampaignQueries(active, new Date()) > 0) {
+    await saveCampaign(campaignPath, active);
+  }
   if (active?.schemaVersion === 3 && hasUnfinishedQueries(active)) {
     if (active.profile && active.profile !== profile) {
       throw new Error(`active ${active.profile} campaign still has unfinished queries; finish it or use --replace explicitly`);
@@ -78,12 +86,16 @@ async function cycle(args: string[]): Promise<void> {
 
 async function finish(args: string[]): Promise<void> {
   const profile = parseResearchProfile(option(args, "profile"), "routine");
-  const campaign = await loadCampaign(campaignPathForProfile(profile));
+  const campaignPath = campaignPathForProfile(profile);
+  const campaign = await loadCampaign(campaignPath);
   if (!campaign || campaign.schemaVersion !== 3) {
     throw new Error("no current v3 research campaign; run research cycle first");
   }
   if (campaign.profile && campaign.profile !== profile) {
     throw new Error(`active ${campaign.profile} campaign does not match requested ${profile} profile`);
+  }
+  if (recoverExpiredCampaignQueries(campaign, new Date()) > 0) {
+    await saveCampaign(campaignPath, campaign);
   }
   const summary = campaignSummary(campaign);
   const converged = summary.pending === 0 && summary.leased === 0;

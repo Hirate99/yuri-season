@@ -11,8 +11,8 @@ import {
   type LeaseLocalJobsRequest,
 } from "~/http/input/job-input";
 import type { CompleteLocalJobInput } from "~/research/types";
-import type { ApiEnvironment } from "../../shared";
-import { validatedJson } from "../../shared";
+import type { ApiEnvironment } from "~/http/shared";
+import { validatedJson } from "~/http/shared";
 
 export const jobRoutes = new Hono<ApiEnvironment>()
   .post("/jobs/lease", validatedJson<LeaseLocalJobsRequest, LeaseLocalJobsInput>(parseLeaseLocalJobs), async (context) => {

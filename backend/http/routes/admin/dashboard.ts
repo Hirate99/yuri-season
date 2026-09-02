@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 
-import type { ApiEnvironment } from "../../shared";
+import type { ApiEnvironment } from "~/http/shared";
 
 export const dashboardRoutes = new Hono<ApiEnvironment>()
   .get("/dashboard", async (context) =>

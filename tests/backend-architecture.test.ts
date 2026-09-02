@@ -36,24 +36,24 @@ describe("backend architecture boundaries", () => {
       ...new Bun.Glob("src/**/*.tsx").scanSync(),
     ];
     for (const path of files) {
-      expect(await Bun.file(path).text()).not.toContain("@worker/");
+      const source = await Bun.file(path).text();
+      expect(source).not.toContain("@worker/");
+      if (path.replaceAll("\\", "/").startsWith("backend/http/")) {
+        expect(source).not.toMatch(/from ["'](?:\.\.\/)+shared["']/);
+      }
     }
   });
 
-  test("keeps public cache invalidation explicit at mutation handlers", async () => {
-    const apiSource = await Bun.file("backend/http/api.ts").text();
-    const adminRoutes = await Promise.all(
-      [...new Bun.Glob("backend/http/routes/admin/**/*.ts").scanSync()].map((path) => Bun.file(path).text()),
+  test("keeps public reads on the direct D1 path", async () => {
+    const backendSources = await Promise.all(
+      [...new Bun.Glob("backend/**/*.ts").scanSync()].map((path) => Bun.file(path).text()),
     );
-    const researchRoutes = await Promise.all(
-      [...new Bun.Glob("backend/http/routes/research/**/*.ts").scanSync()].map((path) => Bun.file(path).text()),
-    );
+    const packageSource = await Bun.file("package.json").text();
+    const workerConfig = await Bun.file("wrangler.jsonc").text();
 
-    expect(apiSource).not.toContain("shouldInvalidatePublicCache");
-    expect(adminRoutes.join("\n")).toContain("invalidatePublicData(context)");
-    expect(researchRoutes.join("\n")).toContain("invalidatePublicData(context)");
-    expect(adminRoutes.join("\n")).toContain("await invalidatePublicData(context)");
-    expect(researchRoutes.join("\n")).toContain("await invalidatePublicData(context)");
+    expect(backendSources.join("\n")).not.toMatch(/upstash|redis|invalidatePublicData/i);
+    expect(packageSource).not.toContain("@upstash/redis");
+    expect(workerConfig).not.toContain("UPSTASH_REDIS");
   });
 
   test("keeps new migration prefixes unique after the historical 0027 collision", () => {

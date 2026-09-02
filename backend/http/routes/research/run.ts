@@ -3,8 +3,8 @@ import { z } from "zod";
 
 import { parseWithSchema } from "~/http/input/schema";
 import type { JobLane } from "~/research/types";
-import type { ApiEnvironment } from "../../shared";
-import { validatedJson } from "../../shared";
+import type { ApiEnvironment } from "~/http/shared";
+import { validatedJson } from "~/http/shared";
 
 const researchRunSchema = z.object({
   lane: z.enum(["rapid", "standard", "discovery"], "未知的更新通道。").default("standard"),

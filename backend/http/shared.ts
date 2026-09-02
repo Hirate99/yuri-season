@@ -2,7 +2,6 @@ import type { Context, MiddlewareHandler } from "hono";
 import { validator } from "hono/validator";
 
 import type { RequestServices } from "~/application/services";
-import { invalidatePublicCache, readThroughPublicCache } from "~/infrastructure/cache/public-cache";
 import { HttpError } from "~/shared/http-error";
 
 export type ApiEnvironment = { Bindings: Env; Variables: { services: RequestServices } };
@@ -33,17 +32,4 @@ export function validatedQuery<Input, Output = Input>(parse: (input: unknown, co
 export function publicJson<T extends object>(context: ApiContext, data: T) {
   context.header("cache-control", PUBLIC_CACHE);
   return context.json(data);
-}
-
-export function cachedPublicData<T>(
-  context: ApiContext,
-  key: string,
-  ttlSeconds: number,
-  load: () => Promise<T>,
-): Promise<T> {
-  return readThroughPublicCache(context.env, key, load, { ttlSeconds });
-}
-
-export function invalidatePublicData(context: ApiContext): Promise<void> {
-  return invalidatePublicCache(context.env);
 }

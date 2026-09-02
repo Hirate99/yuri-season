@@ -5,7 +5,7 @@ import { mapAnime } from "~/infrastructure/db/mappers";
 import { readAnimeSummaryBySlug } from "~/infrastructure/db/read-models/anime";
 import { readEventsForAnime } from "~/infrastructure/db/read-models/catalog";
 import { readBroadcasts, readCast, readSources, readStaff, readThemeSongs } from "~/infrastructure/db/read-models/detail";
-import { accountsTable } from "~/infrastructure/db/schema";
+import { accountsTable, animeTable } from "~/infrastructure/db/schema";
 
 type AccountRecord = Account & { ownerId: string };
 
@@ -115,4 +115,12 @@ export async function readAnimeDetail(db: D1Database, slug: string): Promise<Ani
     sources: sourceRows,
     lastCheckedAt,
   };
+}
+
+export async function readAnimeId(db: D1Database, slug: string): Promise<string | null> {
+  const [row] = await database(db).select({ id: animeTable.id })
+    .from(animeTable)
+    .where(eq(animeTable.slug, slug))
+    .limit(1);
+  return row?.id ?? null;
 }

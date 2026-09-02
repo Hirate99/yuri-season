@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 
-import type { ApiEnvironment } from "../../shared";
+import type { ApiEnvironment } from "~/http/shared";
 import { animeRoutes } from "./anime";
 import { dashboardRoutes } from "./dashboard";
 import { moderationRoutes } from "./moderation";

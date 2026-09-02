@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 
-import type { ApiEnvironment } from "../../shared";
+import type { ApiEnvironment } from "~/http/shared";
 import { batchRoutes } from "./batches";
 import { jobRoutes } from "./jobs";
 import { memoryRoutes } from "./memory";

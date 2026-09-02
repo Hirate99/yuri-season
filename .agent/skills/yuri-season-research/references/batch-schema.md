@@ -164,6 +164,8 @@ Fanwork requires an inline creator source, original creator post, and media meta
 
 For official downloadable galleries, create one candidate and one `media` object. Put every stored image or size variant in `media.assets`; do not create duplicate candidates or parallel URL/hash arrays. Assets sharing the same `sourceUrl` are variants of one logical image. `sortOrder` orders logical images, while `variant` identifies `original`, `preview`, or `thumbnail`. Every asset requires a verified production `r2Key`, SHA-256 `contentHash`, source URL, MIME type, rights status, and human-readable rights basis. A media object containing assets must use `mirrored_with_permission`.
 
+Before uploading a large original, run `bun run research:media:variants -- <input> <original-r2-key> <output-directory>`. It creates 320 px `thumbnail` and 960 px `preview` WebP files plus their R2 keys, hashes, dimensions, and byte sizes. Add those records to the same `media.assets` array, copying the original asset's `sourceUrl`, `sortOrder`, alt text, and rights evidence. Upload and read back every generated key before submitting the batch; the command itself never uploads or writes D1.
+
 ```json
 {
   "media": {

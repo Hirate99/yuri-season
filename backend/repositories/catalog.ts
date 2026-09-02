@@ -1,5 +1,6 @@
 import type {
-  AnimeSummary,
+  AnimeOption,
+  CatalogAnime,
   CalendarEntry,
   CalendarResponse,
   CatalogResponse,
@@ -7,10 +8,9 @@ import type {
   SeasonsResponse,
 } from "@/domain";
 import { resolveCurrentEpisode } from "@/lib/episode-progress";
-import { count, desc, eq } from "drizzle-orm";
+import { asc, count, desc, eq } from "drizzle-orm";
 import { database } from "~/infrastructure/db/client";
-import { mapAnime } from "~/infrastructure/db/mappers";
-import { readAnimeSummariesForSeason } from "~/infrastructure/db/read-models/anime";
+import { readCatalogAnimeForSeason, type CatalogAnimeRecord } from "~/infrastructure/db/read-models/anime";
 import { readCalendarSlots, readEventsForSeason } from "~/infrastructure/db/read-models/catalog";
 import { animeTable, seasonsTable } from "~/infrastructure/db/schema";
 import { HttpError } from "~/shared/http-error";
@@ -56,8 +56,45 @@ export async function readSeasons(db: D1Database): Promise<SeasonsResponse> {
   };
 }
 
-export async function animeForSeason(db: D1Database, seasonId: string): Promise<AnimeSummary[]> {
-  return (await readAnimeSummariesForSeason(db, seasonId)).map(mapAnime);
+function mapCatalogAnime(row: CatalogAnimeRecord): CatalogAnime {
+  return {
+    id: row.id,
+    slug: row.slug,
+    titleZh: row.titleZh,
+    titleJa: row.titleJa,
+    yuriKind: row.yuriKind,
+    yuriStatus: row.yuriStatus,
+    currentEpisode: resolveCurrentEpisode(row),
+    coverUrl: row.coverUrl,
+    primarySlot: row.slotId && row.slotLabel && row.slotWeekday !== null && row.slotLocalTime && row.slotTimezone
+      ? {
+          id: row.slotId,
+          label: row.slotLabel,
+          weekday: row.slotWeekday,
+          localTime: row.slotLocalTime,
+          timezone: row.slotTimezone,
+          platformUrl: row.slotPlatformUrl,
+          isPrimary: true,
+        }
+      : null,
+  };
+}
+
+async function animeForSeason(db: D1Database, seasonId: string): Promise<CatalogAnime[]> {
+  return (await readCatalogAnimeForSeason(db, seasonId)).map(mapCatalogAnime);
+}
+
+export function readCurrentAnimeOptions(db: D1Database): Promise<AnimeOption[]> {
+  return database(db).select({
+    id: animeTable.id,
+    slug: animeTable.slug,
+    titleZh: animeTable.titleZh,
+    titleJa: animeTable.titleJa,
+    titleEn: animeTable.titleEn,
+  }).from(animeTable)
+    .innerJoin(seasonsTable, eq(seasonsTable.id, animeTable.seasonId))
+    .where(eq(seasonsTable.isCurrent, true))
+    .orderBy(asc(animeTable.titleZh));
 }
 
 export async function eventsForSeason(db: D1Database, seasonId: string) {

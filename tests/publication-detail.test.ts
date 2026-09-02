@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readPublicationPage } from "~/application/public/service";
 import { applyCandidateDecision } from "~/repositories/candidates/decisions";
 import { createCandidate } from "~/repositories/candidates/write";
-import { publicMediaUrl } from "@/lib/media-url";
+import { bangumiCoverUrl, publicMediaUrl } from "@/lib/media-url";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;
@@ -273,5 +273,14 @@ describe("publication details", () => {
   test("rejects unsafe object keys when constructing R2 URLs", () => {
     expect(publicMediaUrl("../private/file.webp")).toBeNull();
     expect(publicMediaUrl("yuri//file.webp")).toBeNull();
+  });
+
+  test("requests an existing smaller Bangumi cover for compact cards", () => {
+    const cover = "https://lain.bgm.tv/r/400/pic/cover/l/b3/26/541285_CYBZc.jpg";
+    expect(bangumiCoverUrl(cover, 100))
+      .toBe("https://lain.bgm.tv/r/100/pic/cover/l/b3/26/541285_CYBZc.jpg");
+    expect(bangumiCoverUrl("https://example.com/cover.jpg", 100))
+      .toBe("https://example.com/cover.jpg");
+    expect(bangumiCoverUrl(null, 100)).toBeNull();
   });
 });

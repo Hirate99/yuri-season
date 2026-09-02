@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import type { CatalogResponse, ContentClass, FeedResponse } from "@/domain";
+import type { AnimeOption, ContentClass, FeedResponse } from "@/domain";
 import { EmptyState, LoadingRows } from "@/components/empty-state";
 import { FeedCard } from "@/components/feed-card";
 import { AnimeCombobox } from "@/components/anime-combobox";
@@ -36,7 +36,7 @@ function FeedSearchInput({ value, onChange }: { value: string; onChange: (value:
   );
 }
 
-export function FeedPage({ initialPage, catalog }: { initialPage: FeedResponse; catalog: CatalogResponse }) {
+export function FeedPage({ initialPage, animeOptions }: { initialPage: FeedResponse; animeOptions: AnimeOption[] }) {
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [animeSlug, setAnimeSlug] = useState("");
@@ -78,7 +78,7 @@ export function FeedPage({ initialPage, catalog }: { initialPage: FeedResponse; 
               >{item.label}</button>
             ))}
           </div>
-          <AnimeCombobox anime={catalog.anime} value={animeSlug} onChange={setAnimeSlug} />
+          <AnimeCombobox anime={animeOptions} value={animeSlug} onChange={setAnimeSlug} />
         </div>
       </div>
 

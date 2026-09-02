@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { readCatalog, readCatalogForSeason, readSeasons } from "~/repositories/catalog";
+import { readCatalog, readCatalogForSeason, readCurrentAnimeOptions, readSeasons } from "~/repositories/catalog";
 import { readAnimeDetail } from "~/repositories/detail";
 import { readAdminDashboard } from "~/application/admin/service";
 import { TestD1 } from "./support/d1-adapter";
@@ -17,6 +17,20 @@ beforeEach(async () => {
 afterEach(() => database.close());
 
 describe("current-season catalog", () => {
+  test("returns only the fields needed by the Feed work selector", async () => {
+    const options = await readCurrentAnimeOptions(database.binding());
+
+    expect(options).toHaveLength(11);
+    expect(options[0]).toEqual({
+      id: expect.any(String),
+      slug: expect.any(String),
+      titleZh: expect.any(String),
+      titleJa: expect.any(String),
+      titleEn: expect.any(String),
+    });
+    expect(Object.keys(options[0]).sort()).toEqual(["id", "slug", "titleEn", "titleJa", "titleZh"]);
+  });
+
   test("keeps the verified catalog expansion complete and classified", async () => {
     const catalog = await readCatalog(database.binding());
     expect(catalog.anime).toHaveLength(11);
@@ -32,9 +46,18 @@ describe("current-season catalog", () => {
       yuriStatus: "confirmed",
       coverUrl: expect.any(String),
       currentEpisode: 6,
-      latestVerifiedEpisode: 6,
-      latestEpisodeSourceUrl: "https://www.vap.co.jp/korekaite-shine/story/",
     });
+    expect(Object.keys(korekaite ?? {}).sort()).toEqual([
+      "coverUrl",
+      "currentEpisode",
+      "id",
+      "primarySlot",
+      "slug",
+      "titleJa",
+      "titleZh",
+      "yuriKind",
+      "yuriStatus",
+    ]);
   });
 
   test("keeps stable season archives when the current season changes", async () => {

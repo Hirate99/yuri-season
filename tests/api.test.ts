@@ -8,6 +8,7 @@ describe("Hono API boundary", () => {
     const response = await api.request("https://example.test/api/health");
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("server-timing")).toMatch(/^api;dur=\d+\.\d$/);
     expect(await response.json()).toMatchObject({ ok: true });
   });
 

@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
-export function useViewerTimeZone(): string | null {
+export const ViewerTimeZoneContext = createContext<string | null>(null);
+
+export function useDetectedViewerTimeZone(): string | null {
   const [timeZone, setTimeZone] = useState<string | null>(null);
 
   useEffect(() => {
@@ -8,4 +10,8 @@ export function useViewerTimeZone(): string | null {
   }, []);
 
   return timeZone;
+}
+
+export function useViewerTimeZone(): string | null {
+  return useContext(ViewerTimeZoneContext);
 }

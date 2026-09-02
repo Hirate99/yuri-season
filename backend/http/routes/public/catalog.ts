@@ -1,24 +1,23 @@
 import { Hono } from "hono";
 
 import type { ApiEnvironment } from "../../shared";
-import { cachedPublicJson } from "../../shared";
-import { cacheKeyPart } from "./shared";
+import { publicJson } from "../../shared";
 
 export const catalogRoutes = new Hono<ApiEnvironment>()
   .get("/health", (context) => context.json({ ok: true, now: new Date().toISOString() }))
-  .get("/catalog", (context) =>
-    cachedPublicJson(context, "catalog", 300, () => context.var.services.public.catalog.current()))
-  .get("/calendar", (context) =>
-    cachedPublicJson(context, "calendar", 120, () => context.var.services.public.calendar.current()))
-  .get("/seasons", (context) =>
-    cachedPublicJson(context, "seasons", 900, () => context.var.services.public.seasons()))
-  .get("/seasons/:slug", (context) => {
+  .get("/catalog", async (context) =>
+    publicJson(context, await context.var.services.public.catalog.current()))
+  .get("/catalog/options", async (context) =>
+    publicJson(context, await context.var.services.public.catalog.options()))
+  .get("/calendar", async (context) =>
+    publicJson(context, await context.var.services.public.calendar.current()))
+  .get("/seasons", async (context) =>
+    publicJson(context, await context.var.services.public.seasons()))
+  .get("/seasons/:slug", async (context) => {
     const slug = context.req.param("slug");
-    return cachedPublicJson(context, `season:${cacheKeyPart(slug)}`, 300, () =>
-      context.var.services.public.catalog.season(slug));
+    return publicJson(context, await context.var.services.public.catalog.season(slug));
   })
-  .get("/seasons/:slug/calendar", (context) => {
+  .get("/seasons/:slug/calendar", async (context) => {
     const slug = context.req.param("slug");
-    return cachedPublicJson(context, `season-calendar:${cacheKeyPart(slug)}`, 120, () =>
-      context.var.services.public.calendar.season(slug));
+    return publicJson(context, await context.var.services.public.calendar.season(slug));
   });

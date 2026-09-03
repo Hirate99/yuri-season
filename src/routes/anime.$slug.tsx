@@ -1,17 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimePage } from "@/pages/anime-page";
-import { loadAnimeData } from "@/lib/public-loaders";
+import { loadAnimeData, loadAnimeRelatedData } from "@/lib/public-loaders";
 import { serverContextFromLoader } from "@/server-context";
 
 export const Route = createFileRoute("/anime/$slug")({
   staleTime: 180_000,
-  loader: (loaderContext) => loadAnimeData({
-    serverContext: serverContextFromLoader(loaderContext),
-    slug: loaderContext.params.slug,
-  }),
+  loader: async (loaderContext) => {
+    const input = {
+      serverContext: serverContextFromLoader(loaderContext),
+      slug: loaderContext.params.slug,
+    };
+    const related = loadAnimeRelatedData(input).catch(() => null);
+    return { data: await loadAnimeData(input), related };
+  },
   component: AnimeRoute,
 });
 
 function AnimeRoute() {
-  return <AnimePage data={Route.useLoaderData()} />;
+  const { data, related } = Route.useLoaderData();
+  return <AnimePage data={data} related={related} />;
 }

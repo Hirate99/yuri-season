@@ -1,5 +1,5 @@
 import { createIsomorphicFn } from "@tanstack/react-start";
-import type { AnimePageResponse, CatalogResponse, PublicationDetailResponse } from "@/domain";
+import type { AnimePageResponse, AnimeRelatedResponse, CatalogResponse, PublicationDetailResponse } from "@/domain";
 import type { ServerRequestContext } from "@/server-context";
 import { eventOccursToday } from "./calendar-events";
 import { apiClient, rpcData } from "./api";
@@ -127,6 +127,14 @@ export const loadAnimeData = createIsomorphicFn()
   })
   .client((input: PublicLoadContext & { slug: string }) =>
     rpcData(apiClient.api.anime[":slug"].$get({ param: { slug: input.slug } })));
+
+export const loadAnimeRelatedData = createIsomorphicFn()
+  .server(async (input: PublicLoadContext & { slug: string }): Promise<AnimeRelatedResponse | null> => {
+    const { readAnimeRelated } = await import("~/application/public/service");
+    return readAnimeRelated(database(input), input.slug);
+  })
+  .client((input: PublicLoadContext & { slug: string }) =>
+    rpcData(apiClient.api.anime[":slug"].related.$get({ param: { slug: input.slug } })));
 
 export const loadPublicationData = createIsomorphicFn()
   .server(async (input: PublicLoadContext & { id: string }): Promise<PublicationDetailResponse> => {

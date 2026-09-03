@@ -3,8 +3,8 @@ import { Hono } from "hono";
 import type { SearchMemoryWrite, SourceCheckWrite } from "@/domain";
 import { parseSearchMemoryBatch, type SearchMemoryBatchRequest } from "~/http/input/search-memory-input";
 import { parseSourceChecks, type SourceChecksRequest } from "~/http/input/source-check-input";
-import type { ApiEnvironment } from "../../shared";
-import { validatedJson } from "../../shared";
+import type { ApiEnvironment } from "~/http/shared";
+import { validatedJson } from "~/http/shared";
 
 export const memoryRoutes = new Hono<ApiEnvironment>()
   .get("/research/memory", async (context) => {

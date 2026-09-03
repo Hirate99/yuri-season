@@ -7,7 +7,6 @@
         "@tanstack/react-router": "1.170.25",
         "@tanstack/react-start": "^1.168.42",
         "@tanstack/react-virtual": "^3.14.9",
-        "@upstash/redis": "^1.35.3",
         "downshift": "^9.4.0",
         "drizzle-orm": "^0.45.2",
         "embla-carousel-auto-height": "8.6.0",

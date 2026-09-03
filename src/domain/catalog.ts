@@ -189,6 +189,9 @@ export type AnimeDetail = AnimeSummary & {
 
 export type AnimePageResponse = {
   anime: AnimeDetail;
+};
+
+export type AnimeRelatedResponse = {
   feed: import("./feed").FeedItem[];
   media: import("./feed").MediaItem[];
   discussions: import("./feed").Discussion[];

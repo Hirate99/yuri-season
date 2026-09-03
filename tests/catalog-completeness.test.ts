@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readCatalog, readCatalogForSeason, readCurrentAnimeOptions, readSeasons } from "~/repositories/catalog";
+import { readAnimePage, readAnimeRelated } from "~/application/public/service";
 import { readAnimeDetail } from "~/repositories/detail";
 import { readAdminDashboard } from "~/application/admin/service";
 import { TestD1 } from "./support/d1-adapter";
@@ -17,6 +18,16 @@ beforeEach(async () => {
 afterEach(() => database.close());
 
 describe("current-season catalog", () => {
+  test("keeps below-fold anime content out of the blocking page response", async () => {
+    const page = await readAnimePage(database.binding(), "kimishinu");
+    const related = await readAnimeRelated(database.binding(), "kimishinu");
+
+    expect(Object.keys(page ?? {})).toEqual(["anime"]);
+    expect(page?.anime.slug).toBe("kimishinu");
+    expect(related?.feed.length).toBeGreaterThan(0);
+    expect(related?.media.length).toBeGreaterThan(0);
+  });
+
   test("returns only the fields needed by the Feed work selector", async () => {
     const options = await readCurrentAnimeOptions(database.binding());
 

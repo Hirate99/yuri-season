@@ -6,6 +6,7 @@ import { PublicationPage } from "@/pages/publication-page";
 import { serverContextFromLoader } from "@/server-context";
 
 export const Route = createFileRoute("/feed/$id")({
+  staleTime: 180_000,
   loader: (loaderContext) => loadPublicationData({
     serverContext: serverContextFromLoader(loaderContext),
     id: loaderContext.params.id,

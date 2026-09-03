@@ -60,12 +60,12 @@ invalidation is not inferred from URL prefixes.
 - Every promise is awaited, returned, or deliberately passed to
   `executionContext.waitUntil()`.
 
-## Public cache
+## Public freshness
 
-D1 is the source of truth. The optional Redis cache is read-through and must fall
-back to D1 when unconfigured or unavailable. Successful Admin and research writes
-advance the public cache namespace after the database commit; old entries expire by
-TTL.
+D1 is the direct source for public reads. Public HTTP responses use a short bounded
+browser cache, while route `staleTime` prevents repeat reads during ordinary tab
+navigation. Do not add an external read-through cache without measured evidence that
+it improves end-to-end latency.
 
 ## Migration rules
 

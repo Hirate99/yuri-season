@@ -6,9 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "secrets": {
     "required": [
-      "ADMIN_TOKEN",
-      "UPSTASH_REDIS_REST_URL",
-      "UPSTASH_REDIS_REST_TOKEN"
+      "ADMIN_TOKEN"
     ]
   },
   "d1_databases": [
@@ -44,9 +42,7 @@
       "name": "yuri-season-radar-admin",
       "secrets": {
         "required": [
-          "ADMIN_TOKEN",
-          "UPSTASH_REDIS_REST_URL",
-          "UPSTASH_REDIS_REST_TOKEN"
+          "ADMIN_TOKEN"
         ]
       },
       "routes": [

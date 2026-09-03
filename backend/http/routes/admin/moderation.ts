@@ -4,8 +4,8 @@ import { z } from "zod";
 import type { CandidateDraft } from "@/domain";
 import { parseCandidateDraft } from "~/http/input/anime-input";
 import { parseWithSchema } from "~/http/input/schema";
-import type { ApiEnvironment } from "../../shared";
-import { invalidatePublicData, validatedJson } from "../../shared";
+import type { ApiEnvironment } from "~/http/shared";
+import { validatedJson } from "~/http/shared";
 
 const decisionSchema = z.object({
   decision: z.enum(["publish", "hold", "reject", "withdraw"], "未知的审核决定。"),
@@ -33,7 +33,6 @@ export const moderationRoutes = new Hono<ApiEnvironment>()
         context.req.param("id"),
         context.req.valid("json").reason,
       );
-      await invalidatePublicData(context);
       return context.body(null, 204);
     },
   )
@@ -47,7 +46,6 @@ export const moderationRoutes = new Hono<ApiEnvironment>()
     async (context) => {
       const input = context.req.valid("json");
       await context.var.services.admin.candidates.decide(context.req.param("id"), input.decision, input.reason);
-      await invalidatePublicData(context);
       return context.json({ ok: true });
     },
   );

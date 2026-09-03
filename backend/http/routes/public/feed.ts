@@ -2,8 +2,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 
 import { parseWithSchema } from "~/http/input/schema";
-import type { ApiEnvironment } from "../../shared";
-import { publicJson, validatedQuery } from "../../shared";
+import type { ApiEnvironment } from "~/http/shared";
+import { publicJson, validatedQuery } from "~/http/shared";
 
 const contentClassSchema = z.enum([
   "schedule", "official_news", "official_art", "creator_art", "birthday",

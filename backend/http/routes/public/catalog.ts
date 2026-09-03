@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 
-import type { ApiEnvironment } from "../../shared";
-import { publicJson } from "../../shared";
+import type { ApiEnvironment } from "~/http/shared";
+import { publicJson } from "~/http/shared";
 
 export const catalogRoutes = new Hono<ApiEnvironment>()
   .get("/health", (context) => context.json({ ok: true, now: new Date().toISOString() }))

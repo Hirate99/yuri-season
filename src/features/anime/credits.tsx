@@ -41,7 +41,7 @@ export function CastSection({ cast }: { cast: CharacterCredit[] }) {
       <div className="grid gap-2 md:grid-cols-2">
         {cast.map((credit) => (
           <article className="grid grid-cols-[auto_1fr_1fr] gap-3 rounded-2xl border border-black/[0.06] bg-white p-4 text-xs shadow-[0_9px_28px_rgba(15,23,42,0.05)]" key={credit.id}>
-            {credit.portraitUrl ? <CoverImage className="size-12 rounded-xl" src={credit.portraitUrl} alt={`${credit.characterName}头像`} objectPosition={characterPortraitObjectPosition(credit.portraitUrl)} /> : <span />}
+            {credit.portraitUrl ? <CoverImage className="size-12 rounded-xl" src={credit.portraitUrl} alt={`${credit.characterName}头像`} objectPosition={characterPortraitObjectPosition(credit.portraitUrl)} topAlignTall /> : <span />}
             <div className="min-w-0">
               <p className="text-[10px] text-muted">角色</p>
               <h3 className="mt-1 font-semibold">{credit.characterName}</h3>

@@ -16,7 +16,7 @@ export const Route = createFileRoute("/anime/$slug")({
     return { data: await loadAnimeData(input), related };
   },
   head: ({ loaderData, params }) => seoHead({
-    title: `${loaderData?.data.anime.titleZh ?? "作品"} - 作品资料、放送时间与最新情报`,
+    title: loaderData?.data.anime.titleZh ?? "作品",
     description: loaderData ? animeDescription(loaderData.data.anime) : undefined,
     path: `/anime/${encodeURIComponent(loaderData?.data.anime.slug ?? params.slug)}`,
     image: loaderData?.data.anime.coverUrl,

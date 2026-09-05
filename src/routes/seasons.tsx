@@ -9,7 +9,7 @@ export const Route = createFileRoute("/seasons")({
   staleTime: 900_000,
   loader: (loaderContext) => loadSeasonsData({ serverContext: serverContextFromLoader(loaderContext) }),
   head: ({ loaderData }) => seoHead({
-    title: "百合动画季度片单",
+    title: "季度片单",
     description: loaderData ? seasonsDescription(loaderData) : undefined,
     path: "/seasons",
   }),

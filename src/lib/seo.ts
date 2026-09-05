@@ -16,7 +16,7 @@ export function seoHead({ title, description = SITE_DESCRIPTION, path, image, no
   image?: string | null;
   noindex?: boolean;
 }) {
-  const fullTitle = `${title} · ${SITE_NAME}`;
+  const fullTitle = title === SITE_NAME ? SITE_NAME : `${title} · ${SITE_NAME}`;
   const summary = description.replace(/\s+/gu, " ").trim();
   const url = pageUrl(path);
   return {

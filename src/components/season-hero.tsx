@@ -12,6 +12,8 @@ import { seasonVisualName, seasonVisuals } from "@/lib/season-presentation";
 import { CoverImage } from "./cover-image";
 import { SeasonGlyphArt } from "./season-glyph-art";
 
+const rememberedCardIndexBySeason = new Map<string, number>();
+
 function seasonYear(season: Season): string {
   return season.label.match(/\d{4}/)?.[0] ?? season.startsOn.slice(0, 4);
 }
@@ -53,14 +55,14 @@ export function SeasonHero({ season, count, archived = false, anime, viewerTimeZ
   viewerTimeZone?: string;
   now?: Date;
 }) {
-  const [activeId, setActiveId] = useState<string>();
-  const [paused, setPaused] = useState(false);
   const visualName = seasonVisualName(season);
   const seasonPresentation = seasonVisuals[visualName];
   const selectionSeed = `${season.slug}:${now?.toISOString() ?? "stable"}`;
   const cards = useMemo(() => randomSeasonCards(anime, selectionSeed), [anime, selectionSeed]);
-  const active = cards.find((item) => item.id === activeId) ?? cards[0];
-  const activeIndex = Math.max(0, cards.findIndex((item) => item.id === active?.id));
+  const [activeIndex, setActiveIndex] = useState(() => rememberedCardIndexBySeason.get(season.slug) ?? 0);
+  const [paused, setPaused] = useState(false);
+  const visibleIndex = cards.length ? activeIndex % cards.length : 0;
+  const active = cards[visibleIndex];
   const effectiveTimeZone = viewerTimeZone ?? "Asia/Tokyo";
   const referenceNow = now ?? new Date();
   const slot = active?.primarySlot;
@@ -81,9 +83,10 @@ export function SeasonHero({ season, count, archived = false, anime, viewerTimeZ
       timeout = undefined;
     };
     const advance = () => {
-      setActiveId((currentId) => {
-        const currentIndex = Math.max(0, cards.findIndex((item) => item.id === currentId));
-        return cards[(currentIndex + 1) % cards.length]?.id;
+      setActiveIndex((currentIndex) => {
+        const nextIndex = (currentIndex + 1) % cards.length;
+        rememberedCardIndexBySeason.set(season.slug, nextIndex);
+        return nextIndex;
       });
     };
     const scheduleAdvance = () => {
@@ -110,7 +113,7 @@ export function SeasonHero({ season, count, archived = false, anime, viewerTimeZ
       window.removeEventListener("blur", clearScheduledAdvance);
       window.removeEventListener("focus", scheduleAdvance);
     };
-  }, [cards, paused]);
+  }, [cards, paused, season.slug]);
 
   return (
     <header
@@ -166,7 +169,7 @@ export function SeasonHero({ season, count, archived = false, anime, viewerTimeZ
         >
           <div className="season-card-stage relative mx-auto aspect-[3/4] w-[86%] max-w-[268px] md:w-[64%]">
             {cards.map((item, index) => {
-              const position = cardPosition(index, activeIndex, cards.length);
+              const position = cardPosition(index, visibleIndex, cards.length);
               return (
                 <Link
                   key={item.id}
@@ -194,13 +197,19 @@ export function SeasonHero({ season, count, archived = false, anime, viewerTimeZ
                     key={item.id}
                     type="button"
                     aria-label={`显示 ${item.titleZh}`}
-                    aria-pressed={item.id === active.id}
-                    onClick={() => setActiveId(item.id)}
-                    onMouseEnter={() => setActiveId(item.id)}
-                    className={`relative grid size-10 place-items-center text-[10px] tabular-nums transition-colors ${item.id === active.id ? "font-semibold text-ink" : "text-muted hover:text-ink"}`}
+                    aria-pressed={index === visibleIndex}
+                    onClick={() => {
+                      rememberedCardIndexBySeason.set(season.slug, index);
+                      setActiveIndex(index);
+                    }}
+                    onMouseEnter={() => {
+                      rememberedCardIndexBySeason.set(season.slug, index);
+                      setActiveIndex(index);
+                    }}
+                    className={`relative grid size-10 place-items-center text-[10px] tabular-nums transition-colors ${index === visibleIndex ? "font-semibold text-ink" : "text-muted hover:text-ink"}`}
                   >
                     {String(index + 1).padStart(2, "0")}
-                    <span className={`absolute bottom-1 size-1 rounded-full bg-accent ${item.id === active.id ? "opacity-100" : "opacity-0"}`} aria-hidden="true" />
+                    <span className={`absolute bottom-1 size-1 rounded-full bg-accent ${index === visibleIndex ? "opacity-100" : "opacity-0"}`} aria-hidden="true" />
                   </button>
                 ))}
               </div>

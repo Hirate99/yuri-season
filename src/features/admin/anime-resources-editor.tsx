@@ -20,11 +20,10 @@ export type ResourceSave = (
 
 export type ResourceGroup = "people" | "content" | "monitoring";
 
-export function AnimeResourcesEditor({ animeId, anime, group, onChanged }: {
+export function AnimeResourcesEditor({ animeId, anime, group }: {
   animeId: string;
   anime: AdminAnimeSummary[];
   group: ResourceGroup;
-  onChanged: () => void;
 }) {
   const resources = useApi<AdminAnimeResources>((signal) => rpcData(
     apiClient.api.admin.anime[":id"].resources.$get({ param: { id: animeId } }, { init: { signal } }),
@@ -49,7 +48,6 @@ export function AnimeResourcesEditor({ animeId, anime, group, onChanged }: {
         }));
       }
       resources.reload();
-      onChanged();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
       throw cause;
@@ -65,7 +63,6 @@ export function AnimeResourcesEditor({ animeId, anime, group, onChanged }: {
     try {
       await rpcData(apiClient.api.admin.discussions[":id"].$delete({ param: { id }, json: { reason } }));
       resources.reload();
-      onChanged();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
       throw cause;
@@ -87,7 +84,6 @@ export function AnimeResourcesEditor({ animeId, anime, group, onChanged }: {
         param: { animeId, kind, id },
       }));
       resources.reload();
-      onChanged();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -98,6 +94,7 @@ export function AnimeResourcesEditor({ animeId, anime, group, onChanged }: {
   return (
     <section className="border-t border-black/[0.05] bg-white p-5 md:p-7">
       {resources.loading && <LoadingRows count={3} />}
+      {resources.refreshing && <p className="mb-3 text-xs text-muted" role="status">正在更新资料…</p>}
       {resources.error && <EmptyState title="资料加载失败" detail={resources.error} />}
       {error && <p className="mt-3 border border-line bg-raised p-2 text-[10px] text-[#8b3048]">{error}</p>}
       {resources.data && (

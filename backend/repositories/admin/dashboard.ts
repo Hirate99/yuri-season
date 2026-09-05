@@ -1,5 +1,6 @@
 import type {
   AdminDashboard,
+  AdminDashboardView,
   AdminPublication,
   AuditEntry,
   FeedCandidate,
@@ -221,17 +222,18 @@ async function readAudit(db: D1Database): Promise<AuditEntry[]> {
   }));
 }
 
-export async function readAdminDashboardData(db: D1Database): Promise<DashboardData> {
+export async function readAdminDashboardData(db: D1Database, view: AdminDashboardView = "all"): Promise<DashboardData> {
+  const includes = (...views: AdminDashboardView[]) => view === "all" || views.includes(view);
   const [counts, animeRows, heldCandidates, sources, recentRuns, recentJobs, recentPublications, recentAudit] =
     await Promise.all([
       readCounts(db),
-      readAllAnimeSummaries(db),
-      readHeldCandidates(db),
-      readSources(db),
-      readRuns(db),
-      readJobs(db),
-      readPublications(db),
-      readAudit(db),
+      includes("works") ? readAllAnimeSummaries(db) : [],
+      includes("review") ? readHeldCandidates(db) : [],
+      includes("overview", "automation") ? readSources(db) : [],
+      includes("overview", "automation") ? readRuns(db) : [],
+      includes("overview", "automation") ? readJobs(db) : [],
+      includes("review") ? readPublications(db) : [],
+      includes("automation") ? readAudit(db) : [],
     ]);
   return {
     counts,

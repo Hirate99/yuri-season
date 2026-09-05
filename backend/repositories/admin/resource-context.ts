@@ -16,13 +16,12 @@ export async function assertAnime(db: D1Database, animeId: string): Promise<void
 
 export async function personBelongsToAnime(db: D1Database, animeId: string, personId: string): Promise<boolean> {
   const orm = database(db);
-  const [staff, cast] = await Promise.all([
-    orm.select({ id: workCreditsTable.id }).from(workCreditsTable)
-      .where(and(eq(workCreditsTable.animeId, animeId), eq(workCreditsTable.personId, personId))).get(),
-    orm.select({ id: castCreditsTable.id }).from(castCreditsTable)
-      .where(and(eq(castCreditsTable.animeId, animeId), eq(castCreditsTable.personId, personId))).get(),
-  ]);
-  return Boolean(staff || cast);
+  const [credit] = await orm.select({ id: workCreditsTable.id }).from(workCreditsTable)
+    .where(and(eq(workCreditsTable.animeId, animeId), eq(workCreditsTable.personId, personId)))
+    .unionAll(orm.select({ id: castCreditsTable.id }).from(castCreditsTable)
+      .where(and(eq(castCreditsTable.animeId, animeId), eq(castCreditsTable.personId, personId))))
+    .limit(1);
+  return Boolean(credit);
 }
 
 export async function assertAccountOwner(db: D1Database, animeId: string, value: AccountWrite): Promise<void> {
@@ -35,14 +34,18 @@ export async function assertAccountOwner(db: D1Database, animeId: string, value:
   }
 }
 
-export async function assertSourceAccount(db: D1Database, animeId: string, accountId: string | null): Promise<void> {
-  if (!accountId) return;
+export async function accountBelongsToAnime(db: D1Database, animeId: string, accountId: string): Promise<boolean> {
   const account = await database(db).select({ ownerType: accountsTable.ownerType, ownerId: accountsTable.ownerId })
     .from(accountsTable).where(eq(accountsTable.id, accountId)).get();
-  const belongs = account?.ownerType === "anime"
-    ? account.ownerId === animeId
-    : account ? await personBelongsToAnime(db, animeId, account.ownerId) : false;
-  if (!belongs) throw new HttpError(400, "来源账号不属于当前作品。");
+  if (!account) return false;
+  if (account.ownerType === "anime") return account.ownerId === animeId;
+  return personBelongsToAnime(db, animeId, account.ownerId);
+}
+
+export async function assertSourceAccount(db: D1Database, animeId: string, accountId: string | null): Promise<void> {
+  if (accountId && !await accountBelongsToAnime(db, animeId, accountId)) {
+    throw new HttpError(400, "来源账号不属于当前作品。");
+  }
 }
 
 export async function personForWrite(

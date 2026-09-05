@@ -1,5 +1,5 @@
 import type { AdminAnimeResources } from "@/domain";
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 
 import { database } from "~/infrastructure/db/client";
 import {
@@ -20,86 +20,89 @@ export async function readAdminAnimeResources(
   animeId: string,
 ): Promise<AdminAnimeResources> {
   const orm = database(db);
-  const [anime, broadcasts, staff, cast, sources, content] = await Promise.all([
-    orm.select({ id: animeTable.id, title: animeTable.titleZh })
-      .from(animeTable)
-      .where(eq(animeTable.id, animeId))
-      .get(),
-    orm.select({
-      id: broadcastSlotsTable.id,
-      label: broadcastSlotsTable.label,
-      weekday: broadcastSlotsTable.weekday,
-      localTime: broadcastSlotsTable.localTime,
-      timezone: broadcastSlotsTable.timezone,
-      platformUrl: broadcastSlotsTable.platformUrl,
-      isPrimary: broadcastSlotsTable.isPrimary,
-    }).from(broadcastSlotsTable)
-      .where(eq(broadcastSlotsTable.animeId, animeId))
-      .orderBy(
-        desc(broadcastSlotsTable.isPrimary),
-        broadcastSlotsTable.weekday,
-        broadcastSlotsTable.localTime,
-        broadcastSlotsTable.id,
-      ),
-    orm.select({
-      id: workCreditsTable.id,
-      personId: workCreditsTable.personId,
-      name: peopleTable.name,
-      nameNative: peopleTable.nameNative,
-      primaryKind: peopleTable.primaryKind,
-      role: workCreditsTable.role,
-      profileUrl: workCreditsTable.profileUrl,
-      sortOrder: workCreditsTable.sortOrder,
-    }).from(workCreditsTable)
-      .innerJoin(peopleTable, eq(peopleTable.id, workCreditsTable.personId))
-      .where(eq(workCreditsTable.animeId, animeId))
-      .orderBy(workCreditsTable.sortOrder, workCreditsTable.id),
-    orm.select({
-      id: castCreditsTable.id,
-      characterId: castCreditsTable.characterId,
-      characterName: charactersTable.name,
-      characterNameNative: charactersTable.nameNative,
-      nameSourceUrl: charactersTable.nameSourceUrl,
-      characterProfile: charactersTable.profile,
-      profileSourceUrl: charactersTable.profileSourceUrl,
-      portraitUrl: charactersTable.portraitUrl,
-      portraitSourceUrl: charactersTable.portraitSourceUrl,
-      isMainGroup: charactersTable.isMainGroup,
-      personId: castCreditsTable.personId,
-      personName: peopleTable.name,
-      personNameNative: peopleTable.nameNative,
-      birthdayMonth: charactersTable.birthdayMonth,
-      birthdayDay: charactersTable.birthdayDay,
-      birthdayYear: charactersTable.birthdayYear,
-      birthdayTimezone: charactersTable.birthdayTimezone,
-      birthdaySourceUrl: charactersTable.birthdaySourceUrl,
-      birthdayVerified: charactersTable.birthdayVerified,
-      sortOrder: castCreditsTable.sortOrder,
-    }).from(castCreditsTable)
-      .innerJoin(charactersTable, eq(charactersTable.id, castCreditsTable.characterId))
-      .innerJoin(peopleTable, eq(peopleTable.id, castCreditsTable.personId))
-      .where(eq(castCreditsTable.animeId, animeId))
-      .orderBy(castCreditsTable.sortOrder, castCreditsTable.id),
-    orm.select({
-      id: researchSourcesTable.id,
-      accountId: researchSourcesTable.accountId,
-      sourceType: researchSourcesTable.sourceType,
-      changeKind: researchSourcesTable.changeKind,
-      label: researchSourcesTable.label,
-      url: researchSourcesTable.url,
-      itemUrlTemplate: researchSourcesTable.itemUrlTemplate,
-      trustLevel: researchSourcesTable.trustLevel,
-      publicTextMode: researchSourcesTable.publicTextMode,
-      maxPublicCharacters: researchSourcesTable.maxPublicCharacters,
-      pollIntervalMin: researchSourcesTable.pollIntervalMin,
-      cadenceProfile: researchSourcesTable.cadenceProfile,
-      enabled: researchSourcesTable.enabled,
-    }).from(researchSourcesTable)
-      .where(eq(researchSourcesTable.animeId, animeId))
-      .orderBy(desc(researchSourcesTable.enabled), researchSourcesTable.label, researchSourcesTable.id),
+  const [[animeRows, broadcasts, staff, cast, sources], content] = await Promise.all([
+    orm.batch([
+      orm.select({ id: animeTable.id, title: animeTable.titleZh })
+        .from(animeTable)
+        .where(eq(animeTable.id, animeId))
+        .limit(1),
+      orm.select({
+        id: broadcastSlotsTable.id,
+        label: broadcastSlotsTable.label,
+        weekday: broadcastSlotsTable.weekday,
+        localTime: broadcastSlotsTable.localTime,
+        timezone: broadcastSlotsTable.timezone,
+        platformUrl: broadcastSlotsTable.platformUrl,
+        isPrimary: broadcastSlotsTable.isPrimary,
+      }).from(broadcastSlotsTable)
+        .where(eq(broadcastSlotsTable.animeId, animeId))
+        .orderBy(
+          desc(broadcastSlotsTable.isPrimary),
+          broadcastSlotsTable.weekday,
+          broadcastSlotsTable.localTime,
+          broadcastSlotsTable.id,
+        ),
+      orm.select({
+        id: workCreditsTable.id,
+        personId: workCreditsTable.personId,
+        name: peopleTable.name,
+        nameNative: peopleTable.nameNative,
+        primaryKind: peopleTable.primaryKind,
+        role: workCreditsTable.role,
+        profileUrl: workCreditsTable.profileUrl,
+        sortOrder: workCreditsTable.sortOrder,
+      }).from(workCreditsTable)
+        .innerJoin(peopleTable, eq(peopleTable.id, workCreditsTable.personId))
+        .where(eq(workCreditsTable.animeId, animeId))
+        .orderBy(workCreditsTable.sortOrder, workCreditsTable.id),
+      orm.select({
+        id: castCreditsTable.id,
+        characterId: castCreditsTable.characterId,
+        characterName: sql<string>`${charactersTable.name}`.as("character_name"),
+        characterNameNative: sql<string | null>`${charactersTable.nameNative}`.as("character_name_native"),
+        nameSourceUrl: charactersTable.nameSourceUrl,
+        characterProfile: charactersTable.profile,
+        profileSourceUrl: charactersTable.profileSourceUrl,
+        portraitUrl: charactersTable.portraitUrl,
+        portraitSourceUrl: charactersTable.portraitSourceUrl,
+        isMainGroup: charactersTable.isMainGroup,
+        personId: castCreditsTable.personId,
+        personName: peopleTable.name,
+        personNameNative: peopleTable.nameNative,
+        birthdayMonth: charactersTable.birthdayMonth,
+        birthdayDay: charactersTable.birthdayDay,
+        birthdayYear: charactersTable.birthdayYear,
+        birthdayTimezone: charactersTable.birthdayTimezone,
+        birthdaySourceUrl: charactersTable.birthdaySourceUrl,
+        birthdayVerified: charactersTable.birthdayVerified,
+        sortOrder: castCreditsTable.sortOrder,
+      }).from(castCreditsTable)
+        .innerJoin(charactersTable, eq(charactersTable.id, castCreditsTable.characterId))
+        .innerJoin(peopleTable, eq(peopleTable.id, castCreditsTable.personId))
+        .where(eq(castCreditsTable.animeId, animeId))
+        .orderBy(castCreditsTable.sortOrder, castCreditsTable.id),
+      orm.select({
+        id: researchSourcesTable.id,
+        accountId: researchSourcesTable.accountId,
+        sourceType: researchSourcesTable.sourceType,
+        changeKind: researchSourcesTable.changeKind,
+        label: researchSourcesTable.label,
+        url: researchSourcesTable.url,
+        itemUrlTemplate: researchSourcesTable.itemUrlTemplate,
+        trustLevel: researchSourcesTable.trustLevel,
+        publicTextMode: researchSourcesTable.publicTextMode,
+        maxPublicCharacters: researchSourcesTable.maxPublicCharacters,
+        pollIntervalMin: researchSourcesTable.pollIntervalMin,
+        cadenceProfile: researchSourcesTable.cadenceProfile,
+        enabled: researchSourcesTable.enabled,
+      }).from(researchSourcesTable)
+        .where(eq(researchSourcesTable.animeId, animeId))
+        .orderBy(desc(researchSourcesTable.enabled), researchSourcesTable.label, researchSourcesTable.id),
+    ]),
     readAdminContentResources(db, animeId),
   ]);
 
+  const anime = animeRows[0];
   if (!anime) throw new HttpError(404, "没有找到这部动画。");
 
   const ownerLabels = new Map<string, string>([[animeId, anime.title]]);

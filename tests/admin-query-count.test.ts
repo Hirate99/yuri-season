@@ -15,6 +15,19 @@ beforeEach(async () => {
 afterEach(() => database.close());
 
 describe("Admin dashboard query budget", () => {
+  test("loads work editing without the unrelated review, research and coverage queries", async () => {
+    const full = await readAdminDashboard(database.binding());
+    database.resetMetrics();
+    const works = await readAdminDashboard(database.binding(), "works");
+    expect(works.anime).toEqual(full.anime);
+    expect(works.seasons).toEqual(full.seasons);
+    expect(works.counts).toEqual(full.counts);
+    expect(works.coverage).toEqual([]);
+    expect(works.sources).toEqual([]);
+    expect(works.heldCandidates).toEqual([]);
+    expect(database.preparedStatements).toBeLessThanOrEqual(8);
+  });
+
   test("does not add one catalog query per season", async () => {
     database.resetMetrics();
     await readAdminDashboard(database.binding());

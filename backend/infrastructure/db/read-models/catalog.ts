@@ -1,5 +1,4 @@
-import type { CalendarEvent } from "@/domain";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { database } from "../client";
 import { animeTable, broadcastSlotsTable, charactersTable, eventsTable } from "../schema";
 
@@ -29,7 +28,7 @@ function eventQuery(db: D1Database) {
     .$dynamic();
 }
 
-export function readEventsForSeason(db: D1Database, seasonId: string): Promise<CalendarEvent[]> {
+export function readEventsForSeason(db: D1Database, seasonId: string) {
   return eventQuery(db).where(and(
     eq(animeTable.seasonId, seasonId),
     eq(eventsTable.status, "scheduled"),
@@ -37,7 +36,7 @@ export function readEventsForSeason(db: D1Database, seasonId: string): Promise<C
   )).orderBy(asc(eventsTable.startsAt), asc(eventsTable.title));
 }
 
-export function readEventsForAnime(db: D1Database, animeId: string): Promise<CalendarEvent[]> {
+export function readEventsForAnime(db: D1Database, animeId: string) {
   return eventQuery(db).where(and(
     eq(eventsTable.animeId, animeId),
     eq(eventsTable.verified, true),
@@ -59,7 +58,7 @@ export function readCalendarSlots(db: D1Database, seasonId: string) {
     episodeCount: animeTable.episodeCount,
     premiereEpisodeCount: animeTable.premiereEpisodeCount,
     latestVerifiedEpisode: animeTable.latestVerifiedEpisode,
-    slotId: broadcastSlotsTable.id,
+    slotId: sql<string>`${broadcastSlotsTable.id}`.as("slot_id"),
     slotLabel: broadcastSlotsTable.label,
     slotWeekday: broadcastSlotsTable.weekday,
     slotLocalTime: broadcastSlotsTable.localTime,

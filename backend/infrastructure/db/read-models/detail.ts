@@ -1,4 +1,3 @@
-import type { AnimeSource, BroadcastSlot, ThemeSong } from "@/domain";
 import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { database } from "../client";
 import {
@@ -12,7 +11,7 @@ import {
   workCreditsTable,
 } from "../schema";
 
-export function readBroadcasts(db: D1Database, animeId: string): Promise<BroadcastSlot[]> {
+export function readBroadcasts(db: D1Database, animeId: string) {
   return database(db).select({
     id: broadcastSlotsTable.id,
     label: broadcastSlotsTable.label,
@@ -49,8 +48,8 @@ export function readCast(db: D1Database, animeId: string) {
     id: castCreditsTable.id,
     characterId: castCreditsTable.characterId,
     personId: castCreditsTable.personId,
-    characterName: charactersTable.name,
-    characterNameNative: charactersTable.nameNative,
+    characterName: sql<string>`${charactersTable.name}`.as("character_name"),
+    characterNameNative: sql<string | null>`${charactersTable.nameNative}`.as("character_name_native"),
     nameSourceUrl: charactersTable.nameSourceUrl,
     characterProfile: charactersTable.profile,
     profileSourceUrl: charactersTable.profileSourceUrl,
@@ -71,7 +70,7 @@ export function readCast(db: D1Database, animeId: string) {
     .orderBy(asc(castCreditsTable.sortOrder), asc(castCreditsTable.id));
 }
 
-export function readSources(db: D1Database, animeId: string): Promise<AnimeSource[]> {
+export function readSources(db: D1Database, animeId: string) {
   return database(db).select({
     id: researchSourcesTable.id,
     label: researchSourcesTable.label,
@@ -95,8 +94,8 @@ export function readSources(db: D1Database, animeId: string): Promise<AnimeSourc
     );
 }
 
-export async function readThemeSongs(db: D1Database, animeId: string): Promise<ThemeSong[]> {
-  const rows = await database(db).select({
+export function readThemeSongs(db: D1Database, animeId: string) {
+  return database(db).select({
     id: animeThemeSongsTable.id,
     songKind: animeThemeSongsTable.songKind,
     sequence: animeThemeSongsTable.sequence,
@@ -123,5 +122,4 @@ export async function readThemeSongs(db: D1Database, animeId: string): Promise<T
       asc(animeThemeSongsTable.sequence),
       asc(animeThemeSongsTable.id),
     );
-  return rows.flatMap((row) => row.sourceUrl ? [{ ...row, sourceUrl: row.sourceUrl }] : []);
 }

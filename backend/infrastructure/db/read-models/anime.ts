@@ -61,7 +61,7 @@ const catalogAnimeSelection = {
   premiereEpisodeCount: animeTable.premiereEpisodeCount,
   latestVerifiedEpisode: animeTable.latestVerifiedEpisode,
   coverUrl: animeTable.coverUrl,
-  slotId: broadcastSlotsTable.id,
+  slotId: sql<string | null>`${broadcastSlotsTable.id}`.as("slot_id"),
   slotLabel: broadcastSlotsTable.label,
   slotWeekday: broadcastSlotsTable.weekday,
   slotLocalTime: broadcastSlotsTable.localTime,

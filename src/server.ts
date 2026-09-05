@@ -1,5 +1,6 @@
 import startHandler from "@tanstack/react-start/server-entry";
 import { api } from "~/http/api";
+import { seoRoutes } from "~/http/seo";
 import { redirectPublicAdmin } from "~/platform/admin-boundary";
 import { laneForCron, runResearch } from "~/research/scheduler";
 import { publicApiOriginFromRequest, viewerTimeZoneFromRequest, type ServerRequestContext } from "./server-context";
@@ -19,7 +20,12 @@ export default {
     const adminRedirect = redirectPublicAdmin(request, env);
     if (adminRedirect) return adminRedirect;
 
-    if (new URL(request.url).pathname.startsWith("/api/")) {
+    const pathname = new URL(request.url).pathname;
+    if (pathname === "/robots.txt" || pathname === "/sitemap.xml") {
+      return seoRoutes.fetch(request, env, executionContext);
+    }
+
+    if (pathname.startsWith("/api/")) {
       return api.fetch(request, env, executionContext);
     }
 
@@ -31,7 +37,11 @@ export default {
       publicApiOrigin: publicApiOriginFromRequest(request),
     };
     const response = await startHandler.fetch(request, { context });
-    return withServerTiming(response, "ssr", startedAt);
+    const timedResponse = withServerTiming(response, "ssr", startedAt);
+    if (response.status >= 400 || pathname === "/admin" || pathname.startsWith("/admin/")) {
+      timedResponse.headers.set("x-robots-tag", "noindex, nofollow");
+    }
+    return timedResponse;
   },
 
   scheduled(controller, env, executionContext): void {

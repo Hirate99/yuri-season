@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
 import appCss from "@/styles/app.css?url";
 import type { RouterContext } from "@/router-context";
+import { SITE_DESCRIPTION } from "@/lib/seo";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
@@ -10,7 +11,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#ffffff" },
-      { name: "description", content: "当季百合动画、放送日历、Staff、声优动态与社区讨论索引。" },
+      { name: "description", content: SITE_DESCRIPTION },
       { title: "YuriSeason" },
     ],
     links: [

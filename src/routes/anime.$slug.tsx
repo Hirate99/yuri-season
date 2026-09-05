@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AnimePage } from "@/pages/anime-page";
 import { loadAnimeData, loadAnimeRelatedData } from "@/lib/public-loaders";
 import { serverContextFromLoader } from "@/server-context";
+import { seoHead } from "@/lib/seo";
+import { animeDescription } from "@/lib/seo-descriptions";
 
 export const Route = createFileRoute("/anime/$slug")({
   staleTime: 180_000,
@@ -13,10 +15,12 @@ export const Route = createFileRoute("/anime/$slug")({
     const related = loadAnimeRelatedData(input).catch(() => null);
     return { data: await loadAnimeData(input), related };
   },
-  head: ({ loaderData }) => ({ meta: [
-    { title: `${loaderData?.data.anime.titleZh ?? "作品"} · YuriSeason` },
-    { name: "description", content: loaderData?.data.anime.synopsis ?? "作品资料与最新动态" },
-  ] }),
+  head: ({ loaderData, params }) => seoHead({
+    title: `${loaderData?.data.anime.titleZh ?? "作品"} - 作品资料、放送时间与最新情报`,
+    description: loaderData ? animeDescription(loaderData.data.anime) : undefined,
+    path: `/anime/${encodeURIComponent(loaderData?.data.anime.slug ?? params.slug)}`,
+    image: loaderData?.data.anime.coverUrl,
+  }),
   component: AnimeRoute,
 });
 

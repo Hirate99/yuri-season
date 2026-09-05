@@ -12,7 +12,7 @@ export const Route = createFileRoute("/season/$slug")({
     seasonSlug: loaderContext.params.slug,
   }),
   head: ({ loaderData, params }) => seoHead({
-    title: `${seasonName(loaderData?.catalog.season.label ?? "季度")}百合动画片单`,
+    title: seasonName(loaderData?.catalog.season.label ?? "季度"),
     description: loaderData ? catalogDescription(loaderData.catalog) : undefined,
     path: `/season/${encodeURIComponent(params.slug)}`,
   }),

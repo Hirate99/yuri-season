@@ -14,7 +14,7 @@ export const Route = createFileRoute("/feed")({
     // A nested publication supplies its own canonical URL and metadata.
     if (matches.some((entry) => String(entry.routeId) === "/feed/$id")) return {};
     return seoHead({
-      title: "百合动画最新情报与官方动态",
+      title: "情报",
       description: "百合动画情报时间线：追踪官方新消息、放送变更、宣传视觉图、声优与制作人员动态，也收录角色生日、同人精选和集中讨论。可按作品、内容类型或关键词查找，进入详情查看来源与已收录的原文、中文翻译和图片。",
       path: "/feed",
       noindex: Boolean(match.search.q || match.search.anime || match.search.category),

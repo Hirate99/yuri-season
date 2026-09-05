@@ -2,15 +2,15 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import type { CatalogAnime, CatalogResponse } from "@/domain";
+import { useViewerTimeZone } from "@/hooks/use-viewer-timezone";
 import { eventOccursToday, partitionCalendarEvents } from "@/lib/calendar-events";
 import { verifiedBirthdayPortrait } from "@/lib/character-portraits";
 import { eventPresentation, eventTitle } from "@/lib/event-presentation";
 import { weekdayLabel } from "@/lib/format";
 import { bangumiCoverUrl } from "@/lib/media-url";
 import { seasonPalettes, seasonVisualName } from "@/lib/season-presentation";
-import { weekdayInTimeZone } from "@/lib/timezone";
+import { broadcastInstantOnDate, calendarParts, timeZoneLabel, weekdayInTimeZone } from "@/lib/timezone";
 import { cn } from "@/lib/ui";
-import { BroadcastTime } from "./broadcast-time";
 import { CoverImage } from "./cover-image";
 import { EpisodeProgressBadge } from "./episode-progress-badge";
 import { EventTime } from "./event-time";
@@ -27,20 +27,8 @@ type WeekDate = {
   day: number;
 };
 
-function japanDateParts(now: Date): Omit<WeekDate, "weekday"> {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: JAPAN_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
-  const value = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((part) => part.type === type)?.value);
-  return { year: value("year"), month: value("month"), day: value("day") };
-}
-
-function currentWeek(now: Date): WeekDate[] {
-  const today = japanDateParts(now);
+function currentWeek(now: Date, timeZone: string): WeekDate[] {
+  const today = calendarParts(now, timeZone);
   const source = new Date(Date.UTC(today.year, today.month - 1, today.day));
   const mondayOffset = (source.getUTCDay() + 6) % 7;
   return weekdays.map((weekday, index) => {
@@ -63,33 +51,34 @@ function calendarRangeLabel(week: WeekDate[]): string {
     : `${first.month}月${first.day}日 — ${last.month}月${last.day}日`;
 }
 
-function broadcastMinutes(value: string): number {
-  const [hour, minute] = value.split(":").map(Number);
-  return (hour || 0) * 60 + (minute || 0);
-}
-
-function entriesForDay(anime: CatalogAnime[], weekday: number): CatalogAnime[] {
+function entriesForDay(anime: CatalogAnime[], date: WeekDate, timeZone: string) {
   return anime
-    .filter((item) => item.primarySlot?.weekday === weekday)
+    .flatMap((item) => {
+      const instant = item.primarySlot && broadcastInstantOnDate(item.primarySlot, timeZone, date);
+      return instant ? [{ anime: item, instant }] : [];
+    })
     .sort((left, right) =>
-      broadcastMinutes(left.primarySlot?.localTime ?? "00:00")
-      - broadcastMinutes(right.primarySlot?.localTime ?? "00:00")
-      || left.titleZh.localeCompare(right.titleZh));
+      left.instant.valueOf() - right.instant.valueOf()
+      || left.anime.titleZh.localeCompare(right.anime.titleZh));
 }
 
-export function HomeCalendar({ catalog, viewerTimeZone, renderedAt }: {
+export function HomeCalendar({ catalog, viewerTimeZone: initialTimeZone, renderedAt }: {
   catalog: CatalogResponse;
   viewerTimeZone: string;
   renderedAt: string;
 }) {
+  const viewerTimeZone = useViewerTimeZone() ?? initialTimeZone;
   const now = new Date(renderedAt);
-  const today = weekdayInTimeZone(JAPAN_TIME_ZONE, now);
-  const [selectedDay, setSelectedDay] = useState(today);
+  const today = weekdayInTimeZone(viewerTimeZone, now);
+  const [daySelection, setDaySelection] = useState<{ weekday: number; timeZone: string } | null>(null);
+  const selectedDay = daySelection?.timeZone === viewerTimeZone ? daySelection.weekday : today;
   const [broadcastPage, setBroadcastPage] = useState(0);
   const [eventPage, setEventPage] = useState(0);
-  const week = currentWeek(now);
-  const selectedDate = week.find((date) => date.weekday === selectedDay) ?? week[0];
-  const selectedEntries = entriesForDay(catalog.anime, selectedDay);
+  const week = currentWeek(now, viewerTimeZone).map((date) => ({
+    ...date, entries: entriesForDay(catalog.anime, date, viewerTimeZone),
+  }));
+  const selectedDate = week.find((date) => date.weekday === selectedDay)!;
+  const selectedEntries = selectedDate.entries;
   const broadcastPageCount = Math.max(1, Math.ceil(selectedEntries.length / BROADCAST_PAGE_SIZE));
   const visibleBroadcastPage = Math.min(broadcastPage, broadcastPageCount - 1);
   const broadcastPageStart = visibleBroadcastPage * BROADCAST_PAGE_SIZE;
@@ -113,7 +102,7 @@ export function HomeCalendar({ catalog, viewerTimeZone, renderedAt }: {
     <section className="mt-4 md:mt-8" id="calendar" aria-labelledby="home-calendar-title">
       <header className="flex items-end justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[9px] leading-none font-semibold tracking-[0.18em] text-muted">WEEKLY INDEX · JST</p>
+          <p className="text-[9px] leading-none font-semibold tracking-[0.18em] text-muted">WEEKLY INDEX · {timeZoneLabel(viewerTimeZone, now)}</p>
           <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h2 id="home-calendar-title" className="text-[24px] leading-none font-semibold tracking-[-0.04em] md:text-[32px]">本周放送</h2>
             <p className="text-[11px] text-muted tabular-nums md:text-xs">{calendarRangeLabel(week)}</p>
@@ -129,7 +118,7 @@ export function HomeCalendar({ catalog, viewerTimeZone, renderedAt }: {
         <div className="relative bg-white px-1.5 py-1.5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:-bottom-7 before:rounded-t-[20px] before:border-x before:border-t before:border-line before:content-[''] sm:px-2.5 sm:before:rounded-t-[28px]">
             <nav className="relative z-10 grid grid-cols-7 gap-0.5 sm:gap-1.5" aria-label="选择本周放送日">
               {week.map((date) => {
-                const entries = entriesForDay(catalog.anime, date.weekday);
+                const { entries } = date;
                 const isSelected = date.weekday === selectedDay;
                 const isToday = date.weekday === today;
                 return (
@@ -138,7 +127,7 @@ export function HomeCalendar({ catalog, viewerTimeZone, renderedAt }: {
                     key={date.weekday}
                     aria-pressed={isSelected}
                     onClick={() => {
-                      setSelectedDay(date.weekday);
+                      setDaySelection({ weekday: date.weekday, timeZone: viewerTimeZone });
                       setBroadcastPage(0);
                     }}
                     className={cn(
@@ -198,7 +187,7 @@ export function HomeCalendar({ catalog, viewerTimeZone, renderedAt }: {
               "relative z-10 mt-5 grid flex-1 gap-2.5 sm:grid-cols-2",
               selectedEntries.length ? "content-start" : "grid-rows-[minmax(0,1fr)]",
             )}>
-                {visibleBroadcasts.map((anime) => (
+                {visibleBroadcasts.map(({ anime, instant }) => (
                   <Link
                     key={anime.id}
                     to="/anime/$slug"
@@ -208,7 +197,16 @@ export function HomeCalendar({ catalog, viewerTimeZone, renderedAt }: {
                     <CoverImage className="aspect-[3/4] w-[42px] rounded-[7px]" src={bangumiCoverUrl(anime.coverUrl, 100)} alt={`${anime.titleZh} 封面`} />
                     <div className="min-w-0">
                       {anime.primarySlot && (
-                        <BroadcastTime slot={anime.primarySlot} viewerTimeZone={viewerTimeZone} now={now} />
+                        <span className="block">
+                          <strong className="block text-sm tabular-nums">
+                            {new Intl.DateTimeFormat("en-GB", { timeZone: viewerTimeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(instant)} <small className="font-medium text-muted">{timeZoneLabel(viewerTimeZone, instant)}</small>
+                          </strong>
+                          {viewerTimeZone !== anime.primarySlot.timezone && (
+                            <small className="mt-0.5 block whitespace-nowrap text-[11px] font-normal tabular-nums text-muted">
+                              {weekdayLabel(anime.primarySlot.weekday)} {anime.primarySlot.localTime} {timeZoneLabel(anime.primarySlot.timezone, instant)}
+                            </small>
+                          )}
+                        </span>
                       )}
                       <h3 className="mt-1 line-clamp-2 text-[13px] leading-[18px] font-semibold group-hover:text-accent">{anime.titleZh}</h3>
                       <div className="mt-1.5 flex min-w-0 items-center gap-2 text-[10px] text-muted">

@@ -25,7 +25,7 @@ const SOURCE_ZONE_LABELS: Record<string, string> = {
   UTC: "UTC",
 };
 
-function calendarParts(date: Date, timeZone: string): CalendarParts {
+export function calendarParts(date: Date, timeZone: string): CalendarParts {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
@@ -107,6 +107,14 @@ export function broadcastInstantOnViewerDate(
   now = new Date(),
 ): Date | null {
   const viewerNow = calendarParts(now, viewerTimeZone);
+  return broadcastInstantOnDate(slot, viewerTimeZone, viewerNow);
+}
+
+export function broadcastInstantOnDate(
+  slot: Pick<BroadcastSlot, "weekday" | "localTime" | "timezone">,
+  viewerTimeZone: string,
+  viewerNow: Pick<CalendarParts, "year" | "month" | "day">,
+): Date | null {
   const start = zonedDateTimeToInstant({ ...viewerNow, hour: 0, minute: 0 }, viewerTimeZone);
   const followingDay = addUtcDays(
     new Date(Date.UTC(viewerNow.year, viewerNow.month - 1, viewerNow.day)),

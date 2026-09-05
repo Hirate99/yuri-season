@@ -1,6 +1,6 @@
 # Discovery result file
 
-Record one result for every executed leased task, including zero-hit, partial, and blocked work. `outcome` describes execution completeness; `status` controls durable search memory.
+Use the timeline example below for routine X coverage; account-discovery, fanwork, and community examples apply only to those explicit tasks. Record one result for every executed leased task, including zero-hit, partial, and blocked work. `outcome` describes execution completeness; `status` controls durable search memory.
 
 ```json
 {
@@ -115,8 +115,9 @@ For community-thread results preserve:
 
 - Use `active` when the target should be searched again, `exhausted` after repeated targeted searches find no credible lead, and `blocked` for login, CAPTCHA, or inaccessible sources.
 - Use `complete` only after satisfying the leased task's completion policy. Use `partial` when more pages remain and include `coverage.resumeCursor`; use `blocked` with `status: blocked` when the required surface is unavailable.
+- For routine access failures, first follow the verification and recovery procedure in `update-policy.md`. Record actual per-task progress: an unvisited account does not become partial because another account failed, and an inaccessible post is not editorially ignored. Revalidate old blockers in the current run; never fabricate a resume cursor or infer a rate limit from a generic page error.
 - Before recording a browser-dependent surface as blocked, attempt the app's in-app browser and then the user's Chrome browser unless the user selected a different surface or the first attempt produced a platform-level rate limit. In `notes`, identify each attempted surface and its concrete failure. HTTP 429 stops that platform without an immediate retry or browser switch; preserve partial coverage and the resume cursor so later work does not repeat already inspected originals.
-- Search-engine results cannot complete `timeline_scan` or `tag_scan`. Public embeds may complete an account timeline only when the task's previous cursor was reached; they cannot complete a global newest-first tag scan.
+- Search-engine results cannot complete `timeline_scan` or `tag_scan`. Routine X requires the signed-in original timeline. In an explicit audit that permits embeds, they may complete an account timeline only when the previous cursor was reached; they cannot complete a global newest-first tag scan.
 - Every inspected original in a timeline or tag scan must be represented by a hit with a stable `metadata.platformObjectId`, including ignored and rejected posts.
 - `nextCheckAt` is the agent's scheduling decision, not a fixed lane cadence. Every completed active task must provide it and explain it with short `reasonCodes`; the CLI enforces only a missed-coverage deadline and prevents partial work from being deferred.
 - Put newly verified tags, aliases, units, characters, or pair terms in `discoveredTerms` with the original source URL so later tag scans can reuse them without waiting for a person to update the query.

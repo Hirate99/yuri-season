@@ -2,6 +2,8 @@
 
 Use this policy for updating the public calendar and each work's event resources. Calendar entries are verified time-bearing facts, not dates inferred from Feed copy.
 
+For routine stories, apply event identity, time, and readback rules only to the encountered events. The annual Comic Market completeness checks below apply to an explicitly requested or scheduled calendar audit; they do not expand every routine story into an annual audit.
+
 ## Scope and priority
 
 - Cover medium- and large-scale public events with durable reader value: work or project concerts and Lives, stage or screening events, official online concerts or program festivals, conventions, exhibitions, industry/fan expos, and comparable hybrid events involving tracked works, project units, verified creators, or principal cast.

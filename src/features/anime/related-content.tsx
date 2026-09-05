@@ -19,7 +19,7 @@ export function MediaSection({ media }: { media: MediaItem[] }) {
   if (media.length === 0) return null;
   return (
     <section>
-      <SectionHeading title="贺图 / 同人" />
+      <SectionHeading title="相关创作" />
       <div className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-3">
         {media.map((item) => (
           <a key={item.id} href={item.originalUrl} target="_blank" rel="noreferrer" className="group min-w-0">

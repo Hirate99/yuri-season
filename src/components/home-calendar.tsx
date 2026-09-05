@@ -95,10 +95,18 @@ export function HomeCalendar({ catalog, viewerTimeZone, renderedAt }: {
   const broadcastPageStart = visibleBroadcastPage * BROADCAST_PAGE_SIZE;
   const visibleBroadcasts = selectedEntries.slice(broadcastPageStart, broadcastPageStart + BROADCAST_PAGE_SIZE);
   const allUpcomingEvents = partitionCalendarEvents(catalog.events, now).upcoming;
+  const orderedUpcomingEvents = allUpcomingEvents
+    .map((event, index) => ({
+      event,
+      index,
+      priority: event.eventType === "birthday" && eventOccursToday(event, JAPAN_TIME_ZONE, now) ? 1 : 0,
+    }))
+    .sort((left, right) => right.priority - left.priority || left.index - right.index)
+    .map(({ event }) => event);
   const eventPageCount = Math.max(1, Math.ceil(allUpcomingEvents.length / EVENT_PAGE_SIZE));
   const visibleEventPage = Math.min(eventPage, eventPageCount - 1);
   const eventPageStart = visibleEventPage * EVENT_PAGE_SIZE;
-  const upcomingEvents = allUpcomingEvents.slice(eventPageStart, eventPageStart + EVENT_PAGE_SIZE);
+  const upcomingEvents = orderedUpcomingEvents.slice(eventPageStart, eventPageStart + EVENT_PAGE_SIZE);
   const palette = seasonPalettes[seasonVisualName(catalog.season)];
 
   return (
@@ -254,35 +262,48 @@ export function HomeCalendar({ catalog, viewerTimeZone, renderedAt }: {
               )}
             </div>
           </header>
-          <div className="mt-5 grid flex-1 content-start gap-5" aria-live="polite">
+          <div
+            className={cn(
+              "mt-4 grid flex-1 gap-3",
+              upcomingEvents.length ? "min-h-0 grid-rows-[repeat(3,minmax(0,1fr))]" : "place-items-center",
+            )}
+            aria-live="polite"
+          >
             {upcomingEvents.map((event) => {
               const presentation = eventPresentation(event.eventType);
               const portrait = verifiedBirthdayPortrait(event);
               const isToday = eventOccursToday(event, JAPAN_TIME_ZONE, now);
+              const isBirthday = event.eventType === "birthday";
               return (
                 <article
                   key={event.id}
                   data-event-today={isToday || undefined}
+                  data-event-birthday={isBirthday || undefined}
                   className={cn(
-                    "relative grid grid-cols-[minmax(0,1fr)_auto] gap-x-3",
-                    isToday && "rounded-[16px] bg-white/70 px-3 py-2.5 shadow-[0_10px_26px_-22px_rgba(37,35,43,0.55)]",
+                    "relative grid h-full min-h-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 rounded-[14px] px-3 py-2.5",
                   )}
-                  style={isToday ? { boxShadow: `inset 3px 0 0 ${palette.warm}, 0 10px 26px -22px rgba(37,35,43,0.55)` } : undefined}
+                  style={isToday ? {
+                    backgroundImage: isBirthday
+                      ? `linear-gradient(112deg, ${palette.warm}3d 0%, ${palette.light}24 52%, rgba(255,255,255,0.58) 100%)`
+                      : `linear-gradient(112deg, ${palette.warm}24 0%, ${palette.base}18 54%, rgba(255,255,255,0.52) 100%)`,
+                  } : undefined}
                 >
-                  <div className="min-w-0">
+                  <div className="flex min-h-0 min-w-0 flex-col">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <EventTime event={event} viewerTimeZone={viewerTimeZone} />
-                      {isToday && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-white" style={{ backgroundColor: palette.deep }}>今天</span>}
-                      <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: `${palette.base}32`, color: palette.deep }}>
+                      {isToday && <span className="text-[10px] font-semibold tracking-[0.08em]" style={{ color: palette.deep }}>今天</span>}
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: `${isBirthday ? palette.warm : palette.base}32`, color: palette.deep }}>
                         {presentation.label}
                       </span>
                     </div>
-                    <h4 className="mt-2 line-clamp-2 text-[13px] leading-[19px] font-semibold">
-                      {event.animeSlug
-                        ? <Link to="/anime/$slug" params={{ slug: event.animeSlug }} className="hover:text-accent">{eventTitle(event)}</Link>
-                        : eventTitle(event)}
-                    </h4>
-                    {(event.animeTitle || event.characterName) && <p className="mt-1 text-[11px] leading-4 text-muted">{event.animeTitle ?? event.characterName}</p>}
+                    <div className="flex min-h-0 flex-1 flex-col justify-center pt-1">
+                      <h4 className="truncate text-[13px] leading-[19px] font-semibold">
+                        {event.animeSlug
+                          ? <Link to="/anime/$slug" params={{ slug: event.animeSlug }} className="hover:text-accent">{eventTitle(event)}</Link>
+                          : eventTitle(event)}
+                      </h4>
+                      {(event.animeTitle || event.characterName) && <p className="mt-1 truncate text-[11px] leading-4 text-muted">{event.animeTitle ?? event.characterName}</p>}
+                    </div>
                   </div>
                   {portrait && <CoverImage className="mt-1 size-10 rounded-full ring-2 ring-white" src={portrait.imageUrl} alt={`${event.characterName ?? "角色"}头像`} />}
                   {event.sourceUrl && (
@@ -293,7 +314,7 @@ export function HomeCalendar({ catalog, viewerTimeZone, renderedAt }: {
                 </article>
               );
             })}
-            {!upcomingEvents.length && <p className="py-8 text-sm leading-6 text-muted">暂时没有已确认的近期事件。</p>}
+            {!upcomingEvents.length && <p className="text-sm leading-6 text-muted">暂时没有已确认的近期事件。</p>}
           </div>
         </aside>
       </div>

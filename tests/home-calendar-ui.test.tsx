@@ -154,14 +154,26 @@ test("home calendar marks an event occurring today on the Japan calendar", async
   const sourceEvent = catalog.events[0]!;
   const html = await renderCalendar({
     ...catalog,
-    events: [{
-      ...sourceEvent,
-      id: "today-event",
-      title: "今天的特别活动",
-      startsAt: "2026-09-04T19:00:00+09:00",
-    }],
+    events: [
+      {
+        ...sourceEvent,
+        id: "today-event",
+        title: "今天的特别活动",
+        startsAt: "2026-09-04T19:00:00+09:00",
+      },
+      {
+        ...sourceEvent,
+        id: "today-birthday",
+        eventType: "birthday",
+        title: "紫阳花 生日",
+        startsAt: "2000-09-04",
+      },
+    ],
   });
   expect(html).toContain('data-event-today="true"');
+  expect(html).toContain('data-event-birthday="true"');
   expect(html).toContain(">今天</span>");
   expect(html).toContain("今天的特别活动");
+  expect(html.indexOf("紫阳花")).toBeLessThan(html.indexOf("今天的特别活动"));
+  expect(html).toContain("#eb8b703d");
 });

@@ -1,0 +1,8 @@
+# Route local pages and frontend assets to Vite; keep /api/** on production.
+i-yuri.com http://[::1]:3000 excludeFilter://*/api
+
+# Tell local SSR to use the public production API. Production ignores this header.
+i-yuri.com reqHeaders://x-yuri-production-data=1 excludeFilter://*/api
+
+# Vite HMR.
+wss://i-yuri.com/ ws://[::1]:3000/

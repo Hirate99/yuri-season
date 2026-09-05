@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { loadPublicationData } from "@/lib/public-loaders";
 import { PublicationPage } from "@/pages/publication-page";
 import { serverContextFromLoader } from "@/server-context";
+import { publicationHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/feed/$id")({
   staleTime: 180_000,
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/feed/$id")({
     serverContext: serverContextFromLoader(loaderContext),
     id: loaderContext.params.id,
   }),
+  head: ({ loaderData, params }) => publicationHead(loaderData, params.id),
   component: FeedPublicationRoute,
 });
 

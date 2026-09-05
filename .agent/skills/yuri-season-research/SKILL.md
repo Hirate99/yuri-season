@@ -11,7 +11,7 @@ Keep 百合季 current without rebuilding the whole research universe on every u
 
 Every public claim needs an accessible original URL and traceable evidence. Search snippets are leads, never observations.
 
-Operate like a strong human editor: maintain a reliable watchlist, inspect every due tracked surface incrementally, publish selectively, connect related updates, and verify the reader-facing result. Broad exploration is a separate assignment, not an implied part of routine desk work.
+Operate like a strong human editor: maintain a reliable watchlist, inspect every due tracked surface incrementally, follow useful evidence, choose timely editorial questions, and verify the reader-facing result. Coverage rules are the baseline, not the limit of editorial judgment; broad exploration remains a separate assignment.
 
 ## Read only what the task needs
 
@@ -25,7 +25,7 @@ Operate like a strong human editor: maintain a reliable watchlist, inspect every
 
 ## Choose a profile
 
-- `routine`: default. Process registered official-site/feed diffs, then every due timeline for already verified, enabled X accounts linked to the work: project/official accounts, cast, original authors/creators, and credited production staff. These are all first-class update lanes; account discovery remains separate. Routine never searches for missing accounts, tags, new works, fanwork, community threads, or other unknown objects.
+- `routine`: default. Process registered official-site/feed diffs, then every due timeline for already verified, enabled X accounts linked to the work: project/official accounts, cast, original authors/creators, and credited production staff. Follow related originals and allow bounded editorial searches about tracked works under `references/update-policy.md`. Missing accounts, tag scans, new works, fanwork, and community discovery remain separate.
 - `social-audit`: explicit. Recheck eligible already verified social accounts and official tag coverage; do not discover or verify missing accounts.
 - `discovery`: explicit. Search the requested catalog, tag, music, media, fanwork, or community scope. Account discovery remains excluded.
 - `account-discovery`: explicit and scoped. Require `--anime-id=<ids>` or `--person-id=<ids>`; optionally use `--platform=<values>`. It may find or verify accounts only inside that requested scope.
@@ -35,17 +35,17 @@ Operate like a strong human editor: maintain a reliable watchlist, inspect every
 ## One operating loop
 
 1. Run `bun run research -- cycle --profile=routine` or the explicitly requested profile. Routine state is separate from explicit Discovery state. When a real source diff is pending, process and import it before rerunning the routine cycle.
-2. Lease work with `bun run research -- next --profile=<profile> --limit=<n>`. Execute only leased tasks and obey each task's structured operation, surface, cursor, and completion policy.
+2. Lease coverage work with `bun run research -- next --profile=<profile> --limit=<n>` and obey each task's structured operation, surface, cursor, and completion policy. Related evidence checks and bounded routine editorial searches use the same publication pipeline without starting a Discovery campaign.
 3. Open originals, record every inspected stable object ID, build any traceable batch, then submit with `bun run research -- submit <results.json> --profile=<profile>`.
 4. Import verified candidates through the normal batch workflow and reconcile every supported projection affected by the evidence. A feed card alone is not completion when the same source supports media, events, accounts, schedule, cast, or music.
 5. Pass the reader-facing completion gate in `references/publication-policy.md` for every published item. An accepted batch or populated database row is not proof that the public result works.
-6. Repeat until `bun run research -- finish --profile=<profile>` reports convergence for the requested profile. A result chunk, lease size, or successful import is never a stop condition.
+6. Repeat until `bun run research -- finish --profile=<profile>` reports convergence for the requested profile, then check editorial completion under `references/update-policy.md`. CLI convergence proves planned coverage only; a result chunk, lease size, or successful import is never a stop condition.
 
 The legacy `research:diff`, `research:discover:*`, `research:import`, and specialist audit commands remain compatibility or maintenance entry points; routine operation should use the unified CLI.
 
 ## Coverage and scheduling contract
 
-- Routine completion covers only registered-source processing and due verified-X watchlist tasks. Dormant or unrequested Discovery work must not enter its campaign or block its completion.
+- Routine planned coverage covers registered-source processing and due verified-X watchlist tasks. Resolve or checkpoint in-scope editorial leads separately; dormant or unrequested Discovery work must not enter its campaign or block its completion.
 - Explicit Discovery completion covers only the requested profile and entity/platform scope. Account leads outside `account-discovery` remain durable leads, not automatic follow-up work.
 - For every completed active task, choose `nextCheckAt` from recent activity, event proximity, unresolved leads, platform health, and prior yield. Include short reason codes.
 - Code enforces the maximum freshness deadline. A target cannot be deferred beyond it, and repeatedly deferred or stale work returns to the mandatory pool.

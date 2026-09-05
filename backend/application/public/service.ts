@@ -1,4 +1,5 @@
 import type { AnimePageResponse, AnimeRelatedResponse, PublicationDetailResponse } from "@/domain";
+import { readSitemapPaths } from "~/repositories/sitemap";
 
 import {
   readCalendar,
@@ -64,6 +65,7 @@ export async function readPublicationPage(
 
 export function createPublicService(env: Env) {
   return {
+    sitemap: () => readSitemapPaths(env.DB),
     home: (timeZone: string, seasonSlug?: string) => readHomePage(env.DB, timeZone, seasonSlug),
     anime: {
       page: (slug: string) => readAnimePage(env.DB, slug),

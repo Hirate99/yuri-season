@@ -2,8 +2,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 
 import type { ApiEnvironment } from "~/http/shared";
-import { publicJson, validatedQuery } from "~/http/shared";
-import { ianaTimezone, parseWithSchema } from "~/http/input/schema";
+import { publicJson, validate } from "~/http/shared";
+import { ianaTimezone } from "~/http/input/schema";
 
 const homeQuery = z.object({
   timeZone: ianaTimezone("时区").default("Asia/Tokyo"),
@@ -12,9 +12,7 @@ const homeQuery = z.object({
 
 export const catalogRoutes = new Hono<ApiEnvironment>()
   .get("/health", (context) => context.json({ ok: true, now: new Date().toISOString() }))
-  .get("/home", validatedQuery<z.input<typeof homeQuery>, z.output<typeof homeQuery>>(
-    (input) => parseWithSchema(homeQuery, input),
-  ), async (context) => {
+  .get("/home", validate("query", homeQuery), async (context) => {
     const { timeZone, season } = context.req.valid("query");
     return publicJson(context, await context.var.services.public.home(timeZone, season));
   })

@@ -33,21 +33,29 @@ export function EventTime({ event, viewerTimeZone, showTime = false }: {
   const effectiveTimeZone = viewerTimeZone ?? detectedTimeZone;
   const isBirthday = event.eventType === "birthday";
   const startsAt = timedEvent(event.startsAt) ? event.startsAt : null;
+  const endsAt = timedEvent(event.endsAt) ? event.endsAt : null;
+  const sourceStart = event.startsAt
+    ? (showTime && startsAt ? localDateTime(startsAt, event.timezone) : shortDate(event.startsAt, event.timezone))
+    : null;
+  const sourceEnd = event.endsAt
+    ? (showTime && endsAt ? localDateTime(endsAt, event.timezone) : shortDate(event.endsAt, event.timezone))
+    : null;
   const showLocal = !isBirthday && startsAt
     && effectiveTimeZone && effectiveTimeZone !== event.timezone;
   const local = showLocal ? localDateTime(startsAt, effectiveTimeZone) : null;
+  const localEnd = showLocal && endsAt ? localDateTime(endsAt, effectiveTimeZone) : null;
 
   return (
     <time className="text-xs font-semibold tabular-nums" dateTime={event.startsAt ?? undefined}>
       <span className="block whitespace-nowrap">
-        {showTime && startsAt && !isBirthday ? localDateTime(startsAt, event.timezone) : shortDate(event.startsAt, event.timezone)}
+        {sourceStart}{sourceEnd && sourceEnd !== sourceStart ? ` — ${sourceEnd}` : ""}
         {!isBirthday && startsAt && (
           <small className="ml-1 font-normal text-muted">{timeZoneLabel(event.timezone, new Date(startsAt))}</small>
         )}
       </span>
       {local && effectiveTimeZone && startsAt && (
         <small className="mt-0.5 block whitespace-nowrap text-[11px] font-normal text-muted">
-          {local} {timeZoneLabel(effectiveTimeZone, new Date(startsAt))}
+          {local}{localEnd && localEnd !== local ? ` — ${localEnd}` : ""} {timeZoneLabel(effectiveTimeZone, new Date(startsAt))}
         </small>
       )}
     </time>

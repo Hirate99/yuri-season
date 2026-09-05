@@ -12,8 +12,8 @@ import { and, asc, count, desc, eq, inArray, isNotNull, isNull } from "drizzle-o
 
 import { database } from "~/infrastructure/db/client";
 import { mapAnime } from "~/infrastructure/db/mappers";
-import { publicDiscussion } from "~/infrastructure/db/read-models/public-visibility";
 import { readAllAnimeSummaries } from "~/infrastructure/db/read-models/anime";
+import { publicDiscussion } from "~/infrastructure/db/read-models/public-visibility";
 import {
   animeTable,
   auditLogTable,
@@ -51,7 +51,7 @@ function jsonObject(value: string): Record<string, unknown> {
   }
 }
 
-async function readCounts(db: D1Database): Promise<DashboardData["counts"]> {
+export async function readCounts(db: D1Database): Promise<DashboardData["counts"]> {
   const orm = database(db);
   const [anime, held, sources, discussions, autoPublished] = await orm.batch([
     orm.select({ count: count() }).from(animeTable),
@@ -73,7 +73,7 @@ async function readCounts(db: D1Database): Promise<DashboardData["counts"]> {
   };
 }
 
-async function readHeldCandidates(db: D1Database): Promise<FeedCandidate[]> {
+export async function readHeldCandidates(db: D1Database): Promise<FeedCandidate[]> {
   const orm = database(db);
   const candidates = await orm.select({
     id: feedCandidatesTable.id,
@@ -132,7 +132,7 @@ async function readHeldCandidates(db: D1Database): Promise<FeedCandidate[]> {
   }));
 }
 
-async function readSources(db: D1Database): Promise<SourceHealth[]> {
+export async function readSources(db: D1Database): Promise<SourceHealth[]> {
   return database(db).select({
     id: researchSourcesTable.id,
     animeTitle: animeTable.titleZh,
@@ -154,7 +154,7 @@ async function readSources(db: D1Database): Promise<SourceHealth[]> {
     .orderBy(desc(researchSourcesTable.enabled), desc(researchSourcesTable.failureCount), asc(researchSourcesTable.label));
 }
 
-async function readRuns(db: D1Database): Promise<ResearchRun[]> {
+export async function readRuns(db: D1Database): Promise<ResearchRun[]> {
   return database(db).select({
     id: researchRunsTable.id,
     triggerType: researchRunsTable.triggerType,
@@ -172,7 +172,7 @@ async function readRuns(db: D1Database): Promise<ResearchRun[]> {
   }).from(researchRunsTable).orderBy(desc(researchRunsTable.startedAt)).limit(12);
 }
 
-async function readJobs(db: D1Database): Promise<UpdateJob[]> {
+export async function readJobs(db: D1Database): Promise<UpdateJob[]> {
   return database(db).select({
     id: updateJobsTable.id,
     jobType: updateJobsTable.jobType,
@@ -190,7 +190,7 @@ async function readJobs(db: D1Database): Promise<UpdateJob[]> {
   }).from(updateJobsTable).orderBy(desc(updateJobsTable.createdAt)).limit(30);
 }
 
-async function readPublications(db: D1Database): Promise<AdminPublication[]> {
+export async function readPublications(db: D1Database): Promise<AdminPublication[]> {
   const rows = await database(db).select({
     id: feedItemsTable.id,
     candidateId: feedItemsTable.candidateId,
@@ -208,7 +208,7 @@ async function readPublications(db: D1Database): Promise<AdminPublication[]> {
   return rows.flatMap((row) => row.candidateId ? [{ ...row, candidateId: row.candidateId }] : []);
 }
 
-async function readAudit(db: D1Database): Promise<AuditEntry[]> {
+export async function readAudit(db: D1Database): Promise<AuditEntry[]> {
   const rows = await database(db).select().from(auditLogTable)
     .orderBy(desc(auditLogTable.createdAt)).limit(40);
   return rows.map((row) => ({
@@ -222,12 +222,16 @@ async function readAudit(db: D1Database): Promise<AuditEntry[]> {
   }));
 }
 
+export async function readWorks(db: D1Database) {
+  return (await readAllAnimeSummaries(db)).map(row => ({ ...mapAnime(row), seasonId: row.seasonId, seasonLabel: row.seasonLabel }));
+}
+
 export async function readAdminDashboardData(db: D1Database, view: AdminDashboardView = "all"): Promise<DashboardData> {
   const includes = (...views: AdminDashboardView[]) => view === "all" || views.includes(view);
   const [counts, animeRows, heldCandidates, sources, recentRuns, recentJobs, recentPublications, recentAudit] =
     await Promise.all([
       readCounts(db),
-      includes("works") ? readAllAnimeSummaries(db) : [],
+      includes("works") ? readWorks(db) : [],
       includes("review") ? readHeldCandidates(db) : [],
       includes("overview", "automation") ? readSources(db) : [],
       includes("overview", "automation") ? readRuns(db) : [],
@@ -237,7 +241,7 @@ export async function readAdminDashboardData(db: D1Database, view: AdminDashboar
     ]);
   return {
     counts,
-    anime: animeRows.map((row) => ({ ...mapAnime(row), seasonId: row.seasonId, seasonLabel: row.seasonLabel })),
+    anime: animeRows,
     heldCandidates,
     sources,
     recentRuns,

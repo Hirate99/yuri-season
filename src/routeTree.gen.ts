@@ -14,6 +14,12 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as SeasonsRouteImport } from './routes/seasons'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminAutomationRouteImport } from './routes/admin.automation'
+import { Route as AdminCoverageRouteImport } from './routes/admin.coverage'
+import { Route as AdminReviewRouteImport } from './routes/admin.review'
+import { Route as AdminSeasonsRouteImport } from './routes/admin.seasons'
+import { Route as AdminWorksRouteImport } from './routes/admin.works'
 import { Route as AnimeSlugRouteImport } from './routes/anime.$slug'
 import { Route as FeedIdRouteImport } from './routes/feed.$id'
 import { Route as SeasonSlugRouteImport } from './routes/season.$slug'
@@ -44,6 +50,36 @@ const SeasonsRoute = SeasonsRouteImport.update({
   path: '/seasons',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAutomationRoute = AdminAutomationRouteImport.update({
+  id: '/automation',
+  path: '/automation',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCoverageRoute = AdminCoverageRouteImport.update({
+  id: '/coverage',
+  path: '/coverage',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminReviewRoute = AdminReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSeasonsRoute = AdminSeasonsRouteImport.update({
+  id: '/seasons',
+  path: '/seasons',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminWorksRoute = AdminWorksRouteImport.update({
+  id: '/works',
+  path: '/works',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AnimeSlugRoute = AnimeSlugRouteImport.update({
   id: '/anime/$slug',
   path: '/anime/$slug',
@@ -67,37 +103,54 @@ const UpdatesIdRoute = UpdatesIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/calendar': typeof CalendarRoute
   '/feed': typeof FeedRouteWithChildren
   '/seasons': typeof SeasonsRoute
+  '/admin/automation': typeof AdminAutomationRoute
+  '/admin/coverage': typeof AdminCoverageRoute
+  '/admin/review': typeof AdminReviewRoute
+  '/admin/seasons': typeof AdminSeasonsRoute
+  '/admin/works': typeof AdminWorksRoute
   '/anime/$slug': typeof AnimeSlugRoute
   '/feed/$id': typeof FeedIdRoute
   '/season/$slug': typeof SeasonSlugRoute
   '/updates/$id': typeof UpdatesIdRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/calendar': typeof CalendarRoute
   '/feed': typeof FeedRouteWithChildren
   '/seasons': typeof SeasonsRoute
+  '/admin/automation': typeof AdminAutomationRoute
+  '/admin/coverage': typeof AdminCoverageRoute
+  '/admin/review': typeof AdminReviewRoute
+  '/admin/seasons': typeof AdminSeasonsRoute
+  '/admin/works': typeof AdminWorksRoute
   '/anime/$slug': typeof AnimeSlugRoute
   '/feed/$id': typeof FeedIdRoute
   '/season/$slug': typeof SeasonSlugRoute
   '/updates/$id': typeof UpdatesIdRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/calendar': typeof CalendarRoute
   '/feed': typeof FeedRouteWithChildren
   '/seasons': typeof SeasonsRoute
+  '/admin/automation': typeof AdminAutomationRoute
+  '/admin/coverage': typeof AdminCoverageRoute
+  '/admin/review': typeof AdminReviewRoute
+  '/admin/seasons': typeof AdminSeasonsRoute
+  '/admin/works': typeof AdminWorksRoute
   '/anime/$slug': typeof AnimeSlugRoute
   '/feed/$id': typeof FeedIdRoute
   '/season/$slug': typeof SeasonSlugRoute
   '/updates/$id': typeof UpdatesIdRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,21 +160,32 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/feed'
     | '/seasons'
+    | '/admin/automation'
+    | '/admin/coverage'
+    | '/admin/review'
+    | '/admin/seasons'
+    | '/admin/works'
     | '/anime/$slug'
     | '/feed/$id'
     | '/season/$slug'
     | '/updates/$id'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin'
     | '/calendar'
     | '/feed'
     | '/seasons'
+    | '/admin/automation'
+    | '/admin/coverage'
+    | '/admin/review'
+    | '/admin/seasons'
+    | '/admin/works'
     | '/anime/$slug'
     | '/feed/$id'
     | '/season/$slug'
     | '/updates/$id'
+    | '/admin'
   id:
     | '__root__'
     | '/'
@@ -129,15 +193,21 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/feed'
     | '/seasons'
+    | '/admin/automation'
+    | '/admin/coverage'
+    | '/admin/review'
+    | '/admin/seasons'
+    | '/admin/works'
     | '/anime/$slug'
     | '/feed/$id'
     | '/season/$slug'
     | '/updates/$id'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   CalendarRoute: typeof CalendarRoute
   FeedRoute: typeof FeedRouteWithChildren
   SeasonsRoute: typeof SeasonsRoute
@@ -183,6 +253,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SeasonsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/automation': {
+      id: '/admin/automation'
+      path: '/automation'
+      fullPath: '/admin/automation'
+      preLoaderRoute: typeof AdminAutomationRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/coverage': {
+      id: '/admin/coverage'
+      path: '/coverage'
+      fullPath: '/admin/coverage'
+      preLoaderRoute: typeof AdminCoverageRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/review': {
+      id: '/admin/review'
+      path: '/review'
+      fullPath: '/admin/review'
+      preLoaderRoute: typeof AdminReviewRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/seasons': {
+      id: '/admin/seasons'
+      path: '/seasons'
+      fullPath: '/admin/seasons'
+      preLoaderRoute: typeof AdminSeasonsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/works': {
+      id: '/admin/works'
+      path: '/works'
+      fullPath: '/admin/works'
+      preLoaderRoute: typeof AdminWorksRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/anime/$slug': {
       id: '/anime/$slug'
       path: '/anime/$slug'
@@ -214,6 +326,26 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminAutomationRoute: typeof AdminAutomationRoute
+  AdminCoverageRoute: typeof AdminCoverageRoute
+  AdminReviewRoute: typeof AdminReviewRoute
+  AdminSeasonsRoute: typeof AdminSeasonsRoute
+  AdminWorksRoute: typeof AdminWorksRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAutomationRoute: AdminAutomationRoute,
+  AdminCoverageRoute: AdminCoverageRoute,
+  AdminReviewRoute: AdminReviewRoute,
+  AdminSeasonsRoute: AdminSeasonsRoute,
+  AdminWorksRoute: AdminWorksRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 interface FeedRouteChildren {
   FeedIdRoute: typeof FeedIdRoute
 }
@@ -226,7 +358,7 @@ const FeedRouteWithChildren = FeedRoute._addFileChildren(FeedRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   CalendarRoute: CalendarRoute,
   FeedRoute: FeedRouteWithChildren,
   SeasonsRoute: SeasonsRoute,

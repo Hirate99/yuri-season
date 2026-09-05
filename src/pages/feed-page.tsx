@@ -1,16 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import type { AnimeOption, FeedResponse } from "@/domain";
+import type { AnimeOption } from "@/domain";
 import { EmptyState } from "@/components/empty-state";
 import { FeedCard } from "@/components/feed-card";
 import { AnimeCombobox } from "@/components/anime-combobox";
 import { VirtualWindowGrid } from "@/components/virtual-window-grid";
-import { useCursorFeed } from "@/hooks/use-cursor-feed";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { feedOptions } from "@/lib/queries";
 import { feedFilters, feedQuery, type FeedSearch } from "@/lib/feed-search";
 import { cn, page, textButton } from "@/lib/ui";
 
-export function FeedPage({ initialPage, animeOptions, search, refreshing, onSearch }: {
-  initialPage: FeedResponse;
+export function FeedPage({ animeOptions, search, refreshing, onSearch }: {
   animeOptions: AnimeOption[];
   search: FeedSearch;
   refreshing: boolean;
@@ -56,29 +56,39 @@ export function FeedPage({ initialPage, animeOptions, search, refreshing, onSear
           </div>
         </div>
         {search.anime && <p className="mt-1 mb-2 text-xs text-accent">作品：{animeOptions.find((anime) => anime.slug === search.anime)?.titleZh ?? search.anime}</p>}
-        <FeedResults key={JSON.stringify(request)} query={request} initialPage={initialPage} refreshing={refreshing} />
+        <FeedResults key={JSON.stringify(request)} search={search} refreshing={refreshing} />
       </section>
     </div>
   );
 }
 
-function FeedResults({ query, initialPage, refreshing }: {
-  query: ReturnType<typeof feedQuery>;
-  initialPage: FeedResponse;
+function FeedResults({ search, refreshing }: {
+  search: FeedSearch;
   refreshing: boolean;
 }) {
-  const feed = useCursorFeed(query, initialPage);
+  const feed = useInfiniteQuery(feedOptions(search));
+  const items = useMemo(() => {
+    const seen = new Set<string>();
+    return (feed.data?.pages.flatMap(page => page.items) ?? []).filter(item => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+  }, [feed.data]);
+  const loadMore = () => { if (feed.hasNextPage && !feed.isFetching) void feed.fetchNextPage(); };
 
   return <>
     <div className="h-1" role="status">
       <span className="sr-only">{refreshing ? "加载中" : ""}</span>
     </div>
-    <VirtualWindowGrid items={feed.items} getKey={(item) => item.id} wideLanes={2}
+    <VirtualWindowGrid items={items} getKey={(item) => item.id} wideLanes={2}
       renderItem={(item) => <FeedCard item={item} preserveFeedContext />}
-      estimateRowSize={190} hasMore={!refreshing && !feed.error && Boolean(feed.nextCursor)}
-      loadingMore={feed.loadingMore} onLoadMore={feed.loadMore} />
-    {feed.items.length === 0 && <EmptyState title="暂无匹配的情报" />}
-    {feed.error && <div className="mt-4 space-y-3"><EmptyState title="加载失败" detail={feed.error} />
-      <button className={textButton} type="button" onClick={feed.loadMore}>重试</button></div>}
+      estimateRowSize={190} hasMore={!refreshing && !feed.error && feed.hasNextPage}
+      loadingMore={feed.isFetchingNextPage} onLoadMore={loadMore} />
+    {items.length === 0 && <EmptyState title="暂无匹配的情报" />}
+    {feed.error && <div className="mt-4 space-y-3"><EmptyState title="加载失败" detail={feed.error.message} />
+      <button className={textButton} type="button" onClick={() => {
+        if (feed.isFetchNextPageError) loadMore(); else void feed.refetch();
+      }}>重试</button></div>}
   </>;
 }

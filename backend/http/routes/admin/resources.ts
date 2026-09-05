@@ -1,15 +1,16 @@
 import { Hono } from "hono";
+import { resourceEnvelopeSchema } from "@/domain/inputs/resources";
 
 import type { AdminResourceWrite } from "@/domain";
-import { parseResourceEnvelope, parseResourceKind, parseResourceWrite } from "~/http/input/resource-input";
+import { parseResourceKind, parseResourceWrite } from "~/http/input/resource-input";
 import { HttpError } from "~/shared/http-error";
 import type { ApiEnvironment } from "~/http/shared";
-import { validatedJson } from "~/http/shared";
+import { validate, validatedJson } from "~/http/shared";
 
 export const resourceRoutes = new Hono<ApiEnvironment>()
   .get("/anime/:id/resources", async (context) =>
     context.json(await context.var.services.admin.resources.list(context.req.param("id"))))
-  .post("/anime/:id/resources", validatedJson<AdminResourceWrite>(parseResourceEnvelope), async (context) => {
+  .post("/anime/:id/resources", validate("json", resourceEnvelopeSchema), async (context) => {
     const id = await context.var.services.admin.resources.create(
       context.req.param("id"),
       context.req.valid("json"),

@@ -5,7 +5,7 @@ import type { CatalogResponse } from "@/domain";
 import { TodayPanel } from "@/components/today-panel";
 
 const catalog: CatalogResponse = {
-  season: { id: "summer", slug: "2026-summer", label: "2026 夏", year: 2026, quarter: "summer", startsOn: "2026-07-01", endsOn: "2026-09-30", isCurrent: true },
+  season: { id: "summer", slug: "2026-summer", label: "2026 夏", startsOn: "2026-07-01", endsOn: "2026-09-30" },
   anime: [{
     id: "today", slug: "today", titleZh: "今天的作品", titleJa: "今日", coverUrl: null,
     yuriKind: "canon", yuriStatus: "confirmed", currentEpisode: 9,

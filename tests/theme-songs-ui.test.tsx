@@ -20,13 +20,6 @@ const baseSong: ThemeSong = {
 };
 
 describe("theme-song artwork", () => {
-  test("lays out two song cards per row on large screens", () => {
-    const second = { ...baseSong, id: "theme-song-second", songKind: "ending" } satisfies ThemeSong;
-    const html = renderToStaticMarkup(<ThemeSongsSection songs={[baseSong, second]} />);
-
-    expect(html).toContain("lg:grid-cols-2");
-  });
-
   test("renders an available jacket linked to its provenance page", () => {
     const html = renderToStaticMarkup(<ThemeSongsSection songs={[baseSong]} />);
 

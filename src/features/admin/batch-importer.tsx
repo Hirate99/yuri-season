@@ -1,25 +1,22 @@
-import { useState } from "react";
-import { FileJson2, Upload } from "lucide-react";
 import type { ResearchBatch } from "@/domain";
 import { apiClient, rpcData } from "@/lib/api";
 import { primaryButton } from "@/lib/ui";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { FileJson2, Upload } from "lucide-react";
+import { useState } from "react";
 
-export function BatchImporter({ onImported }: { onImported: () => void }) {
+export function BatchImporter() {
+  const client = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const submit = async () => {
-    if (!file) return;
-    setBusy(true); setMessage(null);
-    try {
-      const body = JSON.parse(await file.text()) as ResearchBatch;
-      const result = await rpcData(apiClient.api.admin.batches.$post({ json: body }));
-      setMessage(result.duplicate ? "这个批次已经导入过，没有重复写入。" : `已写入 ${result.observations} 条观察；发布 ${result.published}，待复核 ${result.held}。`);
-      onImported();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
-    } finally { setBusy(false); }
-  };
+  const mutation = useMutation({
+    mutationFn: async (file: File) => rpcData(apiClient.api.admin.batches.$post({ json: JSON.parse(await file.text()) as ResearchBatch })),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["admin"] }),
+  });
+  const result = mutation.data;
+  const message = mutation.error?.message ?? (result ? result.duplicate
+    ? "这个批次已经导入过，没有重复写入。" : `已写入 ${result.observations} 条观察；发布 ${result.published}，待复核 ${result.held}。` : null);
+  const busy = mutation.isPending;
+  const submit = () => { if (file) mutation.mutate(file); };
   return (
     <section className="max-w-xl border border-[#acb0a8] bg-raised p-7">
       <FileJson2 className="text-[#679b32]" size={28} />

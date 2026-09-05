@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
@@ -13,15 +14,11 @@ const anime = [
 
 describe("cross-work discussion UI", () => {
   test("offers season-wide selection with explicit exclusions", () => {
-    const html = renderToStaticMarkup(<DiscussionsEditor
+    const html = renderToStaticMarkup(<QueryClientProvider client={new QueryClient()}><DiscussionsEditor
       items={[]}
       anime={anime}
-      currentAnimeId="anime-a"
-      busyKey={null}
-      onSave={async () => {}}
-      onUnlink={async () => {}}
-      onDeleteEverywhere={async () => {}}
-    />);
+      animeId="anime-a"
+    /></QueryClientProvider>);
 
     expect(html).toContain("全选当前季度");
     expect(html).toContain("全选全部作品");
@@ -29,7 +26,7 @@ describe("cross-work discussion UI", () => {
   });
 
   test("separates unlinking from destructive global deletion", () => {
-    const html = renderToStaticMarkup(<DiscussionsEditor
+    const html = renderToStaticMarkup(<QueryClientProvider client={new QueryClient()}><DiscussionsEditor
       items={[{
         id: "discussion-shared", platform: "百合会", title: "集中讨论",
         url: "https://bbs.example.test/shared", note: null, isActive: true,
@@ -37,12 +34,8 @@ describe("cross-work discussion UI", () => {
         animeIds: ["anime-a", "anime-b", "anime-c"],
       }]}
       anime={anime}
-      currentAnimeId="anime-a"
-      busyKey={null}
-      onSave={async () => {}}
-      onUnlink={async () => {}}
-      onDeleteEverywhere={async () => {}}
-    />);
+      animeId="anime-a"
+    /></QueryClientProvider>);
 
     expect(html).toContain("从本作移除");
     expect(html).toContain("彻底删除");

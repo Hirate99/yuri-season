@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
-import type { SearchMemoryResponse, SearchMemorySummary } from "@/domain";
 import { Badge } from "@/components/badge";
 import { EmptyState, LoadingRows } from "@/components/empty-state";
-import { dateTime } from "@/lib/format";
-import { apiClient, rpcData, useApi } from "@/lib/api";
-import { cn } from "@/lib/ui";
 import { VirtualWindowGrid } from "@/components/virtual-window-grid";
+import type { SearchMemorySummary } from "@/domain";
+import { dateTime } from "@/lib/format";
+import { cn } from "@/lib/ui";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { memoryQuery } from "./queries";
 
 type View = "recent" | "useful" | "attention";
 
@@ -37,8 +38,7 @@ function hasUsefulResult(record: SearchMemorySummary) {
 }
 
 export function SearchMemoryMonitor() {
-  const memory = useApi<SearchMemoryResponse>((signal) =>
-    rpcData(apiClient.api.admin.research.memory.$get({}, { init: { signal } })), []);
+  const memory = useQuery(memoryQuery);
   const [view, setView] = useState<View>("recent");
   const records = memory.data?.records ?? [];
   const usefulCount = records.filter(hasUsefulResult).length;
@@ -51,8 +51,8 @@ export function SearchMemoryMonitor() {
     return true;
   }), [records, view]);
 
-  if (memory.loading) return <LoadingRows count={6} />;
-  if (memory.error) return <EmptyState title="检索记录加载失败" detail={memory.error} />;
+  if (memory.isPending) return <LoadingRows count={6} />;
+  if (memory.error) return <EmptyState title="检索记录加载失败" detail={memory.error.message} />;
 
   return (
     <div className="grid gap-6">

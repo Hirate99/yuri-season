@@ -3,6 +3,7 @@ import { readAnimeDetail } from "~/repositories/detail";
 import { readCalendar, readCatalog } from "~/repositories/catalog";
 import { readAdminAnimeResources } from "~/repositories/admin/resources";
 import { personBelongsToAnime } from "~/repositories/admin/resource-context";
+import { readAnimeSummaryBySlug } from "~/infrastructure/db/read-models/anime";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;
@@ -15,6 +16,39 @@ beforeEach(async () => {
 afterEach(() => database.close());
 
 describe("D1 read budgets", () => {
+  test("keeps feed aggregates correct with multiple slots, withdrawn items and no visible items", async () => {
+    const animeId = "anime-kimishinu";
+    const expected = database.sqlite.query(`SELECT COUNT(id) AS feedCount, MAX(published_at) AS latestFeedAt
+      FROM feed_items WHERE anime_id = ? AND withdrawn_at IS NULL`).get(animeId) as { feedCount: number; latestFeedAt: string };
+    expect(expected.feedCount).toBeGreaterThan(0);
+    database.sqlite.query("UPDATE broadcast_slots SET is_primary = 1 WHERE anime_id = ?").run(animeId);
+    expect(await readAnimeSummaryBySlug(database.binding(), "kimishinu")).toMatchObject(expected);
+    database.sqlite.query("UPDATE feed_items SET withdrawn_at = CURRENT_TIMESTAMP WHERE anime_id = ?").run(animeId);
+    expect(await readAnimeSummaryBySlug(database.binding(), "kimishinu"))
+      .toMatchObject({ id: animeId, feedCount: 0, latestFeedAt: null });
+    database.sqlite.query("UPDATE feed_items SET anime_id = NULL WHERE anime_id = ?").run(animeId);
+    expect(await readAnimeSummaryBySlug(database.binding(), "kimishinu"))
+      .toMatchObject({ id: animeId, feedCount: 0, latestFeedAt: null });
+  });
+
+  test("shares credit fields while preserving public filtering and admin-only fields", async () => {
+    const detail = (await readAnimeDetail(database.binding(), "kimishinu"))!;
+    const admin = await readAdminAnimeResources(database.binding(), detail.id);
+    for (const { accounts, ...credit } of detail.cast) {
+      expect(admin.cast.find(({ id }) => id === credit.id)).toMatchObject(credit);
+      expect(credit).not.toHaveProperty("isMainGroup");
+      expect(credit).not.toHaveProperty("birthdaySourceUrl");
+    }
+    for (const { accounts, ...credit } of detail.staff) {
+      expect(admin.staff.find(({ id }) => id === credit.id)).toMatchObject(credit);
+      expect(credit).not.toHaveProperty("primaryKind");
+    }
+    database.exec("UPDATE characters SET is_main_group = 0 WHERE id = 'char-sheena'");
+    expect((await readAnimeDetail(database.binding(), "kimishinu"))!.cast.some(({ characterId }) => characterId === "char-sheena")).toBe(false);
+    expect((await readAdminAnimeResources(database.binding(), detail.id)).cast)
+      .toContainEqual(expect.objectContaining({ characterId: "char-sheena", isMainGroup: false }));
+  });
+
   test("batches detail reads without losing joined names or account ownership", async () => {
     const detail = await readAnimeDetail(database.binding(), "kimishinu");
     expect(database.calls).toBe(2);

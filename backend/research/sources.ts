@@ -1,7 +1,8 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { database } from "~/infrastructure/db/client";
 import { accountsTable, animeTable, castCreditsTable, researchSourcesTable } from "~/infrastructure/db/schema";
+import { sourceCheckQuery } from "~/repositories/source-checks";
 
 import type { SourceRecord } from "./types";
 
@@ -62,26 +63,12 @@ export async function markSourceSuccess(
   etag: string | null,
   lastModified: string | null,
 ): Promise<void> {
-  await database(db).update(researchSourcesTable).set({
-    lastCheckedAt: sql`CURRENT_TIMESTAMP`,
-    etag: sql`COALESCE(${etag}, ${researchSourcesTable.etag})`,
-    lastModified: sql`COALESCE(${lastModified}, ${researchSourcesTable.lastModified})`,
-    failureCount: 0,
-    lastError: null,
-    leaseUntil: null,
-    nextCheckAt: sql`CASE
-      WHEN ${researchSourcesTable.urgencyUntil} > CURRENT_TIMESTAMP THEN datetime('now', '+2 minutes')
-      ELSE datetime('now', '+' || ${researchSourcesTable.pollIntervalMin} || ' minutes')
-    END`,
-  }).where(eq(researchSourcesTable.id, source.id));
+  await sourceCheckQuery(db, { sourceId: source.id, outcome: "success", etag, lastModified });
 }
 
 export async function markSourceFailure(db: D1Database, sourceId: string, error: unknown): Promise<void> {
-  await database(db).update(researchSourcesTable).set({
-    lastCheckedAt: sql`CURRENT_TIMESTAMP`,
-    failureCount: sql`${researchSourcesTable.failureCount} + 1`,
-    lastError: error instanceof Error ? error.message.slice(0, 800) : String(error).slice(0, 800),
-    leaseUntil: null,
-    nextCheckAt: sql`datetime('now', '+' || MIN(360, 5 * (${researchSourcesTable.failureCount} + 1)) || ' minutes')`,
-  }).where(eq(researchSourcesTable.id, sourceId));
+  await sourceCheckQuery(db, {
+    sourceId, outcome: "failure",
+    error: (error instanceof Error ? error.message : String(error)).slice(0, 800),
+  });
 }

@@ -3,8 +3,11 @@ import { parseResourceWrite } from "~/http/input/resource-input";
 import { createAdminResource, deleteAdminResource, updateAdminResource } from "~/application/admin/resources";
 import { readAdminAnimeResources } from "~/repositories/admin/resources";
 import { readDiscussions, readMedia } from "~/repositories/feed";
+import { readAnimeDetail } from "~/repositories/detail";
 import { deleteDiscussionEverywhere } from "~/repositories/admin/discussion";
 import { TestD1 } from "./support/d1-adapter";
+import { createThemeSong } from "~/repositories/admin/theme-song";
+import { themeSongSchema } from "@/domain/inputs/theme-song";
 
 let database: TestD1;
 
@@ -18,6 +21,26 @@ beforeEach(async () => {
 afterEach(() => database.close());
 
 describe("Admin related content", () => {
+  test("resolves a shared track in one statement, filling only missing credits", async () => {
+    const value = themeSongSchema.parse({
+      songKind: "opening", sequence: 1, title: "Merged Song", artist: "Shared Artist",
+      lyricist: "Original lyricist", composer: null, verified: true,
+      sourceUrl: "https://example.test/music", sortOrder: 0,
+    });
+    database.resetMetrics();
+    await createThemeSong(database.binding(), "anime-kimishinu", value);
+    expect(database.calls).toBe(2); // Resolve track + insert work association.
+    expect(database.executedStatements).toBe(2);
+    database.resetMetrics();
+    await createThemeSong(database.binding(), "anime-taiari", {
+      ...value, lyricist: "Replacement", composer: "New composer", verified: false,
+    });
+    expect(database.calls).toBe(2);
+    expect(database.executedStatements).toBe(2);
+    expect(database.sqlite.query("SELECT lyricist, composer, verified FROM music_tracks WHERE title = ?").all(value.title))
+      .toEqual([{ lyricist: "Original lyricist", composer: "New composer", verified: 1 }]);
+  });
+
   test("maintains events, media and concentrated discussion threads", async () => {
     const animeId = "anime-kimishinu";
     const eventWrite = parseResourceWrite("event", {
@@ -118,6 +141,15 @@ describe("Admin related content", () => {
     expect(first?.trackId).toBe(second?.trackId);
     expect(first).toMatchObject({ songKind: "opening", sharedAnimeCount: 2, verified: true });
     expect(second).toMatchObject({ songKind: "ending", coverUrl: "https://music.example.test/shared-song.jpg" });
+
+    const song = (await readAnimeDetail(database.binding(), "kimishinu"))!.themeSongs.find(({ id }) => id === firstLink)!;
+    expect(first).toMatchObject(song);
+    expect(song).not.toHaveProperty("verified");
+    expect(song).not.toHaveProperty("trackId");
+    database.sqlite.query("UPDATE music_tracks SET verified = 0 WHERE id = ?").run(first!.trackId);
+    expect((await readAnimeDetail(database.binding(), "kimishinu"))!.themeSongs).toEqual([]);
+    expect((await readAdminAnimeResources(database.binding(), "anime-kimishinu")).themeSongs)
+      .toContainEqual(expect.objectContaining({ id: firstLink, verified: false }));
 
     await deleteAdminResource(database.binding(), "anime-kimishinu", "theme_song", firstLink);
     expect(database.sqlite.query("SELECT COUNT(*) AS count FROM music_tracks").get()).toEqual({ count: 1 });

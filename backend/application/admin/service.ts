@@ -1,6 +1,6 @@
 import type {
-  AdminResourceKind,
   AdminDashboardView,
+  AdminResourceKind,
   AdminResourceWrite,
   AnimeCreate,
   AnimePatch,
@@ -8,17 +8,17 @@ import type {
   ReviewDecision,
   SeasonWrite,
 } from "@/domain";
-import { createAdminResource, deleteAdminResource, updateAdminResource } from "./resources";
-import { readAdminAnimeResources } from "~/repositories/admin/resources";
-import { readAdminDashboardData } from "~/repositories/admin/dashboard";
+import type { AdminPrincipal } from "~/infrastructure/auth";
 import { readAdminCoverage } from "~/repositories/admin/coverage";
-import { readSeasons } from "~/repositories/catalog";
+import { readAdminDashboardData, readAudit, readCounts, readHeldCandidates, readJobs, readPublications, readRuns, readSources, readWorks } from "~/repositories/admin/dashboard";
 import { deleteDiscussionEverywhere } from "~/repositories/admin/discussion";
+import { readAdminAnimeResources } from "~/repositories/admin/resources";
 import { createAnime, patchAnime } from "~/repositories/anime/write";
 import { applyCandidateDecision } from "~/repositories/candidates/decisions";
 import { createCandidate } from "~/repositories/candidates/write";
+import { readSeasons } from "~/repositories/catalog";
 import { createSeason, updateSeason } from "~/repositories/seasons/write";
-import type { AdminPrincipal } from "~/infrastructure/auth";
+import { createAdminResource, deleteAdminResource, updateAdminResource } from "./resources";
 
 export async function readAdminDashboard(db: D1Database, view: AdminDashboardView = "all") {
   const [data, coverage, seasonIndex] = await Promise.all([
@@ -31,6 +31,28 @@ export async function readAdminDashboard(db: D1Database, view: AdminDashboardVie
 
 export function createAdminService(env: Env, principal?: AdminPrincipal) {
   return {
+    pages: {
+      summary: async () => {
+        const [counts, { seasons }] = await Promise.all([readCounts(env.DB), readSeasons(env.DB)]);
+        return { counts, seasons };
+      },
+      overview: async () => {
+        const [sources, recentRuns, recentJobs, coverage] = await Promise.all([
+          readSources(env.DB), readRuns(env.DB), readJobs(env.DB), readAdminCoverage(env.DB),
+        ]);
+        return { sources, recentRuns, recentJobs, coverage };
+      },
+      works: () => readWorks(env.DB),
+      review: async () => {
+        const [heldCandidates, recentPublications] = await Promise.all([readHeldCandidates(env.DB), readPublications(env.DB)]);
+        return { heldCandidates, recentPublications };
+      },
+      automation: async () => {
+        const [sources, recentRuns, recentJobs, recentAudit] = await Promise.all([readSources(env.DB), readRuns(env.DB), readJobs(env.DB), readAudit(env.DB)]);
+        return { sources, recentRuns, recentJobs, recentAudit };
+      },
+      coverage: () => readAdminCoverage(env.DB),
+    },
     dashboard: (view?: AdminDashboardView) => readAdminDashboard(env.DB, view),
     anime: {
       create: (value: AnimeCreate) => createAnime(env.DB, value, principal),

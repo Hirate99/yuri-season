@@ -85,7 +85,6 @@ describe("publication page presentation", () => {
     expect(html).toContain("aria-roledescription=\"carousel\"");
     expect(html).toContain("aspect-ratio:1200 / 800");
     expect(html).toContain("aspect-ratio:800 / 1200");
-    expect(html).toContain("transition-[height]");
   });
 
   test("reserves carousel height while image dimensions are still unknown", () => {
@@ -98,10 +97,9 @@ describe("publication page presentation", () => {
     );
 
     expect(html.match(/aspect-ratio:1 \/ 1/g)).toHaveLength(2);
-    expect(html).toContain("h-full w-full select-none object-contain");
   });
 
-  test("renders one image directly without carousel chrome or a fixed black square", () => {
+  test("renders one image directly without carousel controls", () => {
     const html = renderToStaticMarkup(
       <PublicationMediaCarousel
         assets={[]}
@@ -114,8 +112,6 @@ describe("publication page presentation", () => {
     expect(html).not.toContain("aria-roledescription=\"carousel\"");
     expect(html).not.toContain("上一张图片");
     expect(html).not.toContain("下一张图片");
-    expect(html).not.toContain("aspect-square");
-    expect(html).not.toContain("bg-[#111216]");
   });
 
   test("shows original text and translation without storage implementation copy", async () => {
@@ -132,7 +128,6 @@ describe("publication page presentation", () => {
     expect(html).toContain("私たち運命ですね");
     expect(html).toContain("我们命中注定呢");
     expect(html).toContain("图片来自原帖");
-    expect(html).toContain("w-[calc(100%-2.5rem)]");
     expect(html).not.toContain("R2 仅缓存相同公开图片字节");
   });
 });

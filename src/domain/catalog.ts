@@ -1,3 +1,5 @@
+import type { z } from "zod";
+import type { animeCreateSchema, animePatchSchema } from "./inputs/anime";
 export type YuriKind = "canon" | "strong" | "adjacent";
 export type YuriStatus = "confirmed" | "pending";
 export type AnimeStatus = "airing" | "upcoming" | "finished" | "paused";
@@ -170,10 +172,12 @@ export type CalendarEvent = {
   eventType: "broadcast" | "birthday" | "anniversary" | "stream" | "radio" | "event" | "release";
   title: string;
   startsAt: string | null;
+  endsAt: string | null;
   timezone: string;
   recurrenceRule: string | null;
   sourceUrl: string | null;
   verified: boolean;
+  status: "scheduled" | "completed" | "cancelled";
 };
 
 export type AnimeDetail = AnimeSummary & {
@@ -210,47 +214,5 @@ export type CalendarResponse = {
   events: CalendarEvent[];
 };
 
-export type AnimePatch = Partial<
-  Pick<
-    AnimeSummary,
-    | "titleZh"
-    | "titleZhSourceUrl"
-    | "titleJa"
-    | "titleEn"
-    | "synopsis"
-    | "editorialNote"
-    | "yuriKind"
-    | "yuriStatus"
-    | "status"
-    | "premiereAt"
-    | "episodeCount"
-    | "episodeDurationMin"
-    | "premiereEpisodeCount"
-    | "latestVerifiedEpisode"
-    | "latestEpisodeSourceUrl"
-    | "latestEpisodeCheckedAt"
-    | "studio"
-    | "sourceMaterial"
-    | "officialUrl"
-    | "bangumiUrl"
-    | "officialXUrl"
-    | "coverUrl"
-    | "coverSourceUrl"
-    | "mainCharacterSourceUrl"
-    | "mainCharacterExpectedCount"
-    | "mainCharacterCheckedAt"
-    | "visualTheme"
-    | "featured"
-  >
->;
-
-export type AnimeCreate = Required<Pick<AnimePatch,
-  "titleZh" | "titleJa" | "synopsis" | "yuriKind" | "yuriStatus" | "status" |
-  "premiereAt" | "visualTheme" | "featured"
->> & Omit<AnimePatch,
-  "titleZh" | "titleJa" | "synopsis" | "yuriKind" | "yuriStatus" | "status" |
-  "premiereAt" | "visualTheme" | "featured"
-> & {
-  seasonId: string;
-  slug: string;
-};
+export type AnimePatch = z.output<typeof animePatchSchema>;
+export type AnimeCreate = z.output<typeof animeCreateSchema>;

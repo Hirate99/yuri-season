@@ -1,9 +1,8 @@
 import { Hono } from "hono";
 import { z } from "zod";
 
-import { parseWithSchema } from "~/http/input/schema";
 import type { ApiEnvironment } from "~/http/shared";
-import { publicJson, validatedQuery } from "~/http/shared";
+import { publicJson, validate } from "~/http/shared";
 
 const contentClassSchema = z.enum([
   "schedule", "official_news", "official_art", "creator_art", "birthday",
@@ -26,13 +25,10 @@ const feedQuerySchema = z.object({
   }),
 });
 
-type FeedQueryInput = z.input<typeof feedQuerySchema>;
-type FeedQuery = z.output<typeof feedQuerySchema>;
-
 export const feedRoutes = new Hono<ApiEnvironment>()
   .get(
     "/feed",
-    validatedQuery<FeedQueryInput, FeedQuery>((input) => parseWithSchema(feedQuerySchema, input)),
+    validate("query", feedQuerySchema),
     async (context) => {
       const query = context.req.valid("query");
       return publicJson(context, await context.var.services.public.feed({

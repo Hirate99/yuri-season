@@ -60,31 +60,22 @@ export const loadCalendarData = createIsomorphicFn()
     ? routeData(apiClient.api.seasons[":slug"].calendar.$get({ param: { slug: input.seasonSlug } }))
     : routeData(apiClient.api.calendar.$get()));
 
-export const loadFeedData = createIsomorphicFn()
-  .server(async (input: PublicLoadContext & { search?: FeedSearch }) => {
+export const loadFeedPage = createIsomorphicFn()
+  .server(async (input: PublicLoadContext & { search: FeedSearch; cursor?: string; signal?: AbortSignal }) => {
     const remote = productionApi(input);
-    if (remote) {
-      const [feed, animeOptions] = await Promise.all([
-        routeData(remote.api.feed.$get({ query: feedQuery(input.search ?? {}) })),
-        routeData(remote.api.catalog.options.$get()),
-      ]);
-      return { feed, animeOptions };
-    }
-    const service = await publicService(input);
-    const search = input.search ?? {};
-    const [feed, animeOptions] = await Promise.all([
-      service.feed({ limit: 20, query: search.q, animeSlug: search.anime, contentClasses: feedClasses(search) }),
-      service.catalog.options(),
-    ]);
-    return { feed, animeOptions };
+    if (remote) return routeData(remote.api.feed.$get({ query: { ...feedQuery(input.search), cursor: input.cursor } }, { init: { signal: input.signal } }));
+    return (await publicService(input)).feed({ limit: 20, query: input.search.q, animeSlug: input.search.anime,
+      contentClasses: feedClasses(input.search), cursor: input.cursor });
   })
-  .client(async (input: PublicLoadContext & { search?: FeedSearch }) => {
-    const [feed, animeOptions] = await Promise.all([
-      routeData(apiClient.api.feed.$get({ query: feedQuery(input.search ?? {}) })),
-      routeData(apiClient.api.catalog.options.$get()),
-    ]);
-    return { feed, animeOptions };
-  });
+  .client((input: PublicLoadContext & { search: FeedSearch; cursor?: string; signal?: AbortSignal }) =>
+    routeData(apiClient.api.feed.$get({ query: { ...feedQuery(input.search), cursor: input.cursor } }, { init: { signal: input.signal } })));
+
+export const loadAnimeOptions = createIsomorphicFn()
+  .server(async (input: PublicLoadContext) => {
+    const remote = productionApi(input);
+    return remote ? routeData(remote.api.catalog.options.$get()) : (await publicService(input)).catalog.options();
+  })
+  .client(() => routeData(apiClient.api.catalog.options.$get()));
 
 export const loadAnimeData = createIsomorphicFn()
   .server(async (input: PublicLoadContext & { slug: string }): Promise<AnimePageResponse> => {

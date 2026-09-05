@@ -65,7 +65,7 @@ export function PublicationPage({ data, onBack, backLabel = "返回情报" }: {
                   <span className="rounded-full bg-raised px-2.5 py-1 text-[10px] text-muted">{textModeLabel[document.textMode]}{document.sourceLanguage ? ` · ${document.sourceLanguage}` : ""}</span>
                 </div>
                 <div className="mt-5 space-y-5 text-[15px] leading-8 text-[#30343a] md:text-base md:leading-9">
-                  {paragraphs(document.publicText).map((paragraph, index) => <p key={index} className="whitespace-pre-wrap">{paragraph}</p>)}
+                  {paragraphs(document.publicText).map((paragraph, index) => <p key={index} className="wrap-anywhere whitespace-pre-wrap">{paragraph}</p>)}
                 </div>
               </section>
             )}
@@ -77,7 +77,7 @@ export function PublicationPage({ data, onBack, backLabel = "返回情报" }: {
                   <h2 id="source-translation-heading" className="text-sm font-bold">中文翻译</h2>
                 </div>
                 <div className="mt-5 space-y-5 text-[15px] leading-8 text-[#454a52] md:text-base md:leading-9">
-                  {paragraphs(document.publicTranslation).map((paragraph, index) => <p key={index} className="whitespace-pre-wrap">{paragraph}</p>)}
+                  {paragraphs(document.publicTranslation).map((paragraph, index) => <p key={index} className="wrap-anywhere whitespace-pre-wrap">{paragraph}</p>)}
                 </div>
               </section>
             )}

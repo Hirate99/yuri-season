@@ -47,8 +47,8 @@ export function PublicationPage({ data, onBack, backLabel = "返回情报" }: {
             <span className="text-black/20" aria-hidden="true">·</span>
             <LocalDateTime value={item.publishedAt} />
           </div>
-          <h1 className="mt-5 max-w-[780px] text-[clamp(1.75rem,2.8vw,2.5rem)] leading-[1.18] font-black tracking-[-0.035em]">{item.title}</h1>
-          <p className="mt-4 max-w-[760px] text-[15px] leading-7 text-[#555a62] md:text-base md:leading-8">{item.summary}</p>
+          <h1 className="mt-5 max-w-[780px] text-[clamp(1.75rem,2.8vw,2.5rem)] leading-[1.18] font-black tracking-[-0.035em] text-pretty">{item.title}</h1>
+          <p className="mt-4 max-w-[760px] text-[15px] leading-6 text-[#555a62] md:text-base md:leading-8">{item.summary}</p>
         </header>
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,740px)_260px] lg:items-start lg:justify-between lg:gap-16">

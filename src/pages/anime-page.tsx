@@ -1,4 +1,5 @@
 import { Await } from "@tanstack/react-router";
+import type { MouseEvent } from "react";
 import type { AnimePageResponse, AnimeRelatedResponse } from "@/domain";
 import { AnimeHeader } from "@/features/anime/anime-header";
 import { AnimeSidebar } from "@/features/anime/anime-sidebar";
@@ -11,30 +12,23 @@ export function AnimePage({ data, related }: {
   data: AnimePageResponse;
   related: Promise<AnimeRelatedResponse | null>;
 }) {
+  const anime = data.anime;
   return (
     <div className={page}>
-      <AnimeHeader anime={data.anime} />
-      <Await promise={related} fallback={<></>}>{(content) => content && (
-        <div className="mt-10"><DiscussionsSection discussions={content.discussions} /></div>
-      )}</Await>
-      <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1fr)_260px] xl:gap-16">
-        <div className="space-y-14">
-          <ThemeSongsSection songs={data.anime.themeSongs} />
-          <StaffSection staff={data.anime.staff} />
-          <CastSection cast={data.anime.cast} />
-          <Await
-            promise={related}
-            fallback={<p className="text-xs text-muted" role="status">正在加载相关内容…</p>}
-          >
-            {(content) => content ? (
-              <>
-                <UpdatesSection items={content.feed} />
-                <MediaSection media={content.media} />
-              </>
-            ) : <p className="text-xs text-muted" role="status">相关内容加载失败，请稍后重试。</p>}
+      <AnimeHeader anime={anime} />
+      <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="space-y-12">
+          <Await promise={related} fallback={<p id="updates" className="text-sm text-muted" role="status">正在加载相关动态…</p>}>
+            {(content) => content ? <UpdatesSection items={content.feed} animeSlug={anime.slug} />
+              : <p id="updates" className="text-sm text-muted" role="status">相关内容加载失败，请刷新重试。</p>}
           </Await>
+          <CastSection cast={anime.cast} />
+          <StaffSection staff={anime.staff} />
+          <ThemeSongsSection songs={anime.themeSongs} />
+          <Await promise={related} fallback={null}>{(content) => content && <DiscussionsSection discussions={content.discussions} />}</Await>
+          <Await promise={related} fallback={null}>{(content) => content && <MediaSection media={content.media} />}</Await>
         </div>
-        <AnimeSidebar anime={data.anime} />
+        <AnimeSidebar anime={anime} />
       </div>
     </div>
   );

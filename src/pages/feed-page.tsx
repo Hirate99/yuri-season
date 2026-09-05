@@ -1,101 +1,84 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
-import type { AnimeOption, ContentClass, FeedResponse } from "@/domain";
-import { EmptyState, LoadingRows } from "@/components/empty-state";
+import type { AnimeOption, FeedResponse } from "@/domain";
+import { EmptyState } from "@/components/empty-state";
 import { FeedCard } from "@/components/feed-card";
 import { AnimeCombobox } from "@/components/anime-combobox";
 import { VirtualWindowGrid } from "@/components/virtual-window-grid";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useCursorFeed } from "@/hooks/use-cursor-feed";
-import { cn, page } from "@/lib/ui";
+import { feedFilters, feedQuery, type FeedSearch } from "@/lib/feed-search";
+import { cn, page, textButton } from "@/lib/ui";
 
-const filters: Array<{ label: string; value: string; classes: ContentClass[] }> = [
-  { label: "全部", value: "all", classes: [] },
-  { label: "公式", value: "official", classes: ["schedule", "official_news", "official_art"] },
-  { label: "作者 / Staff", value: "creators", classes: ["creator_art", "staff_post"] },
-  { label: "声优", value: "cast", classes: ["cast_post"] },
-  { label: "生日", value: "birthday", classes: ["birthday"] },
-  { label: "同人", value: "fanwork", classes: ["fanwork"] },
-  { label: "讨论", value: "community", classes: ["community_thread"] },
-];
-
-function FeedSearchInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return (
-    <input
-      className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted md:text-sm"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder="搜索动态、人物或来源"
-      type="search"
-      autoComplete="off"
-      autoCorrect="off"
-      autoCapitalize="off"
-      spellCheck={false}
-      enterKeyHint="search"
-    />
-  );
-}
-
-export function FeedPage({ initialPage, animeOptions }: { initialPage: FeedResponse; animeOptions: AnimeOption[] }) {
-  const [filter, setFilter] = useState("all");
-  const [query, setQuery] = useState("");
-  const [animeSlug, setAnimeSlug] = useState("");
-  const debouncedQuery = useDebouncedValue(query, 250);
-  const feedQuery = useMemo(() => {
-    const selectedFilter = filters.find((item) => item.value === filter);
-    return {
-      limit: "20",
-      q: debouncedQuery.trim() || undefined,
-      anime: animeSlug || undefined,
-      classes: selectedFilter?.classes.length ? selectedFilter.classes.join(",") : undefined,
-    };
-  }, [animeSlug, debouncedQuery, filter]);
-  const feed = useCursorFeed(feedQuery, initialPage);
+export function FeedPage({ initialPage, animeOptions, search, refreshing, onSearch }: {
+  initialPage: FeedResponse;
+  animeOptions: AnimeOption[];
+  search: FeedSearch;
+  refreshing: boolean;
+  onSearch: (search: FeedSearch) => void;
+}) {
+  const [query, setQuery] = useState(search.q ?? "");
+  useEffect(() => setQuery(search.q ?? ""), [search.q]);
+  const request = feedQuery(search);
 
   return (
     <div className={page}>
-      <header className="grid gap-8 py-7 md:grid-cols-[1fr_minmax(320px,480px)] md:items-end md:py-9">
-        <div><p className="flex items-center gap-2 text-[10px] font-bold tracking-[0.14em] text-muted uppercase"><span className="size-1.5 rounded-full bg-signal-coral" />2026 夏 · Latest</p><h1 className="mt-3 text-[38px] leading-none font-black tracking-[-0.045em] md:text-5xl">情报</h1></div>
-        <label className="hidden h-12 w-full items-center gap-3 justify-self-end rounded-2xl border border-black/[0.06] bg-white/80 px-4 shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition focus-within:border-black/10 focus-within:bg-white focus-within:shadow-[0_14px_34px_rgba(15,23,42,0.09)] focus-within:ring-3 focus-within:ring-[#786bd1]/10 md:flex">
-          <Search size={17} className="text-muted" />
-          <FeedSearchInput value={query} onChange={setQuery} />
-        </label>
+      <header className="page-header">
+        <h1 className="page-title">情报</h1>
+        <form className="flex h-10 w-full max-w-64 items-center gap-2 justify-self-end rounded-lg bg-raised pl-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-accent-soft"
+          onSubmit={(event) => { event.preventDefault(); onSearch({ ...search, q: query.trim() || undefined }); }}>
+          <input className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted md:text-sm"
+            value={query} onChange={(event) => {
+              setQuery(event.target.value);
+              if (!event.target.value) onSearch({ ...search, q: undefined });
+            }}
+            placeholder="搜索情报" aria-label="搜索情报" type="search" maxLength={120}
+            autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} enterKeyHint="search" />
+          <button className="grid size-10 shrink-0 place-items-center text-accent" type="submit" aria-label="搜索"><Search size={18} /></button>
+        </form>
       </header>
 
-      <div className="sticky top-[60px] z-20 mt-8 rounded-2xl border border-black/[0.05] bg-white/90 p-1.5 shadow-[0_10px_28px_rgba(15,23,42,0.05)] backdrop-blur-2xl md:top-[64px] md:mt-10">
-        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(220px,260px)] md:items-center">
-          <div className="scrollbar-hidden flex gap-1 overflow-x-auto p-0.5" aria-label="筛选动态">
-            {filters.map((item) => (
-              <button
-                key={item.value}
-                className={cn(
-                  "whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-colors",
-                  filter === item.value
-                    ? "bg-charcoal text-white"
-                    : "text-muted hover:bg-raised hover:text-ink",
-                )}
-                onClick={() => setFilter(item.value)}
-              >{item.label}</button>
+      <section className="min-w-0" aria-label="情报列表" aria-busy={refreshing}>
+        <div className="sticky top-15 z-20 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-white pb-2 md:top-16 md:grid-cols-[1fr_180px] md:py-2">
+          <div className="scrollbar-hidden flex min-w-0 gap-1 overflow-x-auto md:w-fit" aria-label="筛选动态">
+            {feedFilters.map((filter) => (
+              <button key={filter.value} type="button"
+                aria-pressed={(search.category ?? "all") === filter.value}
+                className={cn("rounded-lg px-2 py-2 text-[13px] whitespace-nowrap transition-colors md:px-3 md:text-sm",
+                  (search.category ?? "all") === filter.value ? "bg-accent-soft/70 font-semibold text-accent" : "text-muted hover:text-ink")}
+                onClick={() => onSearch({ ...search, category: filter.value === "all" ? undefined : filter.value })}
+              >{filter.label}</button>
             ))}
           </div>
-          <AnimeCombobox anime={animeOptions} value={animeSlug} onChange={setAnimeSlug} />
+          <div className="flex items-center justify-end gap-2">
+            <div className="w-10 min-w-0 md:w-full"><AnimeCombobox compact anime={animeOptions} value={search.anime ?? ""}
+              onChange={(anime) => onSearch({ ...search, anime: anime || undefined })} /></div>
+            {(search.anime || search.q || search.category) && <button className="shrink-0 text-xs font-semibold text-accent" onClick={() => onSearch({})}>重置</button>}
+          </div>
         </div>
-      </div>
-
-      {feed.loading && <LoadingRows count={6} />}
-      {feed.error && feed.items.length === 0 && <EmptyState title="情报加载失败" detail={feed.error} />}
-      {feed.items.length > 0 && <p className="mt-6 text-[10px] text-muted">已载入 {feed.items.length} 条</p>}
-      <VirtualWindowGrid
-        items={feed.items}
-        getKey={(item) => item.id}
-        renderItem={(item) => <FeedCard item={item} preserveFeedContext />}
-        hasMore={!feed.loading && !feed.refreshing && Boolean(feed.nextCursor)}
-        loadingMore={feed.loadingMore}
-        onLoadMore={feed.loadMore}
-        wideLanes={2}
-      />
-      {!feed.loading && feed.items.length === 0 && !feed.error && <EmptyState title="暂无内容" detail="" />}
-      {feed.error && feed.items.length > 0 && <EmptyState title="继续加载失败" detail={feed.error} />}
+        {search.anime && <p className="mt-1 mb-2 text-xs text-accent">作品：{animeOptions.find((anime) => anime.slug === search.anime)?.titleZh ?? search.anime}</p>}
+        <FeedResults key={JSON.stringify(request)} query={request} initialPage={initialPage} refreshing={refreshing} />
+      </section>
     </div>
   );
+}
+
+function FeedResults({ query, initialPage, refreshing }: {
+  query: ReturnType<typeof feedQuery>;
+  initialPage: FeedResponse;
+  refreshing: boolean;
+}) {
+  const feed = useCursorFeed(query, initialPage);
+
+  return <>
+    <div className="h-1" role="status">
+      <span className="sr-only">{refreshing ? "加载中" : ""}</span>
+    </div>
+    <VirtualWindowGrid items={feed.items} getKey={(item) => item.id} wideLanes={2}
+      renderItem={(item) => <FeedCard item={item} preserveFeedContext />}
+      estimateRowSize={190} hasMore={!refreshing && !feed.error && Boolean(feed.nextCursor)}
+      loadingMore={feed.loadingMore} onLoadMore={feed.loadMore} />
+    {feed.items.length === 0 && <EmptyState title="暂无匹配的情报" />}
+    {feed.error && <div className="mt-4 space-y-3"><EmptyState title="加载失败" detail={feed.error} />
+      <button className={textButton} type="button" onClick={feed.loadMore}>重试</button></div>}
+  </>;
 }

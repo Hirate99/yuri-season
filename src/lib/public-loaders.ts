@@ -1,154 +1,97 @@
 import { createIsomorphicFn } from "@tanstack/react-start";
-import type { AnimePageResponse, AnimeRelatedResponse, CatalogResponse, PublicationDetailResponse } from "@/domain";
+import { notFound } from "@tanstack/react-router";
+import type { ClientResponse } from "hono/client";
+import type { AnimePageResponse, AnimeRelatedResponse, PublicationDetailResponse } from "@/domain";
 import type { ServerRequestContext } from "@/server-context";
-import { eventOccursToday } from "./calendar-events";
 import { apiClient, rpcData } from "./api";
+import { feedClasses, feedQuery, type FeedSearch } from "./feed-search";
 
 export type PublicLoadContext = { serverContext?: ServerRequestContext };
 
-function browserTimeZone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Tokyo";
-  } catch {
-    return "Asia/Tokyo";
-  }
-}
-
-function database(context: PublicLoadContext) {
+async function publicService(context: PublicLoadContext) {
   if (!context.serverContext) throw new Error("Server request context is unavailable.");
-  return context.serverContext.env.DB;
+  const { createPublicService } = await import("~/application/public/service");
+  return createPublicService(context.serverContext.env);
 }
 
-function catalogForHome(
-  catalog: CatalogResponse,
-  viewerTimeZone: string,
-  renderedAt: string,
-  includeToday: boolean,
-): CatalogResponse {
-  const now = new Date(renderedAt);
-  return {
-    ...catalog,
-    events: includeToday
-      ? catalog.events.filter((event) => eventOccursToday(event, viewerTimeZone, now))
-      : [],
-  };
+async function routeData<T extends ClientResponse<unknown>>(request: Promise<T>) {
+  const response = await request;
+  if (response.status === 404) throw notFound();
+  return rpcData(response);
+}
+
+async function serverData<T>(request: Promise<T>): Promise<T> {
+  try { return await request; }
+  catch (error) {
+    if (error instanceof Error && "status" in error && error.status === 404) throw notFound();
+    throw error;
+  }
 }
 
 export const loadHomeData = createIsomorphicFn()
   .server(async (input: PublicLoadContext & { seasonSlug?: string }) => {
-    const renderedAt = new Date().toISOString();
-    const viewerTimeZone = input.serverContext?.viewerTimeZone ?? "Asia/Tokyo";
-    if (input.seasonSlug) {
-      const { readCatalogForSeason } = await import("~/repositories/catalog");
-      const catalog = await readCatalogForSeason(database(input), input.seasonSlug);
-      return {
-        catalog: catalogForHome(catalog, viewerTimeZone, renderedAt, false),
-        feed: null,
-        viewerTimeZone,
-        renderedAt,
-      };
-    }
-    const [{ readCatalog }, { readFeed }] = await Promise.all([
-      import("~/repositories/catalog"),
-      import("~/repositories/feed"),
-    ]);
-    const [catalog, feed] = await Promise.all([
-      readCatalog(database(input)),
-      readFeed(database(input), { limit: 6 }),
-    ]);
-    return {
-      catalog: catalogForHome(catalog, viewerTimeZone, renderedAt, true),
-      feed,
-      viewerTimeZone,
-      renderedAt,
-    };
+    const service = await publicService(input);
+    return serverData(service.home(input.serverContext?.viewerTimeZone ?? "Asia/Tokyo", input.seasonSlug));
   })
-  .client(async (input: PublicLoadContext & { seasonSlug?: string }) => {
-    const viewerTimeZone = browserTimeZone();
-    const renderedAt = new Date().toISOString();
-    if (input.seasonSlug) {
-      const catalog = await rpcData(apiClient.api.seasons[":slug"].$get({ param: { slug: input.seasonSlug } }));
-      return {
-        catalog: catalogForHome(catalog, viewerTimeZone, renderedAt, false),
-        feed: null,
-        viewerTimeZone,
-        renderedAt,
-      };
-    }
-    const [catalog, feed] = await Promise.all([
-      rpcData(apiClient.api.catalog.$get()),
-      rpcData(apiClient.api.feed.$get({ query: { limit: "6" } })),
-    ]);
-    return {
-      catalog: catalogForHome(catalog, viewerTimeZone, renderedAt, true),
-      feed,
-      viewerTimeZone,
-      renderedAt,
-    };
-  });
+  .client((input: PublicLoadContext & { seasonSlug?: string }) => routeData(apiClient.api.home.$get({
+    query: { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Tokyo", season: input.seasonSlug },
+  })));
 
 export const loadCalendarData = createIsomorphicFn()
   .server(async (input: PublicLoadContext & { seasonSlug?: string }) => {
-    const repository = await import("~/repositories/catalog");
-    return input.seasonSlug
-      ? repository.readCalendarForSeason(database(input), input.seasonSlug)
-      : repository.readCalendar(database(input));
+    const { calendar } = await publicService(input);
+    return serverData(input.seasonSlug ? calendar.season(input.seasonSlug) : calendar.current());
   })
   .client((input: PublicLoadContext & { seasonSlug?: string }) => input.seasonSlug
-    ? rpcData(apiClient.api.seasons[":slug"].calendar.$get({ param: { slug: input.seasonSlug } }))
-    : rpcData(apiClient.api.calendar.$get()));
+    ? routeData(apiClient.api.seasons[":slug"].calendar.$get({ param: { slug: input.seasonSlug } }))
+    : routeData(apiClient.api.calendar.$get()));
 
 export const loadFeedData = createIsomorphicFn()
-  .server(async (input: PublicLoadContext) => {
-    const [{ readFeed }, { readCurrentAnimeOptions }] = await Promise.all([
-      import("~/repositories/feed"),
-      import("~/repositories/catalog"),
-    ]);
+  .server(async (input: PublicLoadContext & { search?: FeedSearch }) => {
+    const service = await publicService(input);
+    const search = input.search ?? {};
     const [feed, animeOptions] = await Promise.all([
-      readFeed(database(input), { limit: 20 }),
-      readCurrentAnimeOptions(database(input)),
+      service.feed({ limit: 20, query: search.q, animeSlug: search.anime, contentClasses: feedClasses(search) }),
+      service.catalog.options(),
     ]);
     return { feed, animeOptions };
   })
-  .client(async () => {
+  .client(async (input: PublicLoadContext & { search?: FeedSearch }) => {
     const [feed, animeOptions] = await Promise.all([
-      rpcData(apiClient.api.feed.$get({ query: { limit: "20" } })),
-      rpcData(apiClient.api.catalog.options.$get()),
+      routeData(apiClient.api.feed.$get({ query: feedQuery(input.search ?? {}) })),
+      routeData(apiClient.api.catalog.options.$get()),
     ]);
     return { feed, animeOptions };
   });
 
 export const loadAnimeData = createIsomorphicFn()
   .server(async (input: PublicLoadContext & { slug: string }): Promise<AnimePageResponse> => {
-    const { readAnimePage } = await import("~/application/public/service");
-    const page = await readAnimePage(database(input), input.slug);
-    if (!page) throw new Error("没有找到这部动画。");
+    const service = await publicService(input);
+    const page = await service.anime.page(input.slug);
+    if (!page) throw notFound();
     return page;
   })
   .client((input: PublicLoadContext & { slug: string }) =>
-    rpcData(apiClient.api.anime[":slug"].$get({ param: { slug: input.slug } })));
+    routeData(apiClient.api.anime[":slug"].$get({ param: { slug: input.slug } })));
 
 export const loadAnimeRelatedData = createIsomorphicFn()
   .server(async (input: PublicLoadContext & { slug: string }): Promise<AnimeRelatedResponse | null> => {
-    const { readAnimeRelated } = await import("~/application/public/service");
-    return readAnimeRelated(database(input), input.slug);
+    const service = await publicService(input);
+    return service.anime.related(input.slug);
   })
   .client((input: PublicLoadContext & { slug: string }) =>
-    rpcData(apiClient.api.anime[":slug"].related.$get({ param: { slug: input.slug } })));
+    routeData(apiClient.api.anime[":slug"].related.$get({ param: { slug: input.slug } })));
 
 export const loadPublicationData = createIsomorphicFn()
   .server(async (input: PublicLoadContext & { id: string }): Promise<PublicationDetailResponse> => {
-    const { readPublicationPage } = await import("~/application/public/service");
-    const page = await readPublicationPage(database(input), input.id);
-    if (!page) throw new Error("没有找到这条情报。");
+    const service = await publicService(input);
+    const page = await service.publications.page(input.id);
+    if (!page) throw notFound();
     return page;
   })
   .client((input: PublicLoadContext & { id: string }) =>
-    rpcData(apiClient.api.updates[":id"].$get({ param: { id: input.id } })));
+    routeData(apiClient.api.updates[":id"].$get({ param: { id: input.id } })));
 
 export const loadSeasonsData = createIsomorphicFn()
-  .server(async (input: PublicLoadContext) => {
-    const { readSeasons } = await import("~/repositories/catalog");
-    return readSeasons(database(input));
-  })
-  .client(() => rpcData(apiClient.api.seasons.$get()));
+  .server(async (input: PublicLoadContext) => (await publicService(input)).seasons())
+  .client(() => routeData(apiClient.api.seasons.$get()));

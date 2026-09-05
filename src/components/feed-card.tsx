@@ -2,83 +2,67 @@ import { Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import type { FeedItem } from "@/domain";
 import { contentLabel } from "@/lib/format";
-import { bangumiCoverUrl } from "@/lib/media-url";
-import { CoverImage } from "./cover-image";
 import { LocalDateTime } from "./local-date-time";
 
-export function FeedCard({ item, compact = false, preserveFeedContext = false }: {
-  item: FeedItem;
-  compact?: boolean;
-  preserveFeedContext?: boolean;
+function FeedTitle({ item, preserveFeedContext }: { item: FeedItem; preserveFeedContext: boolean }) {
+  const props = {
+    className: "after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-accent/50 group-hover:text-accent",
+    children: item.title,
+    "aria-label": `查看详情：${item.title}`,
+  };
+  if (item.contentClass === "community_thread") {
+    return <a {...props} href={item.url} target="_blank" rel="noreferrer" aria-label={`打开讨论：${item.title}`} />;
+  }
+  return preserveFeedContext
+    ? <Link {...props} to="/feed/$id" params={{ id: item.id }} search={(previous) => previous}
+        mask={{ to: "/updates/$id", params: { id: item.id }, unmaskOnReload: true }} resetScroll={false} />
+    : <Link {...props} to="/updates/$id" params={{ id: item.id }} state={{ yuriReturnToPrevious: true }} />;
+}
+
+export function FeedCard({ item, preserveFeedContext = false, compact = false }: {
+  item: FeedItem; preserveFeedContext?: boolean; compact?: boolean;
 }) {
   const relatedAnime = item.relatedAnime ?? [];
-  const isDiscussion = item.contentClass === "community_thread";
   const isCrossWork = item.contentClass === "community_thread" && relatedAnime.length > 1;
-  const showPreview = Boolean(item.media?.previewUrl && item.media.presentationMode !== "link_only");
-  const showCover = !showPreview && !isCrossWork && Boolean(item.animeCoverUrl);
+  const majorSpoiler = item.spoilerLevel === "major" || item.media?.spoilerLevel === "major";
+  const showPreview = !majorSpoiler && Boolean(item.media?.previewUrl && item.media.presentationMode !== "link_only");
 
   return (
-    <article className="group relative rounded-[10px] border border-black/[0.06] bg-white p-4 shadow-[0_10px_34px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(15,23,42,0.085)] md:p-5">
-      <div className="flex items-center justify-between gap-3 text-[10px] text-muted">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-raised px-2.5 py-1 font-semibold text-ink"><i className="size-1 rounded-full bg-charcoal" aria-hidden="true" />{contentLabel(item.contentClass)}</span>
-          {isCrossWork && <span className="rounded-full bg-[#eeeafd] px-2.5 py-1 font-semibold text-[#51459d]">跨作品 · {relatedAnime.length} 部</span>}
+    <article className={`group surface relative shadow-[0_2px_6px_rgba(37,35,43,0.025),0_12px_28px_-16px_rgba(105,83,168,0.16)] transition-[border-color,box-shadow] duration-200 hover:border-accent/25 hover:shadow-[0_2px_8px_rgba(37,35,43,0.035),0_14px_32px_-16px_rgba(105,83,168,0.24)] ${compact ? "h-full p-4" : "p-4 md:p-5"}`}>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium text-accent">{contentLabel(item.contentClass)}</span>
+          {isCrossWork && <span>跨作品 · {relatedAnime.length} 部</span>}
+          {(majorSpoiler || item.spoilerLevel !== "none") && <span>{majorSpoiler ? "重要剧透" : "含剧情信息"}</span>}
         </div>
         <LocalDateTime value={item.publishedAt} />
       </div>
-      <div className={showPreview || showCover ? "mt-4 grid grid-cols-[minmax(0,1fr)_68px] gap-4 sm:grid-cols-[minmax(0,1fr)_116px]" : "mt-4 min-w-0"}>
-        <div className="min-w-0">
-          <h3 className={compact ? "text-sm font-semibold" : "text-base font-semibold"}>
-            {isDiscussion ? (
-              <a
-                className="after:absolute after:inset-0 after:rounded-[10px] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-charcoal/50 group-hover:underline"
-                href={item.url}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`打开讨论：${item.title}`}
-              >{item.title}</a>
-            ) : preserveFeedContext ? (
-              <Link
-                className="after:absolute after:inset-0 after:rounded-[10px] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-charcoal/50 group-hover:underline"
-                to="/feed/$id"
-                params={{ id: item.id }}
-                mask={{ to: "/updates/$id", params: { id: item.id }, unmaskOnReload: true }}
-                resetScroll={false}
-                aria-label={`查看详情：${item.title}`}
-              >{item.title}</Link>
-            ) : (
-              <Link
-                className="after:absolute after:inset-0 after:rounded-[10px] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-charcoal/50 group-hover:underline"
-                to="/updates/$id"
-                params={{ id: item.id }}
-                state={{ yuriReturnToPrevious: true }}
-                aria-label={`查看详情：${item.title}`}
-              >{item.title}</Link>
-            )}
-          </h3>
-          <p className="mt-2 text-xs leading-6 text-[#50545b]">{item.summary}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
-            <span>{item.sourceName}{item.sourceAccount ? ` · ${item.sourceAccount}` : ""}</span>
-            {!isCrossWork && item.animeSlug && <Link className="relative z-10 text-ink hover:underline" to="/anime/$slug" params={{ slug: item.animeSlug }}>{item.animeTitle}</Link>}
-            <a className="relative z-10 inline-flex items-center gap-0.5 text-ink hover:underline" href={item.url} target="_blank" rel="noreferrer">{isDiscussion ? "讨论串" : "原文"}<ArrowUpRight size={11} /></a>
-          </div>
-          {isCrossWork && (
-            <div className="mt-3 flex flex-wrap gap-1.5" aria-label="关联作品">
-              {relatedAnime.slice(0, 4).map((work) => <a className="relative z-10 max-w-full truncate rounded-full border border-black/[0.07] bg-raised px-2.5 py-1 text-[10px] font-medium text-ink hover:bg-[#eeeafd]" key={work.id} href={`/anime/${work.slug}`}>{work.title}</a>)}
-              {relatedAnime.length > 4 && <span className="rounded-full bg-raised px-2.5 py-1 text-[10px] text-muted">+{relatedAnime.length - 4}</span>}
-            </div>
-          )}
-        </div>
-        {showPreview ? (
-          <div className="aspect-[4/3] overflow-hidden rounded-xl bg-[#eceef1]">
-            <img className="h-full w-full object-cover" src={item.media?.previewUrl ?? ""} alt="" loading="lazy" referrerPolicy="no-referrer" />
-          </div>
-        ) : showCover ? (
-          <div>
-            <CoverImage className="aspect-[3/4] w-full rounded-xl shadow-sm" src={bangumiCoverUrl(item.animeCoverUrl, 200)} alt={`${item.animeTitle ?? "作品"} 封面`} />
-          </div>
-        ) : null}
+      <div className={`mt-3 grid grid-rows-[min-content_1fr] items-start gap-x-3 gap-y-2 ${showPreview ? `grid-cols-[minmax(0,1fr)_72px] ${compact ? "" : "sm:grid-cols-[minmax(0,1fr)_128px] sm:gap-x-5"}` : "grid-cols-1"}`}>
+        <h3 className={`col-start-1 row-start-1 min-w-0 text-[15px] leading-[22px] font-semibold ${compact ? "md:text-base md:leading-6" : "md:text-lg md:leading-7"}`}>
+          <FeedTitle item={item} preserveFeedContext={preserveFeedContext} />
+        </h3>
+        {majorSpoiler ? <details className="relative z-10 col-start-1 row-start-2 text-sm leading-6 text-muted">
+          <summary className="w-fit cursor-pointer text-accent">展开剧透摘要</summary>
+          <p className="mt-2">{item.summary}</p>
+        </details> : <p className={`row-start-2 line-clamp-2 text-muted ${showPreview ? "col-[1/3] sm:col-[1/2]" : "col-start-1"} ${compact ? "text-[13px] leading-[22px]" : "text-sm leading-6 md:leading-7"}`}>{item.summary}</p>}
+        {showPreview && <div className="col-start-2 row-start-1 aspect-square overflow-hidden rounded-lg bg-raised sm:row-[1/3] md:aspect-[4/3]">
+          <img className="h-full w-full object-cover" src={item.media?.previewUrl ?? ""} alt="" loading="lazy" referrerPolicy="no-referrer" />
+        </div>}
       </div>
+      <footer className="mt-3 flex items-center gap-3 text-xs text-muted">
+        <a className="relative z-10 inline-flex min-h-7 min-w-0 max-w-[70%] items-center gap-1 hover:text-accent"
+          href={item.url} target="_blank" rel="noreferrer" aria-label={`原文：${item.sourceName}`}
+          title={item.sourceAccount ? `${item.sourceName} · ${item.sourceAccount}` : item.sourceName}>
+          <span className="truncate">{item.sourceName}</span><ArrowUpRight className="shrink-0" size={12} />
+        </a>
+        {!isCrossWork && item.animeSlug && <Link className="relative z-10 inline-flex min-h-7 shrink-0 items-center text-muted hover:text-accent"
+          to="/anime/$slug" params={{ slug: item.animeSlug }} aria-label={`作品：${item.animeTitle}`}>作品详情</Link>}
+      </footer>
+      {isCrossWork && <div className="mt-3 flex flex-wrap gap-1.5" aria-label="关联作品">
+        {relatedAnime.slice(0, 4).map((work) => <Link className="relative z-10 max-w-full truncate rounded-md bg-raised px-2 py-1 text-xs text-muted hover:text-accent"
+          key={work.id} to="/anime/$slug" params={{ slug: work.slug }}>{work.title}</Link>)}
+        {relatedAnime.length > 4 && <span className="px-2 py-1 text-xs text-muted">+{relatedAnime.length - 4}</span>}
+      </div>}
     </article>
   );
 }

@@ -13,7 +13,7 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
   return (
     <nav
       className={mobile
-        ? "fixed inset-x-3 bottom-3 z-30 grid h-14 grid-cols-4 rounded-2xl border border-black/[0.06] bg-white/85 shadow-[0_16px_45px_rgba(15,23,42,0.14)] backdrop-blur-2xl md:hidden"
+        ? "fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
         : "hidden h-full items-stretch md:flex"
       }
       aria-label={mobile ? "移动端主导航" : "主导航"}
@@ -24,12 +24,12 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
           to={item.to}
           activeOptions={{ exact: item.exact }}
           className={mobile
-            ? "grid place-items-center text-xs text-muted"
-            : "relative grid place-items-center px-4 text-xs font-medium text-muted transition hover:text-ink"
+            ? "relative grid h-14 place-items-center text-sm text-muted"
+            : "relative grid place-items-center px-4 text-sm font-medium text-muted transition hover:text-ink"
           }
           activeProps={{ className: mobile
-            ? "!text-ink font-semibold"
-            : "!text-ink after:absolute after:bottom-3 after:left-1/2 after:size-1 after:-translate-x-1/2 after:rounded-full after:bg-signal-coral"
+            ? "!text-accent font-semibold after:absolute after:top-0 after:h-0.5 after:w-5 after:bg-accent"
+            : "!text-ink after:absolute after:bottom-3 after:left-1/2 after:size-1 after:-translate-x-1/2 after:rounded-full after:bg-accent"
           }}
         >{item.label}</Link>
       ))}

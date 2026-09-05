@@ -1,4 +1,4 @@
-import { HeadContent, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
+import { HeadContent, Link, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
 import appCss from "@/styles/app.css?url";
@@ -19,6 +19,16 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ],
   }),
   component: AppShell,
+  notFoundComponent: () => (
+    <div className="mx-auto max-w-xl px-6 py-24 text-center">
+      <p className="text-sm font-semibold text-accent">404</p>
+      <h1 className="mt-3 text-3xl font-bold">没有找到这个页面</h1>
+      <p className="mt-4 text-sm leading-7 text-muted">链接可能已失效，或这条内容已撤回。</p>
+      <div className="mt-8 flex justify-center gap-6 text-sm font-semibold text-accent">
+        <Link to="/">返回片单</Link><Link to="/feed">查看情报</Link>
+      </div>
+    </div>
+  ),
   shellComponent: RootDocument,
 });
 

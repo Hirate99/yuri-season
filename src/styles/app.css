@@ -2,12 +2,14 @@
 
 @theme {
   --font-sans: Inter, "Noto Sans SC", "Noto Sans JP", "Microsoft YaHei UI", system-ui, sans-serif;
-  --color-ink: #121316;
-  --color-muted: #686d75;
+  --color-ink: #25232b;
+  --color-muted: #686371;
   --color-paper: #ffffff;
-  --color-raised: #f4f5f7;
-  --color-line: #e5e7eb;
-  --color-charcoal: #15171a;
+  --color-raised: #f7f7f8;
+  --color-line: #eae9ed;
+  --color-charcoal: #292531;
+  --color-accent: #6953a8;
+  --color-accent-soft: #eee9f8;
   --color-signal-coral: #ff5a2f;
   --color-signal-lime: #b6f25a;
   --color-signal-rose: #f38fae;
@@ -20,14 +22,70 @@
   * { box-sizing: border-box; }
   html {
     @apply bg-paper text-ink antialiased;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    scroll-padding-top: 8rem;
+    scrollbar-gutter: stable;
   }
-  html::-webkit-scrollbar { display: none; }
-  body { @apply m-0 min-w-80 bg-paper font-sans; }
+  body { @apply m-0 min-w-0 bg-paper font-sans; }
   button, select { @apply cursor-pointer; }
   button:disabled { @apply cursor-wait opacity-55; }
+  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
   ::selection { @apply bg-charcoal text-white; }
+}
+
+@layer components {
+  .page-header { @apply mb-6 grid min-h-12 grid-cols-[auto_minmax(0,1fr)] items-center gap-6 md:min-h-14; }
+  .page-header > .page-title { @apply mt-0; }
+  .page-title { @apply mt-2 text-[30px] leading-tight font-bold tracking-tight md:text-[40px]; }
+  .eyebrow { @apply text-xs font-semibold tracking-wide text-accent; }
+  .surface { @apply rounded-xl border border-line bg-white; }
+
+  .season-card-stage {
+    perspective: 1100px;
+    transform-style: preserve-3d;
+  }
+
+  .season-card {
+    backface-visibility: hidden;
+    transform-origin: 50% 78%;
+    transform-style: preserve-3d;
+    transition:
+      transform 760ms cubic-bezier(.2, .78, .2, 1),
+      opacity 420ms ease,
+      filter 620ms ease,
+      box-shadow 620ms ease;
+    will-change: transform;
+  }
+
+  .season-card[data-card-position="active"] {
+    z-index: 3;
+    opacity: 1;
+    filter: saturate(1);
+    pointer-events: auto;
+    transform: translate3d(0, 0, 62px) rotateX(0) rotateY(0) rotateZ(0);
+    box-shadow: 0 24px 48px -18px rgb(37 35 43 / 34%);
+  }
+
+  .season-card[data-card-position="next"] {
+    z-index: 2;
+    opacity: .28;
+    filter: saturate(.72);
+    pointer-events: none;
+    transform: translate3d(18px, 12px, -20px) rotateX(1.5deg) rotateY(7deg) rotateZ(3deg);
+    box-shadow: 0 12px 28px -16px rgb(37 35 43 / 20%);
+  }
+
+  .season-card[data-card-position="previous"] {
+    z-index: 1;
+    opacity: .22;
+    filter: saturate(.65);
+    pointer-events: none;
+    transform: translate3d(-20px, 18px, -38px) rotateX(-1deg) rotateY(-8deg) rotateZ(-4deg);
+    box-shadow: 0 10px 24px -16px rgb(37 35 43 / 16%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .season-card { transition: none; }
 }
 
 @utility scrollbar-hidden {

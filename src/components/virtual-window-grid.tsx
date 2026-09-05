@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 type VirtualWindowGridProps<T> = {
   items: T[];
   getKey: (item: T) => string;
-  renderItem: (item: T) => ReactNode;
+  renderItem: (item: T, index: number) => ReactNode;
   estimateRowSize?: number;
   hasMore?: boolean;
   loadingMore?: boolean;
@@ -44,14 +44,15 @@ export function VirtualWindowGrid<T>({
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
+    if (!mounted) return;
     const updateLayout = () => {
-      setScrollMargin(containerRef.current?.offsetTop ?? 0);
-      setLanes(window.matchMedia("(min-width: 1280px)").matches ? wideLanes : 1);
+      setScrollMargin((containerRef.current?.getBoundingClientRect().top ?? 0) + window.scrollY);
+      setLanes(window.matchMedia("(min-width: 768px)").matches ? wideLanes : 1);
     };
     updateLayout();
     window.addEventListener("resize", updateLayout);
     return () => window.removeEventListener("resize", updateLayout);
-  }, [wideLanes]);
+  }, [wideLanes, mounted]);
 
   useEffect(() => {
     if (mounted && loaderVisible && !loadingMore) onLoadMore?.();
@@ -59,8 +60,8 @@ export function VirtualWindowGrid<T>({
 
   if (!mounted) {
     return (
-      <div className={`mt-3 grid gap-3 ${wideLanes === 2 ? "xl:grid-cols-2" : ""}`}>
-        {items.slice(0, 6).map((item) => <div key={getKey(item)}>{renderItem(item)}</div>)}
+      <div className={`mt-3 grid gap-3 ${wideLanes === 2 ? "md:grid-cols-2" : ""}`}>
+        {items.slice(0, 6).map((item, index) => <div key={getKey(item)}>{renderItem(item, index)}</div>)}
       </div>
     );
   }
@@ -82,7 +83,7 @@ export function VirtualWindowGrid<T>({
               transform: `translate3d(${x}, ${virtualItem.start - scrollMargin}px, 0)`,
             }}
           >
-            {item ? renderItem(item) : <div className="grid min-h-20 place-items-center text-xs text-muted" role="status">正在加载…</div>}
+            {item ? renderItem(item, virtualItem.index) : <div className="grid min-h-20 place-items-center text-xs text-muted" role="status">正在加载…</div>}
           </div>
         );
       })}

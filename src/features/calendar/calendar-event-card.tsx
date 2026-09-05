@@ -14,12 +14,17 @@ export function CalendarEventCard({ event }: { event: CalendarEvent }) {
 
   return (
     <article className={cn(
-      "grid min-h-20 grid-cols-[minmax(0,1fr)_32px] items-center gap-x-3 rounded-2xl border p-4 shadow-[0_10px_30px_rgba(15,23,42,0.045)] transition-shadow hover:shadow-[0_14px_38px_rgba(15,23,42,0.07)] md:grid-cols-[148px_minmax(0,1fr)_32px] md:gap-x-5",
+      "grid grid-cols-[minmax(0,1fr)_32px] items-start gap-x-3 gap-y-2 rounded-xl border p-4",
       isBirthday
         ? "border-[#f2dce3] bg-[linear-gradient(110deg,#fff8fa_0%,#ffffff_52%)]"
-        : "border-black/[0.06] bg-white",
+        : "border-line bg-white",
     )}>
-      <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 md:self-center">
+      <div className={cn("flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1", isBirthday && "text-[#a84863]")}>
+        <EventTime event={event} />
+        <Badge tone={presentation.tone}>{presentation.label}</Badge>
+      </div>
+
+      <div className="col-span-2 col-start-1 row-start-2 flex min-w-0 items-center gap-3">
         {portrait && (
           <a
             className="relative shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b64c69]"
@@ -28,32 +33,26 @@ export function CalendarEventCard({ event }: { event: CalendarEvent }) {
             rel="noreferrer"
             aria-label={`${event.characterName ?? "角色"}头像来源`}
           >
-            <span className="absolute -inset-1 rounded-full bg-[#fae7ed]" aria-hidden="true" />
             <CoverImage
-              className="relative size-12 rounded-full ring-2 ring-white"
+              className="size-10 rounded-full ring-2 ring-white"
               src={portrait.imageUrl}
               alt={`${event.characterName ?? "角色"}头像`}
             />
           </a>
         )}
-        <div className={cn("min-w-0", isBirthday && "text-[#a84863]")}>
-          <EventTime event={event} />
+        <div className="min-w-0">
+          <h3 className="text-sm leading-5 font-semibold">
+            {eventTitle(event)}
+          </h3>
+          {(event.animeTitle || event.characterName) && (
+            <p className="mt-1 text-xs leading-4 text-muted">{event.animeTitle ?? event.characterName}</p>
+          )}
         </div>
-      </div>
-
-      <div className="col-span-2 col-start-1 row-start-2 mt-3 min-w-0 md:col-span-1 md:col-start-2 md:row-start-1 md:mt-0">
-        <Badge tone={presentation.tone}>{presentation.label}</Badge>
-        <h3 className="mt-2 text-[15px] leading-5 font-bold tracking-[-0.01em]">
-          {eventTitle(event)}
-        </h3>
-        {(event.animeTitle || event.characterName) && (
-          <p className="mt-1 text-[10px] text-muted">{event.animeTitle ?? event.characterName}</p>
-        )}
       </div>
 
       {event.sourceUrl && (
         <a
-          className="col-start-2 row-start-1 grid size-8 place-items-center rounded-full text-muted transition hover:bg-black/[0.045] hover:text-ink md:col-start-3"
+          className="col-start-2 row-start-1 -mt-1 grid size-8 place-items-center rounded-full text-muted transition hover:bg-black/[0.045] hover:text-ink"
           href={event.sourceUrl}
           target="_blank"
           rel="noreferrer"

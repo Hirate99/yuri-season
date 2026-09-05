@@ -17,7 +17,7 @@ type CarouselImage = {
 
 function MediaCaption({ image }: { image: CarouselImage }) {
   return (
-    <figcaption className="flex flex-wrap items-center justify-between gap-2 bg-[#f7f7f9] px-4 py-3 text-[10px] text-muted">
+    <figcaption className="flex flex-wrap items-center justify-between gap-2 bg-[#f7f7f9] px-4 py-3 text-xs text-muted">
       <span>{image.rightsStatus === "press_kit" ? "官方图片" : "图片来自原帖"}</span>
       <a className="transition hover:text-ink" href={image.sourceUrl} target="_blank" rel="noreferrer">图片来源 ↗</a>
     </figcaption>
@@ -26,10 +26,12 @@ function MediaCaption({ image }: { image: CarouselImage }) {
 
 function SinglePublicationImage({ image }: { image: CarouselImage }) {
   return (
-    <figure className="mb-10 overflow-hidden rounded-2xl bg-white shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
+    <figure className="mb-10 overflow-hidden rounded-xl bg-white border border-line">
       <img
         className="block h-auto w-full select-none"
         src={image.url}
+        width={image.width ?? undefined}
+        height={image.height ?? undefined}
         alt={image.altText}
         draggable={false}
         decoding="async"
@@ -40,31 +42,13 @@ function SinglePublicationImage({ image }: { image: CarouselImage }) {
   );
 }
 
-const variantPriority: Record<PublicationAsset["variant"], number> = {
-  thumbnail: 1,
-  original: 2,
-  preview: 3,
-};
-
-function preferredAsset(current: PublicationAsset, candidate: PublicationAsset): PublicationAsset {
-  const priorityDifference = variantPriority[candidate.variant] - variantPriority[current.variant];
-  if (priorityDifference !== 0) return priorityDifference > 0 ? candidate : current;
-  return (candidate.width ?? 0) > (current.width ?? 0) ? candidate : current;
-}
-
 export function publicationCarouselImages(
   assets: PublicationAsset[],
   media: MediaItem | null,
   fallbackAlt: string,
 ): CarouselImage[] {
-  const grouped = new Map<string, PublicationAsset>();
-  for (const asset of assets) {
-    const current = grouped.get(asset.sourceUrl);
-    grouped.set(asset.sourceUrl, current ? preferredAsset(current, asset) : asset);
-  }
-
-  const images: CarouselImage[] = [...grouped.values()]
-    .sort((left, right) => left.sortOrder - right.sortOrder)
+  // The public read model supplies one preferred variant per source, in order.
+  const images: CarouselImage[] = assets
     .map((asset) => ({
       id: asset.id,
       url: asset.url,
@@ -116,7 +100,7 @@ function MultiplePublicationImages({ images }: { images: CarouselImage[] }) {
   }, [api, measuredAspectRatios]);
 
   return (
-    <figure className="mb-10 overflow-hidden rounded-2xl bg-white shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
+    <figure className="mb-10 overflow-hidden rounded-xl bg-white border border-line">
       <div className="relative isolate">
         <div className="overflow-hidden" ref={viewportRef} aria-roledescription="carousel" aria-label={`图片轮播，共 ${images.length} 张`}>
           <div className="flex touch-pan-y items-start transition-[height] duration-300 ease-out">
@@ -136,6 +120,9 @@ function MultiplePublicationImages({ images }: { images: CarouselImage[] }) {
                 <img
                   className="block h-full w-full select-none object-contain"
                   src={image.url}
+                  width={image.width ?? undefined}
+                  height={image.height ?? undefined}
+                  loading={index === selectedIndex ? "eager" : "lazy"}
                   alt={image.altText}
                   draggable={false}
                   decoding="async"

@@ -18,6 +18,7 @@ export function CoverImage({ src, alt, className, eager = false, fallback, objec
     : objectPosition;
 
   useEffect(() => {
+    setFailed(false);
     setIsTall(false);
     const image = imageRef.current;
     if (topAlignTall && image?.complete) {

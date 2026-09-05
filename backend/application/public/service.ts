@@ -16,6 +16,17 @@ import {
   readPublicationDocument,
 } from "~/repositories/publications";
 
+export async function readHomePage(db: D1Database, timeZone: string, seasonSlug?: string) {
+  const now = new Date();
+  const [catalog, feed] = await Promise.all([
+    seasonSlug
+      ? readCatalogForSeason(db, seasonSlug, { events: "none", now })
+      : readCatalog(db, { events: "all", now }),
+    seasonSlug ? null : readFeed(db, { limit: 6 }),
+  ]);
+  return { catalog, feed, viewerTimeZone: timeZone, renderedAt: now.toISOString() };
+}
+
 /** Shared application read model used by SSR and the public API. */
 export async function readAnimePage(db: D1Database, slug: string): Promise<AnimePageResponse | null> {
   const anime = await readAnimeDetail(db, slug);
@@ -30,7 +41,7 @@ export async function readAnimeRelated(
   const animeId = await readAnimeId(db, slug);
   if (!animeId) return null;
   const [feed, media, discussions] = await Promise.all([
-    readFeed(db, { animeId, limit: 40 }),
+    readFeed(db, { animeId, limit: 2 }),
     readMedia(db, animeId),
     readDiscussions(db, animeId),
   ]);
@@ -53,6 +64,7 @@ export async function readPublicationPage(
 
 export function createPublicService(env: Env) {
   return {
+    home: (timeZone: string, seasonSlug?: string) => readHomePage(env.DB, timeZone, seasonSlug),
     anime: {
       page: (slug: string) => readAnimePage(env.DB, slug),
       related: (slug: string) => readAnimeRelated(env.DB, slug),

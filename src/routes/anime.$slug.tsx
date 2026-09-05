@@ -13,6 +13,10 @@ export const Route = createFileRoute("/anime/$slug")({
     const related = loadAnimeRelatedData(input).catch(() => null);
     return { data: await loadAnimeData(input), related };
   },
+  head: ({ loaderData }) => ({ meta: [
+    { title: `${loaderData?.data.anime.titleZh ?? "作品"} · YuriSeason` },
+    { name: "description", content: loaderData?.data.anime.synopsis ?? "作品资料与最新动态" },
+  ] }),
   component: AnimeRoute,
 });
 

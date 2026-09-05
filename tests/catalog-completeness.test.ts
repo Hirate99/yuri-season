@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readCatalog, readCatalogForSeason, readCurrentAnimeOptions, readSeasons } from "~/repositories/catalog";
-import { readAnimePage, readAnimeRelated } from "~/application/public/service";
+import { readAnimePage, readAnimeRelated, readHomePage } from "~/application/public/service";
+import { eventOccursToday } from "@/lib/calendar-events";
 import { readAnimeDetail } from "~/repositories/detail";
 import { readAdminDashboard } from "~/application/admin/service";
 import { TestD1 } from "./support/d1-adapter";
@@ -18,6 +19,32 @@ beforeEach(async () => {
 afterEach(() => database.close());
 
 describe("current-season catalog", () => {
+  test("filters home events in the viewer timezone while retaining calendar data", async () => {
+    const full = await readCatalog(database.binding());
+    const now = new Date("2026-08-14T02:00:00Z");
+    for (const timeZone of ["Asia/Tokyo", "America/Los_Angeles"]) {
+      const home = await readCatalog(database.binding(), { events: "today", timeZone, now });
+      expect(home.anime).toEqual(full.anime);
+      expect(home.events).toEqual(full.events.filter((event) => eventOccursToday(event, timeZone, now)));
+      expect(home.generatedAt).toBe(now.toISOString());
+    }
+  });
+
+  test("keeps the current event calendar available to the homepage", async () => {
+    const full = await readCatalog(database.binding());
+    const home = await readHomePage(database.binding(), "Asia/Tokyo");
+    expect(home.catalog.events).toEqual(full.events);
+  });
+
+  test("does not read discarded events or feed for an archived home", async () => {
+    database.resetMetrics();
+    const page = await readHomePage(database.binding(), "Asia/Tokyo", "2026-summer");
+    expect(page.catalog.anime).toHaveLength(11);
+    expect(page.catalog.events).toEqual([]);
+    expect(page.feed).toBeNull();
+    expect(database.preparedStatements).toBe(2);
+  });
+
   test("keeps below-fold anime content out of the blocking page response", async () => {
     const page = await readAnimePage(database.binding(), "kimishinu");
     const related = await readAnimeRelated(database.binding(), "kimishinu");

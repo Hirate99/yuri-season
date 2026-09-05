@@ -1,8 +1,11 @@
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import type { RouterContext } from "./router-context";
+import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
+import { createQueryClient } from "./lib/queries";
 
 export function getRouter() {
+  const queryClient = createQueryClient();
   let restoreSpaScroll = false;
   const router = createRouter({
     routeTree,
@@ -11,8 +14,9 @@ export function getRouter() {
     // TanStack Start adds the per-request Worker context through
     // `additionalContext` during SSR.  Do not shadow it with an explicit
     // `undefined` value in the router's base context.
-    context: {} satisfies RouterContext,
+    context: { queryClient } satisfies RouterContext,
   });
+  setupRouterSsrQueryIntegration({ router, queryClient });
 
   if (typeof window !== "undefined") {
     const unsubscribe = router.subscribe("onRendered", () => {

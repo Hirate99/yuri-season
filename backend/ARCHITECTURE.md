@@ -33,13 +33,39 @@ creates `hc<ApiType>()` clients for both the browser and operational scripts. Do
 duplicate internal API paths, request DTOs, response casts, or generic `fetch<T>`
 wrappers in consumers.
 
-Public reads use D1 directly. Admin mutations refresh only the affected view or resource;
-background refreshes retain the active editor and its selection.
+Public reads use D1 directly. Admin queries use the `admin` query-key prefix;
+mutations invalidate that prefix, refreshing active views and marking inactive
+views stale. Background refreshes retain the active editor and its selection.
+
+Input contracts live in `src/domain/inputs`: Zod validates runtime values and
+derives write types. Hono uses `@hono/zod-validator` with the existing HTTP error
+shape. Context-dependent workflow parsers retain the Hono validator adapter.
+Admin forms share their individual schemas through React Hook Form and the Zod
+resolver. Import the individual schema rather than the resource envelope in UI
+code. Server refreshes must not reset dirty form values.
+
+`/admin` is a layout with nested overview, works, review, coverage, automation and
+seasons routes. Review and automation tabs use validated search parameters.
+Each form owns its mutation state; query and mutation options live together in
+`src/features/admin/queries.ts`. The layout owns only the shared summary query.
+Dedicated page read endpoints return their own data, without unrelated empty
+arrays. The existing dashboard endpoint remains compatible with research scripts.
+Overview and coverage use `src/domain/coverage.ts` for the same completeness rules.
+
+TanStack Query owns admin server state and Feed pagination. Each router gets its
+own QueryClient; the official Router integration handles SSR hydration. Feed
+loaders populate the same infinite query used by the component, preserving loaded
+pages on navigation. Other public loaders, including deferred anime-related data,
+remain router-owned. Local selections and search inputs stay in component state.
 
 ## Database rules
 
 - Every persisted business table is declared in `infrastructure/db/schema`.
 - Drizzle is the default for reads and writes, including joins and CTEs.
+- Public and admin reads share field selections in `read-models/detail.ts`;
+  each query keeps its own visibility filters, ordering, and admin-only fields.
+- Source check updates live in `repositories/source-checks.ts`. Worker checks use
+  the database clock; timestamped local checks reject stale or replayed results.
 - Native D1 statements are restricted to `infrastructure/db/native`. They are only
   for operations Drizzle cannot express clearly, currently atomic job state
   transitions and the dynamically filtered feed query.

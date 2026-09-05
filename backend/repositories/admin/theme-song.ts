@@ -15,7 +15,7 @@ async function resolveTrack(db: D1Database, value: ThemeSongWrite): Promise<stri
     return existing.id;
   }
   const orm = database(db);
-  await orm.insert(musicTracksTable).values({
+  const [track] = await orm.insert(musicTracksTable).values({
     id: createId("track"),
     title: value.title,
     artist: value.artist,
@@ -27,13 +27,7 @@ async function resolveTrack(db: D1Database, value: ThemeSongWrite): Promise<stri
     verified: value.verified,
     coverUrl: value.coverUrl,
     coverSourceUrl: value.coverSourceUrl,
-  }).onConflictDoNothing();
-  const track = await orm.select({ id: musicTracksTable.id }).from(musicTracksTable).where(and(
-    eq(musicTracksTable.title, value.title),
-    eq(musicTracksTable.artist, value.artist),
-  )).get();
-  if (!track) throw new HttpError(500, "曲目写入失败。");
-  await orm.update(musicTracksTable).set({
+  }).onConflictDoUpdate({ target: [musicTracksTable.title, musicTracksTable.artist], set: {
     lyricist: sql`COALESCE(${musicTracksTable.lyricist}, ${value.lyricist})`,
     composer: sql`COALESCE(${musicTracksTable.composer}, ${value.composer})`,
     arranger: sql`COALESCE(${musicTracksTable.arranger}, ${value.arranger})`,
@@ -43,7 +37,7 @@ async function resolveTrack(db: D1Database, value: ThemeSongWrite): Promise<stri
     coverSourceUrl: sql`COALESCE(${musicTracksTable.coverSourceUrl}, ${value.coverSourceUrl})`,
     verified: sql`MAX(${musicTracksTable.verified}, ${value.verified ? 1 : 0})`,
     updatedAt: sql`CURRENT_TIMESTAMP`,
-  }).where(eq(musicTracksTable.id, track.id));
+  } }).returning({ id: musicTracksTable.id });
   return track.id;
 }
 

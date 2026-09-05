@@ -29,6 +29,15 @@ export function eventDateKey(event: Pick<CalendarEvent, "startsAt" | "timezone">
   return safeDateKey(date, event.timezone);
 }
 
+function eventEndDateKey(event: Pick<CalendarEvent, "endsAt" | "timezone">): string | null {
+  if (!event.endsAt) return null;
+  const dateOnly = /^(\d{4}-\d{2}-\d{2})$/.exec(event.endsAt);
+  if (dateOnly) return dateOnly[1];
+  const date = new Date(event.endsAt);
+  if (Number.isNaN(date.valueOf())) return null;
+  return safeDateKey(date, event.timezone);
+}
+
 export function eventOccursToday(event: CalendarEvent, viewerTimeZone: string, now = new Date()): boolean {
   if (!event.startsAt) return false;
   const date = new Date(event.startsAt);
@@ -38,10 +47,17 @@ export function eventOccursToday(event: CalendarEvent, viewerTimeZone: string, n
     return eventDay?.slice(5) === today.slice(5);
   }
   if (/^\d{4}-\d{2}-\d{2}$/.test(event.startsAt)) {
-    return eventDateKey(event) === safeDateKey(now, event.timezone);
+    const today = safeDateKey(now, event.timezone);
+    const startDay = eventDateKey(event);
+    const endDay = eventEndDateKey(event) ?? startDay;
+    return startDay !== null && endDay !== null && startDay <= today && today <= endDay;
   }
-  return !Number.isNaN(date.valueOf())
-    && safeDateKey(date, viewerTimeZone) === safeDateKey(now, viewerTimeZone);
+  if (Number.isNaN(date.valueOf())) return false;
+  const today = safeDateKey(now, viewerTimeZone);
+  const startDay = safeDateKey(date, viewerTimeZone);
+  const end = event.endsAt ? new Date(event.endsAt) : null;
+  const endDay = end && !Number.isNaN(end.valueOf()) ? safeDateKey(end, viewerTimeZone) : startDay;
+  return startDay <= today && today <= endDay;
 }
 
 function eventComparisonDateKey(event: CalendarEvent, now: Date): string | null {
@@ -57,7 +73,8 @@ export function partitionCalendarEvents(events: CalendarEvent[], now = new Date(
   for (const event of events) {
     const eventDay = eventComparisonDateKey(event, now);
     const today = safeDateKey(now, event.timezone);
-    if (eventDay === null || eventDay >= today) upcoming.push({ event, dateKey: eventDay });
+    const endDay = event.eventType === "birthday" ? eventDay : eventEndDateKey(event) ?? eventDay;
+    if (eventDay === null || endDay === null || endDay >= today) upcoming.push({ event, dateKey: eventDay });
     else past.push({ event, dateKey: eventDay });
   }
   const tieBreak = (left: CalendarEvent, right: CalendarEvent) =>

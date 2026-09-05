@@ -1,3 +1,6 @@
+import type { z } from "zod";
+import type { resourceEnvelopeSchema, resourceKindSchema } from "./inputs/resources";
+import type { seasonSchema } from "./inputs/season";
 import type { AnimePatch, AnimeSummary, BroadcastSlot, SeasonSummary, ThemeSongKind } from "./catalog";
 import type {
   ContentClass,
@@ -296,52 +299,23 @@ export type AdminAnimeResources = {
   themeSongs: AdminThemeSong[];
 };
 
-export type AdminResourceKind = "broadcast" | "account" | "staff" | "cast" | "source" | "event" | "media" | "discussion" | "theme_song";
+export type AdminResourceKind = z.output<typeof resourceKindSchema>;
 
 export type AdminDashboardView = "all" | "overview" | "review" | "works" | "coverage" | "automation" | "seasons";
 
-export type BroadcastWrite = Omit<BroadcastSlot, "id">;
+export type AdminResourceWrite = z.output<typeof resourceEnvelopeSchema>;
 
-export type AccountWrite = Omit<AdminAccount, "id" | "ownerLabel" | "verifiedAt">;
+export type BroadcastWrite = Extract<AdminResourceWrite, { kind: "broadcast" }>["value"];
+export type AccountWrite = Extract<AdminResourceWrite, { kind: "account" }>["value"];
+export type StaffWrite = Extract<AdminResourceWrite, { kind: "staff" }>["value"];
+export type CastWrite = Extract<AdminResourceWrite, { kind: "cast" }>["value"];
+export type SourceWrite = Extract<AdminResourceWrite, { kind: "source" }>["value"];
+export type EventWrite = Extract<AdminResourceWrite, { kind: "event" }>["value"];
+export type MediaWrite = Extract<AdminResourceWrite, { kind: "media" }>["value"];
+export type DiscussionWrite = Extract<AdminResourceWrite, { kind: "discussion" }>["value"];
+export type ThemeSongWrite = Extract<AdminResourceWrite, { kind: "theme_song" }>["value"];
 
-export type StaffWrite = Omit<AdminStaffCredit, "id" | "personId"> & { personId?: string | null };
-
-export type CastWrite = Omit<AdminCastCredit, "id" | "characterId" | "personId"> & {
-  personId?: string | null;
-};
-
-export type SourceWrite = Omit<AdminSource, "id">;
-
-export type EventWrite = Omit<AdminEvent, "id">;
-
-export type MediaWrite = Omit<AdminMedia, "id">;
-
-export type DiscussionWrite = Omit<AdminDiscussion, "id" | "lastCheckedAt" | "sharedAnimeCount" | "animeIds"> & {
-  animeIds?: string[];
-};
-
-export type ThemeSongWrite = Omit<AdminThemeSong, "id" | "trackId" | "sharedAnimeCount"> & {
-  trackId?: string | null;
-};
-
-export type AdminResourceWrite =
-  | { kind: "broadcast"; value: BroadcastWrite }
-  | { kind: "account"; value: AccountWrite }
-  | { kind: "staff"; value: StaffWrite }
-  | { kind: "cast"; value: CastWrite }
-  | { kind: "source"; value: SourceWrite }
-  | { kind: "event"; value: EventWrite }
-  | { kind: "media"; value: MediaWrite }
-  | { kind: "discussion"; value: DiscussionWrite }
-  | { kind: "theme_song"; value: ThemeSongWrite };
-
-export type SeasonWrite = {
-  slug: string;
-  label: string;
-  startsOn: string;
-  endsOn: string;
-  isCurrent: boolean;
-};
+export type SeasonWrite = z.output<typeof seasonSchema>;
 
 export type CandidateDraft = {
   observationId?: string | null;

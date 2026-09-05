@@ -15,10 +15,12 @@ function event(id: string, startsAt: string, timezone = "Asia/Tokyo"): CalendarE
     eventType: "event",
     title: id,
     startsAt,
+    endsAt: null,
     timezone,
     recurrenceRule: null,
     sourceUrl: null,
     verified: true,
+    status: "scheduled",
   };
 }
 
@@ -67,5 +69,24 @@ describe("calendar event dates", () => {
 
     expect(groups.upcoming.map(({ id }) => id)).toEqual(["september", "next-year-event"]);
     expect(groups.past.map(({ id }) => id)).toEqual(["february", "july"]);
+  });
+
+  test("keeps a multi-day event upcoming until its final source-calendar day", () => {
+    const multiDay = { ...event("convention", "2026-09-04"), endsAt: "2026-09-06" };
+    const now = new Date("2026-09-05T12:00:00Z");
+    const groups = partitionCalendarEvents([multiDay], now);
+
+    expect(groups.upcoming.map(({ id }) => id)).toEqual(["convention"]);
+    expect(eventOccursToday(multiDay, "America/Los_Angeles", now)).toBe(true);
+  });
+
+  test("matches each viewer day touched by a timed event range", () => {
+    const multiDay = {
+      ...event("festival", "2026-09-05T10:00:00+09:00"),
+      endsAt: "2026-09-06T18:00:00+09:00",
+    };
+
+    expect(eventOccursToday(multiDay, "Asia/Tokyo", new Date("2026-09-06T03:00:00Z"))).toBe(true);
+    expect(eventOccursToday(multiDay, "Asia/Tokyo", new Date("2026-09-07T03:00:00Z"))).toBe(false);
   });
 });

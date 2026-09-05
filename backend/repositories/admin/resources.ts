@@ -1,7 +1,8 @@
 import type { AdminAnimeResources } from "@/domain";
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 
 import { database } from "~/infrastructure/db/client";
+import { broadcastSelection, castSelection, staffSelection } from "~/infrastructure/db/read-models/detail";
 import {
   accountsTable,
   animeTable,
@@ -26,15 +27,7 @@ export async function readAdminAnimeResources(
         .from(animeTable)
         .where(eq(animeTable.id, animeId))
         .limit(1),
-      orm.select({
-        id: broadcastSlotsTable.id,
-        label: broadcastSlotsTable.label,
-        weekday: broadcastSlotsTable.weekday,
-        localTime: broadcastSlotsTable.localTime,
-        timezone: broadcastSlotsTable.timezone,
-        platformUrl: broadcastSlotsTable.platformUrl,
-        isPrimary: broadcastSlotsTable.isPrimary,
-      }).from(broadcastSlotsTable)
+      orm.select(broadcastSelection).from(broadcastSlotsTable)
         .where(eq(broadcastSlotsTable.animeId, animeId))
         .orderBy(
           desc(broadcastSlotsTable.isPrimary),
@@ -43,38 +36,19 @@ export async function readAdminAnimeResources(
           broadcastSlotsTable.id,
         ),
       orm.select({
-        id: workCreditsTable.id,
-        personId: workCreditsTable.personId,
-        name: peopleTable.name,
-        nameNative: peopleTable.nameNative,
+        ...staffSelection,
         primaryKind: peopleTable.primaryKind,
-        role: workCreditsTable.role,
-        profileUrl: workCreditsTable.profileUrl,
         sortOrder: workCreditsTable.sortOrder,
       }).from(workCreditsTable)
         .innerJoin(peopleTable, eq(peopleTable.id, workCreditsTable.personId))
         .where(eq(workCreditsTable.animeId, animeId))
         .orderBy(workCreditsTable.sortOrder, workCreditsTable.id),
       orm.select({
-        id: castCreditsTable.id,
-        characterId: castCreditsTable.characterId,
-        characterName: sql<string>`${charactersTable.name}`.as("character_name"),
-        characterNameNative: sql<string | null>`${charactersTable.nameNative}`.as("character_name_native"),
-        nameSourceUrl: charactersTable.nameSourceUrl,
-        characterProfile: charactersTable.profile,
-        profileSourceUrl: charactersTable.profileSourceUrl,
-        portraitUrl: charactersTable.portraitUrl,
-        portraitSourceUrl: charactersTable.portraitSourceUrl,
+        ...castSelection,
         isMainGroup: charactersTable.isMainGroup,
-        personId: castCreditsTable.personId,
-        personName: peopleTable.name,
-        personNameNative: peopleTable.nameNative,
-        birthdayMonth: charactersTable.birthdayMonth,
-        birthdayDay: charactersTable.birthdayDay,
         birthdayYear: charactersTable.birthdayYear,
         birthdayTimezone: charactersTable.birthdayTimezone,
         birthdaySourceUrl: charactersTable.birthdaySourceUrl,
-        birthdayVerified: charactersTable.birthdayVerified,
         sortOrder: castCreditsTable.sortOrder,
       }).from(castCreditsTable)
         .innerJoin(charactersTable, eq(charactersTable.id, castCreditsTable.characterId))

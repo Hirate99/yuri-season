@@ -1,12 +1,19 @@
-import { useState, type FormEvent } from "react";
-import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, Save } from "lucide-react";
-import type { AdminAnimeSummary, AnimePatch } from "@/domain";
 import { Badge } from "@/components/badge";
+import type { AdminAnimeSummary } from "@/domain";
+import { animeCreateSchema } from "@/domain/inputs/anime";
 import { yuriDisplayLabel } from "@/lib/format";
 import { cn, primaryButton } from "@/lib/ui";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { ArrowUpRight, Save } from "lucide-react";
+import { useState } from "react";
+import { FormProvider, useForm } from "react-hook-form";
+import type { z } from "zod";
 import { AnimeResourcesEditor, type ResourceGroup } from "./anime-resources-editor";
-import { animePatchFromForm, WorkFields } from "./work-form";
+import { patchWorkMutation } from "./queries";
+import { FormErrors } from "./resource-form";
+import { WorkFields } from "./work-form";
 
 type Section = "basic" | ResourceGroup;
 const sections: Array<{ id: Section; label: string }> = [
@@ -16,17 +23,14 @@ const sections: Array<{ id: Section; label: string }> = [
   { id: "monitoring", label: "账号与来源" },
 ];
 
-export function WorkEditor({ item, anime, busy, onSave }: {
+export function WorkEditor({ item, anime }: {
   item: AdminAnimeSummary;
   anime: AdminAnimeSummary[];
-  busy: boolean;
-  onSave: (id: string, patch: AnimePatch) => Promise<void>;
 }) {
   const [section, setSection] = useState<Section>("basic");
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    await onSave(item.id, animePatchFromForm(new FormData(event.currentTarget)));
-  };
+  const save = useMutation(patchWorkMutation(item.id));
+  const form = useForm<z.input<typeof animeCreateSchema>, unknown, z.output<typeof animeCreateSchema>>({ resolver: zodResolver(animeCreateSchema), defaultValues: item });
+  const submit = form.handleSubmit(value => { save.mutate(value); });
 
   return (
     <article className="overflow-hidden rounded-3xl border border-black/[0.06] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.05)]">
@@ -43,13 +47,14 @@ export function WorkEditor({ item, anime, busy, onSave }: {
       </nav>
 
       {section === "basic" ? (
-        <form className="grid gap-4 border-t border-black/[0.05] p-5 md:grid-cols-2 md:p-7" onSubmit={submit}>
-          <WorkFields item={item} />
+        <FormProvider {...form}><form className="grid gap-4 border-t border-black/[0.05] p-5 md:grid-cols-2 md:p-7" onSubmit={submit}>
+          <WorkFields />
+          <FormErrors errors={form.formState.errors} error={save.error} />
           <footer className="flex flex-wrap items-center justify-between gap-3 pt-3 md:col-span-2">
-            <label className="inline-flex items-center gap-2 text-xs"><input name="featured" type="checkbox" defaultChecked={item.featured} />首页精选</label>
-            <button className={primaryButton} disabled={busy} type="submit"><Save size={15} />{busy ? "保存中…" : "保存"}</button>
+            <label className="inline-flex items-center gap-2 text-xs"><input {...form.register("featured")} type="checkbox" />首页精选</label>
+            <button className={primaryButton} disabled={save.isPending} type="submit"><Save size={15} />{save.isPending ? "保存中…" : "保存"}</button>
           </footer>
-        </form>
+        </form></FormProvider>
       ) : <AnimeResourcesEditor animeId={item.id} anime={anime} group={section} />}
     </article>
   );

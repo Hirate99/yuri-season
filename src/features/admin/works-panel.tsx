@@ -1,16 +1,13 @@
-import { useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
-import type { AdminAnimeSummary, AnimeCreate, AnimePatch, SeasonSummary } from "@/domain";
+import type { AdminAnimeSummary, SeasonSummary } from "@/domain";
 import { cn } from "@/lib/ui";
+import { Plus, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { NewWorkEditor } from "./new-work-editor";
 import { WorkEditor } from "./work-editor";
 
-export function WorksPanel({ anime, seasons, busyId, onPatch, onCreate }: {
+export function WorksPanel({ anime, seasons }: {
   anime: AdminAnimeSummary[];
   seasons: SeasonSummary[];
-  busyId: string | null;
-  onPatch: (id: string, patch: AnimePatch) => Promise<void>;
-  onCreate: (value: AnimeCreate) => Promise<void>;
 }) {
   const currentSeason = seasons.find((season) => season.isCurrent)?.id ?? "all";
   const [query, setQuery] = useState("");
@@ -50,8 +47,8 @@ export function WorksPanel({ anime, seasons, busyId, onPatch, onCreate }: {
       </aside>
 
       <section className="min-w-0">
-        {creating ? <NewWorkEditor seasons={seasons} busy={busyId === "new-work"} onCreate={async (value) => { await onCreate(value); setCreating(false); }} open />
-          : selected ? <WorkEditor key={selected.id} item={selected} anime={anime} busy={busyId === selected.id} onSave={onPatch} />
+        {creating ? <NewWorkEditor seasons={seasons} onCreated={() => setCreating(false)} open />
+          : selected ? <WorkEditor key={selected.id} item={selected} anime={anime}  />
             : <div className="rounded-3xl bg-white p-8 text-sm text-muted">请选择一部作品</div>}
       </section>
     </div>

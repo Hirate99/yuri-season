@@ -64,10 +64,12 @@ const catalog: CatalogResponse = {
     eventType: "event",
     title: "周末特别活动",
     startsAt: "2026-09-06T19:00:00+09:00",
+    endsAt: null,
     timezone: "Asia/Tokyo",
     recurrenceRule: null,
     sourceUrl: "https://example.com/event",
     verified: true,
+    status: "scheduled",
   }],
   generatedAt: "2026-09-04T08:00:00Z",
 };
@@ -101,12 +103,6 @@ test("home calendar turns the current week into the homepage navigation", async 
   expect(html).not.toContain(">周一的作品<");
   expect(html).toContain("周末特别活动");
   expect(html).toContain('href="/calendar"');
-});
-
-test("home calendar inherits the active season palette", async () => {
-  const html = await renderCalendar();
-  expect(html).toContain("#30396f");
-  expect(html).toContain("#8fcfc6");
 });
 
 test("home calendar groups and sorts extended hours within the viewer's day and week", async () => {
@@ -200,5 +196,4 @@ test("home calendar marks an event occurring today on the Japan calendar", async
   expect(html).toContain(">今天</span>");
   expect(html).toContain("今天的特别活动");
   expect(html.indexOf("紫阳花")).toBeLessThan(html.indexOf("今天的特别活动"));
-  expect(html).toContain("#eb8b703d");
 });

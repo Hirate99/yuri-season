@@ -3,9 +3,8 @@ import { z } from "zod";
 
 import type { CandidateDraft } from "@/domain";
 import { parseCandidateDraft } from "~/http/input/anime-input";
-import { parseWithSchema } from "~/http/input/schema";
 import type { ApiEnvironment } from "~/http/shared";
-import { validatedJson } from "~/http/shared";
+import { validate, validatedJson } from "~/http/shared";
 
 const decisionSchema = z.object({
   decision: z.enum(["publish", "hold", "reject", "withdraw"], "未知的审核决定。"),
@@ -19,15 +18,10 @@ const deleteReasonSchema = z.object({
   reason: z.string().trim().min(1, "彻底删除需要填写原因。").max(300),
 });
 
-type DecisionInput = z.input<typeof decisionSchema>;
-type DecisionValue = z.output<typeof decisionSchema>;
-type DeleteReasonInput = z.input<typeof deleteReasonSchema>;
-type DeleteReason = z.output<typeof deleteReasonSchema>;
-
 export const moderationRoutes = new Hono<ApiEnvironment>()
   .delete(
     "/discussions/:id",
-    validatedJson<DeleteReasonInput, DeleteReason>((value) => parseWithSchema(deleteReasonSchema, value)),
+    validate("json", deleteReasonSchema),
     async (context) => {
       await context.var.services.admin.discussions.delete(
         context.req.param("id"),
@@ -42,7 +36,7 @@ export const moderationRoutes = new Hono<ApiEnvironment>()
   })
   .post(
     "/candidates/:id/decision",
-    validatedJson<DecisionInput, DecisionValue>((value) => parseWithSchema(decisionSchema, value)),
+    validate("json", decisionSchema),
     async (context) => {
       const input = context.req.valid("json");
       await context.var.services.admin.candidates.decide(context.req.param("id"), input.decision, input.reason);

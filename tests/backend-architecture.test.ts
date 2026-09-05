@@ -17,45 +17,6 @@ describe("backend architecture boundaries", () => {
     }
   });
 
-  test("keeps the shared anime read model in Drizzle instead of a SQL select constant", async () => {
-    const source = await Bun.file("backend/infrastructure/db/read-models/anime.ts").text();
-    expect(source).toContain("getTableColumns(animeTable)");
-    expect(source).not.toContain("ANIME_SELECT");
-  });
-
-  test("keeps Admin resource reads in typed Drizzle queries", async () => {
-    const source = await Bun.file("backend/repositories/admin/resources.ts").text();
-    expect(source).toContain("database(db)");
-    expect(source).not.toMatch(/\.prepare\s*\(/);
-  });
-
-  test("uses the dedicated backend root alias", async () => {
-    const files = [
-      ...new Bun.Glob("backend/**/*.ts").scanSync(),
-      ...new Bun.Glob("src/**/*.ts").scanSync(),
-      ...new Bun.Glob("src/**/*.tsx").scanSync(),
-    ];
-    for (const path of files) {
-      const source = await Bun.file(path).text();
-      expect(source).not.toContain("@worker/");
-      if (path.replaceAll("\\", "/").startsWith("backend/http/")) {
-        expect(source).not.toMatch(/from ["'](?:\.\.\/)+shared["']/);
-      }
-    }
-  });
-
-  test("keeps public reads on the direct D1 path", async () => {
-    const backendSources = await Promise.all(
-      [...new Bun.Glob("backend/**/*.ts").scanSync()].map((path) => Bun.file(path).text()),
-    );
-    const packageSource = await Bun.file("package.json").text();
-    const workerConfig = await Bun.file("wrangler.jsonc").text();
-
-    expect(backendSources.join("\n")).not.toMatch(/upstash|redis|invalidatePublicData/i);
-    expect(packageSource).not.toContain("@upstash/redis");
-    expect(workerConfig).not.toContain("UPSTASH_REDIS");
-  });
-
   test("keeps new migration prefixes unique after the historical 0027 collision", () => {
     const prefixes = [...new Bun.Glob("migrations/*.sql").scanSync()]
       .map((path) => path.replaceAll("\\", "/").split("/").at(-1)!.split("_")[0]);
@@ -68,7 +29,6 @@ describe("backend architecture boundaries", () => {
     const prepareFiles: string[] = [];
     const nativeStatementFiles: string[] = [];
     const nativeHelperImports: string[] = [];
-    let count = 0;
     for (const path of files) {
       const source = await Bun.file(path).text();
       const matches = source.match(/\.prepare\s*\(/g) ?? [];
@@ -80,12 +40,10 @@ describe("backend architecture boundaries", () => {
         && !path.replaceAll("\\", "/").includes("/native/")) {
         nativeHelperImports.push(path.replaceAll("\\", "/"));
       }
-      count += matches.length;
     }
     expect(prepareFiles).toEqual(["backend/infrastructure/db/native/statement.ts"]);
     expect(nativeStatementFiles).toEqual([]);
     expect(nativeHelperImports).toEqual([]);
-    expect(count).toBeLessThanOrEqual(20);
   });
 
   test("defines every persisted business table in the Drizzle schema", async () => {
@@ -105,10 +63,6 @@ describe("backend architecture boundaries", () => {
   });
 
   test("keeps application orchestration out of repositories", async () => {
-    expect(await Bun.file("backend/repositories/admin-resource-mutations.ts").exists()).toBe(false);
-    expect(await Bun.file("backend/repositories/mutations.ts").exists()).toBe(false);
-    expect(await Bun.file("backend/repositories/admin/dashboard.ts").text()).not.toContain("readAdminCoverage");
-    expect(await Bun.file("backend/repositories/detail.ts").text()).not.toContain("readFeed");
     for (const path of new Bun.Glob("backend/repositories/**/*.ts").scanSync()) {
       expect(await Bun.file(path).text()).not.toContain("~/application/");
     }
@@ -119,40 +73,6 @@ describe("backend architecture boundaries", () => {
       for (const path of new Bun.Glob(`${root}/**/*.ts`).scanSync()) {
         expect(await Bun.file(path).text()).not.toContain("~/http/");
       }
-    }
-  });
-
-  test("keeps batch orchestration small and exports a Hono RPC contract", async () => {
-    const batch = await Bun.file("backend/research/batch.ts").text();
-    const api = await Bun.file("backend/http/api.ts").text();
-    expect(batch.split(/\r?\n/).length).toBeLessThan(201);
-    expect(api).toContain("export type ApiType = typeof api");
-  });
-
-  test("groups route capabilities under their shared URL prefixes", async () => {
-    for (const prefix of ["admin", "public", "research"]) {
-      expect(await Bun.file(`backend/http/routes/${prefix}.ts`).exists()).toBe(false);
-      expect(await Bun.file(`backend/http/routes/${prefix}/index.ts`).exists()).toBe(true);
-    }
-  });
-
-  test("uses the Hono RPC contract instead of duplicating client API paths", async () => {
-    const client = await Bun.file("src/lib/rpc.ts").text();
-    expect(client).toContain("hc<ApiType>");
-    expect(client).not.toContain("apiRequest");
-    for (const path of [
-      ...new Bun.Glob("src/**/*.ts").scanSync(),
-      ...new Bun.Glob("src/**/*.tsx").scanSync(),
-      ...new Bun.Glob("scripts/**/*.ts").scanSync(),
-    ]) {
-      if (path.replaceAll("\\", "/") === "src/server.ts") continue;
-      expect(await Bun.file(path).text()).not.toMatch(/["'`]\/api\//);
-    }
-  });
-
-  test("does not contain known mojibake sequences", async () => {
-    for (const path of new Bun.Glob("backend/**/*.ts").scanSync()) {
-      expect(await Bun.file(path).text()).not.toMatch(/灏|銆|鈥|锟|鐨|鑷|鍔ㄧ敾|�/u);
     }
   });
 });

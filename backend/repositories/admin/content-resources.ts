@@ -2,6 +2,7 @@ import type { AdminDiscussion, AdminEvent, AdminMedia, AdminThemeSong } from "@/
 import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { database } from "~/infrastructure/db/client";
+import { themeSongSelection } from "~/infrastructure/db/read-models/detail";
 import {
   animeThemeSongsTable,
   discussionAnimeTable,
@@ -71,20 +72,8 @@ export async function readAdminContentResources(db: D1Database, animeId: string)
         discussionsTable.id,
       ),
     orm.select({
-      id: animeThemeSongsTable.id,
+      ...themeSongSelection,
       trackId: animeThemeSongsTable.trackId,
-      songKind: animeThemeSongsTable.songKind,
-      sequence: animeThemeSongsTable.sequence,
-      title: musicTracksTable.title,
-      artist: musicTracksTable.artist,
-      lyricist: musicTracksTable.lyricist,
-      composer: musicTracksTable.composer,
-      arranger: musicTracksTable.arranger,
-      episodeRange: animeThemeSongsTable.episodeRange,
-      officialUrl: musicTracksTable.officialUrl,
-      coverUrl: musicTracksTable.coverUrl,
-      coverSourceUrl: musicTracksTable.coverSourceUrl,
-      sourceUrl: musicTracksTable.sourceUrl,
       verified: musicTracksTable.verified,
       sortOrder: animeThemeSongsTable.sortOrder,
     }).from(animeThemeSongsTable)

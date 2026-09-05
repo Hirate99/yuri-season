@@ -25,13 +25,13 @@ describe("Admin dashboard query budget", () => {
     expect(works.coverage).toEqual([]);
     expect(works.sources).toEqual([]);
     expect(works.heldCandidates).toEqual([]);
-    expect(database.preparedStatements).toBeLessThanOrEqual(8);
+    expect(database.executedStatements).toBeLessThanOrEqual(8);
   });
 
   test("does not add one catalog query per season", async () => {
     database.resetMetrics();
     await readAdminDashboard(database.binding());
-    const oneSeasonQueries = database.preparedStatements;
+    const oneSeasonQueries = database.executedStatements;
 
     database.exec(`
       INSERT INTO seasons (id, slug, label, starts_on, ends_on, is_current)
@@ -40,13 +40,13 @@ describe("Admin dashboard query budget", () => {
     database.resetMetrics();
     await readAdminDashboard(database.binding());
 
-    expect(database.preparedStatements).toBe(oneSeasonQueries);
+    expect(database.executedStatements).toBe(oneSeasonQueries);
   });
 
   test("keeps coverage query count constant as work count grows", async () => {
     database.resetMetrics();
     await readAdminCoverage(database.binding());
-    const baseline = database.preparedStatements;
+    const baseline = database.executedStatements;
 
     database.exec(`
       INSERT INTO anime (
@@ -61,7 +61,7 @@ describe("Admin dashboard query budget", () => {
     database.resetMetrics();
     await readAdminCoverage(database.binding());
 
-    expect(database.preparedStatements).toBe(baseline);
+    expect(database.executedStatements).toBe(baseline);
     expect(baseline).toBeLessThanOrEqual(20);
   });
 });

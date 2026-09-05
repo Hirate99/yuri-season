@@ -1,16 +1,15 @@
 import { Hono } from "hono";
 
-import type { SeasonWrite } from "@/domain";
-import { parseSeasonWrite } from "~/http/input/season-input";
+import { seasonSchema } from "@/domain/inputs/season";
 import type { ApiEnvironment } from "~/http/shared";
-import { validatedJson } from "~/http/shared";
+import { validate } from "~/http/shared";
 
 export const seasonRoutes = new Hono<ApiEnvironment>()
-  .post("/seasons", validatedJson<SeasonWrite>(parseSeasonWrite), async (context) => {
+  .post("/seasons", validate("json", seasonSchema), async (context) => {
     const id = await context.var.services.admin.seasons.create(context.req.valid("json"));
     return context.json({ id }, 201);
   })
-  .patch("/seasons/:id", validatedJson<SeasonWrite>(parseSeasonWrite), async (context) => {
+  .patch("/seasons/:id", validate("json", seasonSchema), async (context) => {
     await context.var.services.admin.seasons.update(context.req.param("id"), context.req.valid("json"));
     return context.json({ ok: true });
   });

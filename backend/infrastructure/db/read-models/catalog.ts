@@ -14,10 +14,12 @@ const eventSelection = {
   eventType: eventsTable.eventType,
   title: eventsTable.title,
   startsAt: eventsTable.startsAt,
+  endsAt: eventsTable.endsAt,
   timezone: eventsTable.timezone,
   recurrenceRule: eventsTable.recurrenceRule,
   sourceUrl: eventsTable.sourceUrl,
   verified: eventsTable.verified,
+  status: eventsTable.status,
 };
 
 function eventQuery(db: D1Database) {

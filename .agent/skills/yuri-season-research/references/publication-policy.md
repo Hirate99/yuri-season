@@ -10,6 +10,12 @@ Use this policy for public copy, attached media, storage operations, migrations,
 - Standardize Chinese typography unless a source name requires otherwise: `第7话`, `8月16日`, and `第1—5话`.
 - For repair batches, group by work, content lane, and source identity; review neighboring titles and original evidence; produce per-item proposals. Preserve intentional cross-work, named-event, official-product, community, and creator-led forms. Never run a blanket Feed-wide prefix or regex rewrite.
 
+## Linked articles and interviews
+
+- Organize coverage around the substantive article or event. Preserve the referring post as discovery evidence and attribute the article to its actual publisher and authors; never put article text under the referring X post's identity. Reuse the existing item when it represents the same content, through the normal correction workflow.
+- Read all relevant article pages before writing. Distinguish original text, faithful translation, and editorial summary; a summary must not be labeled as a full translation. Reading a complete article does not itself authorize mirroring its full text.
+- Preserve source publication dates and actual capture times separately. A referring post retains its own date; do not overwrite an article's date with the referral or import time merely to move it up the Feed. Verify actual list placement and detail access, and report a visibility issue separately from a content repair.
+
 ## Publication media invariant
 
 - Every automatically published observation, including an official webpage, must declare `mediaDisposition: none | attached | unavailable | link_only_policy`. `none` is valid only after opening the original and confirming that it has no media. `attached` requires uploaded `candidate.media.assets`.

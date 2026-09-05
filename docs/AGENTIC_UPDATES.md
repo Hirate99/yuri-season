@@ -9,7 +9,7 @@ Agentic Update 的目标是让站点在低人工维护下持续获得高精度�
 - 所有公开事实都能追溯到一个或多个来源观察。
 - 重复 Cron、任务重试和本地 skill 重跑不会产生重复内容。
 - LLM 自动审核是默认路径，但最终发布仍经过确定性策略。
-- 已知来源同步和未知来源发现分开，避免每轮任务都做昂贵搜索。
+- 已知来源同步保底，日常允许关联证据追查和有时间边界的主动选题；大范围未知来源发现另行启动。
 - Worker 与本地 agent 使用同一种观察、候选和审核协议。
 - 失败局部化；一个来源超时不能让整轮任务失效。
 - 成本、反转率、来源健康和模型决定均可观测。
@@ -42,6 +42,8 @@ Agentic Update 的目标是让站点在低人工维护下持续获得高精度�
 Worker 只执行支持公共 API 或允许域名的发现任务。依赖搜索引擎、登录态浏览器或平台人工判断的任务标记为 `local`，交给项目 skill。
 
 两个闭环最终都写入相同的 `observation → claim → candidate → review → publication` 管线。
+
+日常编辑判断在两个闭环之间保留一个小范围：采访外链与分页、引用原帖、画廊及活动详情属于当前消息核验；固定覆盖和合格候选处理完成后，可围绕已追踪作品的信息缺口主动搜索采访、制作谈与活动报道，以运行窗口约两成为起始上限，不设搜索或发布数量指标。按新增信息决定追查深度，不限制固定跳数，也不自动登记新账号。复用现有批次管线，以 `.research-cache/routine-editorial.md` 保存未完成线索、复查时间及近期搜索结果，下轮先读再续查；具体执行以 [.agent/skills/yuri-season-research/references/update-policy.md](../.agent/skills/yuri-season-research/references/update-policy.md) 为准。
 
 ## 3. 核心记录
 
@@ -131,10 +133,10 @@ Worker 只执行支持公共 API 或允许域名的发现任务。依赖搜索�
 
 ### 5.1 计划
 
-Dispatcher 保留三种增量通道，但第一阶段采用 `local-first`：Cloudflare 不配置主动 Cron，Worker 只接收本地 Codex 生成的可追溯批次。Codex recurring task 每 6 小时启动一次无人值守 agentic cycle；来源与误报率稳定后，才按来源逐个启用 Worker cadence：
+Dispatcher 保留三种增量通道，但第一阶段采用 `local-first`：Cloudflare 不配置主动 Cron，Worker 只接收本地 Codex 生成的可追溯批次。Codex recurring task 按本地自动任务配置启动无人值守 agentic cycle；来源与误报率稳定后，才按来源逐个启用 Worker cadence：
 
 - 快速增量（按需）：首播、最终话或活动窗口由本地 Codex 临时执行；完成后即停止，不做永久 5 分钟轮询。
-- 无人值守 routine cycle（每 6 小时）：先完成 pending diff 或已登记官网 / Feed 增量同步，再检查所有到期的已验证公式、声优、原作者 / 创作者和制作组 X 账号时间线；不生成账号发现、标签、同人、社区或全季目录查询。
+- 无人值守 routine cycle（按本地自动任务配置）：先完成 pending diff 或已登记官网 / Feed 增量同步，再检查所有到期的已验证公式、声优、原作者 / 创作者和制作组 X 账号时间线；追查关联原文，并在剩余预算内主动选题，不生成账号发现、标签、同人、社区或全季目录查询。
 - 深度发现：仅在用户明确请求 `discovery` 后运行，由 durable search memory 的 `nextSearchAt` 与请求的实体、内容通道或平台范围决定到期查询。
 - 账号发现：仅在用户明确请求 `account-discovery` 并指定作品、人物或平台范围后运行；线索不会自动扩大日常 watchlist。
 - 生日、作品完整性、Comic Market 和其他日历审计：作为独立到期任务或显式任务运行，不并入每次网站更新。
@@ -143,7 +145,7 @@ Admin、本地 skill 与可信 webhook 可以直接写入 observation batch 并�
 
 本地 routine 默认检查全部符合边界的已登记一方来源，不做每轮轮转；Bangumi、社区和未验证来源不进入这组选择。仅在紧急限流或命中平台限流窗口时用 `YURI_SOURCE_LIMIT` 临时缩量。只有存在条目级 diff 时才调用 LLM，并把多个变化合并审核。抓取层硬限制为单请求 15 秒超时、每来源最多读取 256 KiB（`MAX_SOURCE_BYTES`）；LLM 调用次数在本阶段不做脚本化硬上限，`budget_json` 字段已预留但尚未强制执行。
 
-定时任务在一次 routine cycle 内连续完成官网增量与已验证 X 时间线检查，不顺带启动 Discovery。显式 Discovery 使用独立 campaign 状态，且只处理用户请求的 profile 与实体 / 平台范围。单个来源或平台错误只阻塞对应范围，其他工作继续；查询租约和结果文件分块只用于并发、崩溃恢复与及时落盘，不是停止条件。每个 profile 持续到自身到期工作收敛、遇到真正的全局认证 / 配置阻塞，或运行窗口结束并已保存可恢复状态。正常的零变化和零命中不通知。
+定时任务在一次 routine cycle 内连续完成官网增量、已验证 X 时间线检查与关联证据追查，主动选题不启动独立 Discovery campaign。显式 Discovery 使用独立 campaign 状态，且只处理用户请求的 profile 与实体 / 平台范围。单个来源或平台错误只阻塞对应范围，其他工作继续；查询租约和结果文件分块只用于并发、崩溃恢复与及时落盘，不是停止条件。CLI `finish` 仅证明计划覆盖；结束前还须处理已发现的合格候选，并记录未完成追查及下次具体动作。每个 profile 持续到自身到期工作收敛、遇到真正的全局认证 / 配置阻塞，或运行窗口结束并已保存可恢复状态。正常的零变化和零命中不通知。
 
 ### 5.2 抓取
 

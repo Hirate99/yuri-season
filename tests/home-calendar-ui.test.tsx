@@ -69,17 +69,17 @@ const catalog: CatalogResponse = {
     sourceUrl: "https://example.com/event",
     verified: true,
   }],
-  generatedAt: "2026-09-04T01:00:00Z",
+  generatedAt: "2026-09-04T08:00:00Z",
 };
 
-async function renderCalendar(data: CatalogResponse = catalog) {
+async function renderCalendar(data: CatalogResponse = catalog, viewerTimeZone = "America/Los_Angeles") {
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: ["/"] }),
     routeTree: createRootRoute({
       component: () => (
         <HomeCalendar
           catalog={data}
-          viewerTimeZone="America/Los_Angeles"
+          viewerTimeZone={viewerTimeZone}
           renderedAt={data.generatedAt}
         />
       ),
@@ -91,7 +91,7 @@ async function renderCalendar(data: CatalogResponse = catalog) {
 
 test("home calendar turns the current week into the homepage navigation", async () => {
   const html = await renderCalendar();
-  expect(html).toContain("WEEKLY INDEX · JST");
+  expect(html).toContain("WEEKLY INDEX · PDT");
   expect(html).toContain("本周放送");
   expect(html).toContain("8月31日 — 9月6日");
   expect(html.match(/type="button"/g)).toHaveLength(7);
@@ -107,6 +107,31 @@ test("home calendar inherits the active season palette", async () => {
   const html = await renderCalendar();
   expect(html).toContain("#30396f");
   expect(html).toContain("#8fcfc6");
+});
+
+test("home calendar groups and sorts extended hours within the viewer's day and week", async () => {
+  const source = catalog.anime[0]!;
+  const data: CatalogResponse = {
+    ...catalog,
+    generatedAt: "2026-09-06T17:00:00Z",
+    anime: [
+      { ...source, id: "late", slug: "late", titleZh: "深夜节目", primarySlot: { ...source.primarySlot!, weekday: 0, localTime: "25:00" } },
+      { ...source, id: "early", slug: "early", titleZh: "凌晨节目", primarySlot: { ...source.primarySlot!, weekday: 1, localTime: "00:00" } },
+    ],
+  };
+  const pacific = await renderCalendar(data);
+  expect(pacific).toContain("8月31日 — 9月6日");
+  expect(pacific).toContain("2026.09.06");
+  expect(pacific).toContain("周日放送");
+  expect(pacific).toContain("今天 · 2");
+  expect(pacific).toContain("08:00");
+  expect(pacific).toContain("09:00");
+  expect(pacific.indexOf("凌晨节目")).toBeLessThan(pacific.indexOf("深夜节目"));
+  const japan = await renderCalendar(data, "Asia/Tokyo");
+  expect(japan).toContain("9月7日 — 13日");
+  expect(japan).toContain("周一放送");
+  expect(japan).toContain("今天 · 2");
+  expect(japan).toContain("01:00");
 });
 
 test("home calendar pages a long upcoming event list without growing the sidebar", async () => {

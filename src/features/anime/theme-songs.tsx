@@ -23,7 +23,7 @@ function hasAppleMusic(song: ThemeSong) {
 
 function SongMark({ song }: { song: ThemeSong }) {
   return (
-    <span className="grid h-full w-full place-items-center bg-white text-[10px] font-black text-[#7568d0]">
+    <span className="grid h-full w-full place-items-center bg-white text-xs font-black text-[#7568d0]">
       {kindLabel[song.songKind]}{song.sequence > 1 ? song.sequence : ""}
     </span>
   );
@@ -32,21 +32,21 @@ function SongMark({ song }: { song: ThemeSong }) {
 export function ThemeSongsSection({ songs }: { songs: ThemeSong[] }) {
   if (songs.length === 0) return null;
   return (
-    <section>
+    <section id="music">
       <SectionHeading title="音乐" />
       <div className="grid gap-2 lg:grid-cols-2">
         {songs.map((song) => (
-          <article className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl bg-raised p-3" key={song.id}>
+          <article className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-raised p-3" key={song.id}>
             {song.coverUrl ? (
               <a href={song.coverSourceUrl ?? song.sourceUrl} target="_blank" rel="noreferrer" aria-label="查看封面来源">
                 <CoverImage className="size-14 rounded-xl shadow-sm" src={song.coverUrl} alt={`${song.title} 封面`} fallback={<SongMark song={song} />} />
               </a>
             ) : <span className="size-14 overflow-hidden rounded-xl shadow-sm"><SongMark song={song} /></span>}
             <div className="min-w-0">
-              <p className="text-[9px] font-bold text-[#7568d0]">{kindLabel[song.songKind]}{song.sequence > 1 ? song.sequence : ""}</p>
+              <p className="text-xs font-bold text-[#7568d0]">{kindLabel[song.songKind]}{song.sequence > 1 ? song.sequence : ""}</p>
               <h3 className="mt-1 truncate text-sm font-semibold">{song.title}</h3>
-              <p className="mt-1 text-[10px] text-muted">{song.artist}{song.episodeRange ? ` · ${song.episodeRange}` : ""}</p>
-              {credits(song) && <p className="mt-1 truncate text-[9px] text-muted">{credits(song)}</p>}
+              <p className="mt-1 text-xs text-muted">{song.artist}{song.episodeRange ? ` · ${song.episodeRange}` : ""}</p>
+              {credits(song) && <p className="mt-1 truncate text-xs text-muted">{credits(song)}</p>}
             </div>
             <div className="flex items-center gap-1">
               {song.officialUrl && <a className="grid size-9 place-items-center rounded-full bg-white text-[#7568d0] shadow-sm" href={song.officialUrl} target="_blank" rel="noreferrer" aria-label="试听"><Headphones size={15} /></a>}

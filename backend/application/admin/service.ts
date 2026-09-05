@@ -1,5 +1,6 @@
 import type {
   AdminResourceKind,
+  AdminDashboardView,
   AdminResourceWrite,
   AnimeCreate,
   AnimePatch,
@@ -19,10 +20,10 @@ import { createCandidate } from "~/repositories/candidates/write";
 import { createSeason, updateSeason } from "~/repositories/seasons/write";
 import type { AdminPrincipal } from "~/infrastructure/auth";
 
-export async function readAdminDashboard(db: D1Database) {
+export async function readAdminDashboard(db: D1Database, view: AdminDashboardView = "all") {
   const [data, coverage, seasonIndex] = await Promise.all([
-    readAdminDashboardData(db),
-    readAdminCoverage(db),
+    readAdminDashboardData(db, view),
+    view === "all" || view === "overview" || view === "coverage" ? readAdminCoverage(db) : [],
     readSeasons(db),
   ]);
   return { ...data, coverage, seasons: seasonIndex.seasons };
@@ -30,7 +31,7 @@ export async function readAdminDashboard(db: D1Database) {
 
 export function createAdminService(env: Env, principal?: AdminPrincipal) {
   return {
-    dashboard: () => readAdminDashboard(env.DB),
+    dashboard: (view?: AdminDashboardView) => readAdminDashboard(env.DB, view),
     anime: {
       create: (value: AnimeCreate) => createAnime(env.DB, value, principal),
       patch: (id: string, value: AnimePatch) => patchAnime(env.DB, id, value, principal),

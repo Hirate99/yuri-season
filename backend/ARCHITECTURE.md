@@ -19,7 +19,7 @@ Worker entry -> HTTP routes -> application services -> repositories -> database
 - `backend/repositories` owns persistence for one module or aggregate. A repository
   does not call application services or compose unrelated repositories.
 - `backend/research` owns research workflows and pure decision policy.
-- `backend/infrastructure` contains Cloudflare, authentication, cache, and database
+- `backend/infrastructure` contains Cloudflare, authentication, and database
   adapters.
 
 Use small functions and factories. Do not add interfaces that merely mirror a
@@ -33,8 +33,8 @@ creates `hc<ApiType>()` clients for both the browser and operational scripts. Do
 duplicate internal API paths, request DTOs, response casts, or generic `fetch<T>`
 wrappers in consumers.
 
-Mutation handlers await public-data invalidation explicitly after successful writes. Cache
-invalidation is not inferred from URL prefixes.
+Public reads use D1 directly. Admin mutations refresh only the affected view or resource;
+background refreshes retain the active editor and its selection.
 
 ## Database rules
 
@@ -50,6 +50,12 @@ invalidation is not inferred from URL prefixes.
 
 ## Query performance
 
+- Batch independent D1 reads with Drizzle when they belong to the same response.
+  Preserve the query builders until the batch executes. Joined projections need
+  unique SQL column aliases: D1 batch results are objects, so duplicate column
+  names lose values before Drizzle can map them.
+- Measure executed statements and D1 calls separately. A batch reduces calls,
+  not the number of SQL statements; preparing a statement is not executing it.
 - Do not issue a query per parent row. Coverage and feed query counts must remain
   constant as result size grows.
 - Use deterministic cursor ordering.

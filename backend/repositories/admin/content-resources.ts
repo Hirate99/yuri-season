@@ -18,7 +18,7 @@ export async function readAdminContentResources(db: D1Database, animeId: string)
   themeSongs: AdminThemeSong[];
 }> {
   const orm = database(db);
-  const [events, media, discussionRows, themeSongRows] = await Promise.all([
+  const [events, media, discussionRows, themeSongRows] = await orm.batch([
     orm.select({
       id: eventsTable.id,
       personId: eventsTable.personId,

@@ -298,6 +298,8 @@ export type AdminAnimeResources = {
 
 export type AdminResourceKind = "broadcast" | "account" | "staff" | "cast" | "source" | "event" | "media" | "discussion" | "theme_song";
 
+export type AdminDashboardView = "all" | "overview" | "review" | "works" | "coverage" | "automation" | "seasons";
+
 export type BroadcastWrite = Omit<BroadcastSlot, "id">;
 
 export type AccountWrite = Omit<AdminAccount, "id" | "ownerLabel" | "verifiedAt">;

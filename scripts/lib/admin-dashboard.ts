@@ -17,7 +17,7 @@ export function adminApi() {
 }
 
 export async function fetchAdminDashboard(): Promise<AdminDashboard> {
-  return rpcData(adminApi().api.admin.dashboard.$get());
+  return rpcData(adminApi().api.admin.dashboard.$get({ query: {} }));
 }
 
 export async function fetchAdminResources(animeId: string): Promise<AdminAnimeResources> {

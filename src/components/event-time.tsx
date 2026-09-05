@@ -24,9 +24,10 @@ function localDateTime(value: string, timeZone: string): string | null {
   }
 }
 
-export function EventTime({ event, viewerTimeZone }: {
+export function EventTime({ event, viewerTimeZone, showTime = false }: {
   event: CalendarEvent;
   viewerTimeZone?: string;
+  showTime?: boolean;
 }) {
   const detectedTimeZone = useViewerTimeZone();
   const effectiveTimeZone = viewerTimeZone ?? detectedTimeZone;
@@ -39,13 +40,13 @@ export function EventTime({ event, viewerTimeZone }: {
   return (
     <time className="text-xs font-semibold tabular-nums" dateTime={event.startsAt ?? undefined}>
       <span className="block whitespace-nowrap">
-        {shortDate(event.startsAt, event.timezone)}
+        {showTime && startsAt && !isBirthday ? localDateTime(startsAt, event.timezone) : shortDate(event.startsAt, event.timezone)}
         {!isBirthday && startsAt && (
           <small className="ml-1 font-normal text-muted">{timeZoneLabel(event.timezone, new Date(startsAt))}</small>
         )}
       </span>
       {local && effectiveTimeZone && startsAt && (
-        <small className="mt-0.5 block whitespace-nowrap text-[9px] font-normal text-muted">
+        <small className="mt-0.5 block whitespace-nowrap text-[11px] font-normal text-muted">
           {local} {timeZoneLabel(effectiveTimeZone, new Date(startsAt))}
         </small>
       )}

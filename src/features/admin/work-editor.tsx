@@ -16,12 +16,11 @@ const sections: Array<{ id: Section; label: string }> = [
   { id: "monitoring", label: "账号与来源" },
 ];
 
-export function WorkEditor({ item, anime, busy, onSave, onResourcesChanged }: {
+export function WorkEditor({ item, anime, busy, onSave }: {
   item: AdminAnimeSummary;
   anime: AdminAnimeSummary[];
   busy: boolean;
   onSave: (id: string, patch: AnimePatch) => Promise<void>;
-  onResourcesChanged?: () => void;
 }) {
   const [section, setSection] = useState<Section>("basic");
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -51,7 +50,7 @@ export function WorkEditor({ item, anime, busy, onSave, onResourcesChanged }: {
             <button className={primaryButton} disabled={busy} type="submit"><Save size={15} />{busy ? "保存中…" : "保存"}</button>
           </footer>
         </form>
-      ) : <AnimeResourcesEditor animeId={item.id} anime={anime} group={section} onChanged={onResourcesChanged ?? (() => undefined)} />}
+      ) : <AnimeResourcesEditor animeId={item.id} anime={anime} group={section} />}
     </article>
   );
 }

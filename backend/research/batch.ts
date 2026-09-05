@@ -38,36 +38,27 @@ export async function ingestResearchBatch(db: D1Database, batch: ResearchBatch):
     resources: 0,
   };
   const message = JSON.stringify({ agent: batch.agent, scope: batch.scope, note: batch.note });
+  const running = {
+    status: "running" as const,
+    sourceCount: 0,
+    observationCount: 0,
+    candidateCount: 0,
+    publishedCount: 0,
+    heldCount: 0,
+    rejectedCount: 0,
+    jobCount: 0,
+    message,
+    startedAt: sql`CURRENT_TIMESTAMP`,
+    finishedAt: null,
+  };
   if (previous) {
-    await orm.update(researchRunsTable).set({
-      status: "running",
-      sourceCount: 0,
-      observationCount: 0,
-      candidateCount: 0,
-      publishedCount: 0,
-      heldCount: 0,
-      rejectedCount: 0,
-      jobCount: 0,
-      message,
-      startedAt: sql`CURRENT_TIMESTAMP`,
-      finishedAt: null,
-    }).where(eq(researchRunsTable.id, runId));
+    await orm.update(researchRunsTable).set(running).where(eq(researchRunsTable.id, runId));
   } else {
     await orm.insert(researchRunsTable).values({
       id: runId,
       externalBatchId: batch.batchId,
       triggerType: "local_skill",
-      status: "running",
-      sourceCount: 0,
-      observationCount: 0,
-      candidateCount: 0,
-      publishedCount: 0,
-      heldCount: 0,
-      rejectedCount: 0,
-      jobCount: 0,
-      message,
-      startedAt: sql`CURRENT_TIMESTAMP`,
-      finishedAt: null,
+      ...running,
     });
   }
 

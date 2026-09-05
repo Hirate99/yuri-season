@@ -8,6 +8,7 @@ import type {
   SeasonsResponse,
 } from "@/domain";
 import { resolveCurrentEpisode } from "@/lib/episode-progress";
+import { eventOccursToday } from "@/lib/calendar-events";
 import { asc, count, desc, eq } from "drizzle-orm";
 import { database } from "~/infrastructure/db/client";
 import { readCatalogAnimeForSeason, type CatalogAnimeRecord } from "~/infrastructure/db/read-models/anime";
@@ -80,10 +81,6 @@ function mapCatalogAnime(row: CatalogAnimeRecord): CatalogAnime {
   };
 }
 
-async function animeForSeason(db: D1Database, seasonId: string): Promise<CatalogAnime[]> {
-  return (await readCatalogAnimeForSeason(db, seasonId)).map(mapCatalogAnime);
-}
-
 export function readCurrentAnimeOptions(db: D1Database): Promise<AnimeOption[]> {
   return database(db).select({
     id: animeTable.id,
@@ -97,30 +94,35 @@ export function readCurrentAnimeOptions(db: D1Database): Promise<AnimeOption[]> 
     .orderBy(asc(animeTable.titleZh));
 }
 
-export async function eventsForSeason(db: D1Database, seasonId: string) {
-  return readEventsForSeason(db, seasonId);
+export type CatalogOptions = { events?: "all" | "today" | "none"; timeZone?: string; now?: Date };
+
+async function catalogForSeason(db: D1Database, season: Season, options: CatalogOptions): Promise<CatalogResponse> {
+  const animeQuery = readCatalogAnimeForSeason(db, season.id);
+  const [rows, events] = options.events === "none"
+    ? [await animeQuery, []]
+    : await database(db).batch([animeQuery, readEventsForSeason(db, season.id)]);
+  const now = options.now ?? new Date();
+  return {
+    season, anime: rows.map(mapCatalogAnime),
+    events: options.events === "today"
+      ? events.filter((event) => eventOccursToday(event, options.timeZone ?? "Asia/Tokyo", now))
+      : events,
+    generatedAt: now.toISOString(),
+  };
 }
 
-async function catalogForSeason(db: D1Database, season: Season): Promise<CatalogResponse> {
-  const [anime, events] = await Promise.all([
-    animeForSeason(db, season.id),
-    eventsForSeason(db, season.id),
-  ]);
-  return { season, anime, events, generatedAt: new Date().toISOString() };
+export async function readCatalog(db: D1Database, options: CatalogOptions = {}): Promise<CatalogResponse> {
+  return catalogForSeason(db, await currentSeason(db), options);
 }
 
-export async function readCatalog(db: D1Database): Promise<CatalogResponse> {
-  return catalogForSeason(db, await currentSeason(db));
-}
-
-export async function readCatalogForSeason(db: D1Database, slug: string): Promise<CatalogResponse> {
-  return catalogForSeason(db, await seasonBySlug(db, slug));
+export async function readCatalogForSeason(db: D1Database, slug: string, options: CatalogOptions = {}): Promise<CatalogResponse> {
+  return catalogForSeason(db, await seasonBySlug(db, slug), options);
 }
 
 async function calendarForSeason(db: D1Database, season: Season): Promise<CalendarResponse> {
-  const [slotRows, events] = await Promise.all([
+  const [slotRows, events] = await database(db).batch([
     readCalendarSlots(db, season.id),
-    eventsForSeason(db, season.id),
+    readEventsForSeason(db, season.id),
   ]);
   const entries: CalendarEntry[] = slotRows.map((row) => ({
     animeId: row.animeId,

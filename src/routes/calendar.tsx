@@ -6,6 +6,7 @@ import { serverContextFromLoader } from "@/server-context";
 export const Route = createFileRoute("/calendar")({
   staleTime: 120_000,
   loader: (loaderContext) => loadCalendarData({ serverContext: serverContextFromLoader(loaderContext) }),
+  head: () => ({ meta: [{ title: "放送日历 · YuriSeason" }] }),
   component: CalendarRoute,
 });
 

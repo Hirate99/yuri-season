@@ -1,62 +1,235 @@
 import { Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowUpRight } from "lucide-react";
 import type { CatalogAnime, Season } from "@/domain";
-import { shortDate } from "@/lib/format";
+import { shortDate, weekdayLabel } from "@/lib/format";
+import {
+  broadcastInstantOnViewerDate,
+  localBroadcastDisplay,
+  timeZoneLabel,
+} from "@/lib/timezone";
+import { seasonVisualName, seasonVisuals } from "@/lib/season-presentation";
 import { CoverImage } from "./cover-image";
+import { SeasonGlyphArt } from "./season-glyph-art";
 
-export function SeasonHero({ season, anime, archived = false }: {
-  season: Season | undefined;
-  anime: CatalogAnime[];
+function seasonYear(season: Season): string {
+  return season.label.match(/\d{4}/)?.[0] ?? season.startsOn.slice(0, 4);
+}
+
+function uniqueAnime(anime: CatalogAnime[]): CatalogAnime[] {
+  return anime.filter((item, index) => anime.findIndex((candidate) => candidate.id === item.id) === index);
+}
+
+function seededShuffle<T>(items: T[], seed: string): T[] {
+  let state = Array.from(seed).reduce((value, character) => Math.imul(value ^ character.charCodeAt(0), 16777619), 2166136261) >>> 0;
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    const target = state % (index + 1);
+    [result[index], result[target]] = [result[target], result[index]];
+  }
+  return result;
+}
+
+function randomSeasonCards(anime: CatalogAnime[], seed: string): CatalogAnime[] {
+  const unique = uniqueAnime(anime);
+  const withCovers = seededShuffle(unique.filter((item) => item.coverUrl), `${seed}:covers`);
+  const withoutCovers = seededShuffle(unique.filter((item) => !item.coverUrl), `${seed}:fallbacks`);
+  return [...withCovers, ...withoutCovers].slice(0, 3);
+}
+
+function cardPosition(index: number, activeIndex: number, count: number): "active" | "next" | "previous" {
+  const offset = (index - activeIndex + count) % count;
+  if (offset === 0) return "active";
+  if (offset === 1) return "next";
+  return "previous";
+}
+
+export function SeasonHero({ season, count, archived = false, anime, viewerTimeZone, now }: {
+  season: Season;
+  count: number;
   archived?: boolean;
+  anime: CatalogAnime[];
+  viewerTimeZone?: string;
+  now?: Date;
 }) {
-  const featured = anime.filter((item) => item.coverUrl).slice(0, 3);
+  const [activeId, setActiveId] = useState<string>();
+  const [paused, setPaused] = useState(false);
+  const visualName = seasonVisualName(season);
+  const seasonPresentation = seasonVisuals[visualName];
+  const selectionSeed = `${season.slug}:${now?.toISOString() ?? "stable"}`;
+  const cards = useMemo(() => randomSeasonCards(anime, selectionSeed), [anime, selectionSeed]);
+  const active = cards.find((item) => item.id === activeId) ?? cards[0];
+  const activeIndex = Math.max(0, cards.findIndex((item) => item.id === active?.id));
+  const effectiveTimeZone = viewerTimeZone ?? "Asia/Tokyo";
+  const referenceNow = now ?? new Date();
+  const slot = active?.primarySlot;
+  const local = slot && effectiveTimeZone !== slot.timezone
+    ? localBroadcastDisplay(slot, effectiveTimeZone, referenceNow)
+    : null;
+  const broadcastLabel = archived
+    ? "季度归档"
+    : slot
+      ? (broadcastInstantOnViewerDate(slot, effectiveTimeZone, referenceNow) ? "今日放送" : "即将放送")
+      : "本季作品";
+
+  useEffect(() => {
+    if (paused || cards.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let timeout: number | undefined;
+    const clearScheduledAdvance = () => {
+      if (timeout !== undefined) window.clearTimeout(timeout);
+      timeout = undefined;
+    };
+    const advance = () => {
+      setActiveId((currentId) => {
+        const currentIndex = Math.max(0, cards.findIndex((item) => item.id === currentId));
+        return cards[(currentIndex + 1) % cards.length]?.id;
+      });
+    };
+    const scheduleAdvance = () => {
+      clearScheduledAdvance();
+      if (document.visibilityState !== "visible" || !document.hasFocus()) return;
+      timeout = window.setTimeout(() => {
+        if (document.visibilityState !== "visible" || !document.hasFocus()) return;
+        advance();
+        scheduleAdvance();
+      }, 5_500);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") scheduleAdvance();
+      else clearScheduledAdvance();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", clearScheduledAdvance);
+    window.addEventListener("focus", scheduleAdvance);
+    scheduleAdvance();
+    return () => {
+      clearScheduledAdvance();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", clearScheduledAdvance);
+      window.removeEventListener("focus", scheduleAdvance);
+    };
+  }, [cards, paused]);
 
   return (
-    <header className="relative min-h-[300px] py-7 md:min-h-[340px] md:py-10">
-      <div className="grid gap-9 md:grid-cols-[minmax(0,1fr)_minmax(330px,500px)] md:items-center">
-        <div className="relative z-10 md:pt-6">
-          <p className="flex items-center gap-2 text-[10px] font-bold tracking-[0.14em] text-muted uppercase">
-            <span className="size-1.5 rounded-full bg-signal-coral" />{season?.label ?? "当季"}
-          </p>
-          <h1 className="mt-4 max-w-2xl text-[38px] leading-[0.98] font-black tracking-[-0.05em] sm:text-5xl lg:text-[56px]">
-            {archived ? "百合动画" : "当季百合动画"}
-          </h1>
-          {season && (
-            <div className="mt-8 inline-flex flex-wrap items-center gap-x-3 gap-y-1 border border-black/[0.06] bg-white/72 px-4 py-2.5 text-[10px] font-semibold tracking-[0.04em] text-muted shadow-[0_12px_32px_rgba(15,23,42,0.07)] backdrop-blur-2xl">
-              <span>{shortDate(season.startsOn)}—{shortDate(season.endsOn)}</span>
-              <span className="h-3 w-px bg-black/15" />
-              <span>{anime.length} 部</span>
-            </div>
-          )}
+    <header
+      className={`relative isolate overflow-hidden pb-6 pt-2 ${active ? "min-h-190 sm:min-h-180 md:min-h-140 lg:min-h-[610px]" : "min-h-110 md:min-h-[520px]"}`}
+      aria-label={`${season.label} 百合动画`}
+    >
+      <div className="absolute left-0 top-3 z-20 md:top-8">
+        <div className="flex flex-col items-start gap-1">
+          <p data-season-year className="text-sm leading-none font-medium tracking-[0.04em] text-ink tabular-nums md:text-base">{seasonYear(season)}</p>
+          <p data-season-english className="text-[30px] leading-[0.92] font-bold tracking-[0.045em] text-accent md:text-[38px]">{seasonPresentation.english}</p>
         </div>
-
-        {featured.length > 0 && (
-          <div className="relative grid grid-cols-3 items-end gap-2.5 pb-5 sm:gap-4 md:pb-0" aria-label="当季作品封面">
-            {featured.map((item, index) => (
-              <Link
-                key={item.id}
-                to="/anime/$slug"
-                params={{ slug: item.slug }}
-                className={index === 0 ? "-translate-y-2" : index === 1 ? "translate-y-5" : "-translate-y-5"}
-                aria-label={item.titleZh}
-              >
-                <span className="mb-2 flex justify-end text-[9px] text-muted">
-                  <span className="truncate font-medium">{item.primarySlot?.localTime ?? "—"}</span>
-                </span>
-                <CoverImage
-                  className="aspect-[3/4] w-full rounded-[6px] shadow-[0_22px_45px_rgba(15,23,42,0.18)] ring-1 ring-black/[0.08] transition duration-300 hover:-translate-y-1"
-                  src={item.coverUrl}
-                  alt={`${item.titleZh} 封面`}
-                  eager={index === 0}
-                />
-              </Link>
-            ))}
-            <div className="absolute right-0 -bottom-1 flex items-end gap-2 text-right" aria-hidden="true">
-              <strong className="text-5xl leading-none font-black tracking-[-0.07em]">{anime.length}</strong>
-              <span className="pb-1 text-[8px] font-bold tracking-[0.14em] text-muted uppercase">titles</span>
-            </div>
-          </div>
-        )}
+        <p data-season-date className="mt-2 whitespace-nowrap text-xs tracking-[0.035em] text-muted tabular-nums">
+          {shortDate(season.startsOn)} — {shortDate(season.endsOn)}
+        </p>
       </div>
+
+      <div className="pointer-events-none absolute -left-[5%] top-[92px] z-0 grid h-[350px] w-[84%] place-items-center sm:left-[2%] sm:top-[100px] sm:h-[440px] sm:w-[70%] md:left-[7%] md:top-[62px] md:h-[500px] md:w-[49%]">
+        <h1 className="sr-only">{seasonPresentation.glyph}</h1>
+        <SeasonGlyphArt season={visualName} className="h-full w-full" />
+        <span data-season-glyph={seasonPresentation.glyph} className="sr-only">{seasonPresentation.glyph}</span>
+        <span
+          className="absolute right-[3%] top-[28%] hidden text-[10px] font-semibold tracking-[0.14em] text-accent md:right-[1%] md:top-[31%] md:block"
+          style={{ writingMode: "vertical-rl" }}
+        >
+          YURI ANIME INDEX
+        </span>
+      </div>
+
+      <a
+        href="#works"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById("works")?.scrollIntoView({
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+            block: "start",
+          });
+        }}
+        className="group absolute bottom-7 left-0 z-20 inline-flex items-baseline gap-2 py-2 text-ink md:bottom-10"
+      >
+        <strong className="text-2xl leading-none font-medium tracking-[-0.045em] tabular-nums">{count}</strong>
+        <span className="text-xs text-muted">部百合动画</span>
+        <span className="text-xs font-medium text-accent">{archived ? "查看归档" : "浏览本季"}</span>
+        <ArrowUpRight size={13} aria-hidden="true" className="text-accent transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transform-none" />
+      </a>
+
+      {active && (
+        <figure
+          className="absolute right-0 top-[160px] z-10 w-[66%] max-w-[430px] sm:top-[150px] sm:w-[52%] md:right-[1%] md:top-[54px] md:w-[42%] md:max-w-[500px]"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          onFocusCapture={() => setPaused(true)}
+          onBlurCapture={() => setPaused(false)}
+        >
+          <div className="season-card-stage relative mx-auto aspect-[3/4] w-[86%] max-w-[268px] md:w-[64%]">
+            {cards.map((item, index) => {
+              const position = cardPosition(index, activeIndex, cards.length);
+              return (
+                <Link
+                  key={item.id}
+                  to="/anime/$slug"
+                  params={{ slug: item.slug }}
+                  data-card-position={position}
+                  aria-hidden={position === "active" ? undefined : true}
+                  tabIndex={position === "active" ? undefined : -1}
+                  className="season-card absolute inset-0 block rounded-[5px]"
+                >
+                  <CoverImage
+                    className="h-full w-full rounded-[5px] ring-1 ring-black/5"
+                    src={item.coverUrl}
+                    alt={position === "active" ? `${item.titleZh} 封面` : ""}
+                    eager
+                  />
+                </Link>
+              );
+            })}
+
+            {cards.length > 1 && (
+              <div className="absolute -top-11 right-0 z-20 flex items-center" aria-label="切换主推作品">
+                {cards.map((item, index) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-label={`显示 ${item.titleZh}`}
+                    aria-pressed={item.id === active.id}
+                    onClick={() => setActiveId(item.id)}
+                    onMouseEnter={() => setActiveId(item.id)}
+                    className={`relative grid size-10 place-items-center text-[10px] tabular-nums transition-colors ${item.id === active.id ? "font-semibold text-ink" : "text-muted hover:text-ink"}`}
+                  >
+                    {String(index + 1).padStart(2, "0")}
+                    <span className={`absolute bottom-1 size-1 rounded-full bg-accent ${item.id === active.id ? "opacity-100" : "opacity-0"}`} aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <figcaption className="relative mt-7 min-h-32">
+            {slot && (
+              <div className="pointer-events-none absolute -top-7 right-0 z-0 whitespace-nowrap text-[clamp(4.25rem,11vw,7.5rem)] leading-none font-semibold tracking-[-0.075em] text-accent-soft tabular-nums" aria-hidden="true">
+                {slot.localTime}
+              </div>
+            )}
+            <div className="relative z-10 flex items-end justify-between gap-4 pt-10 md:pt-14">
+              <div className="min-w-0">
+                <Link to="/anime/$slug" params={{ slug: active.slug }} className="text-sm leading-6 font-semibold text-ink transition-colors hover:text-accent md:text-base">
+                  {active.titleZh}<ArrowUpRight size={13} aria-hidden="true" className="ml-1 inline-block align-baseline text-accent" />
+                </Link>
+                {slot && (
+                  <p className="mt-1 text-[11px] leading-5 text-muted tabular-nums">
+                    {weekdayLabel(slot.weekday)} · {timeZoneLabel(slot.timezone)}
+                    {local && <span className="block">{local.weekday} {local.time} {local.timezone}</span>}
+                  </p>
+                )}
+              </div>
+              <span className="shrink-0 pb-1 text-[11px] font-medium text-accent">{broadcastLabel}</span>
+            </div>
+          </figcaption>
+        </figure>
+      )}
     </header>
   );
 }

@@ -4,16 +4,11 @@ import { database } from "~/infrastructure/db/client";
 import { accountsTable, researchSourcesTable } from "~/infrastructure/db/schema";
 import { HttpError } from "~/shared/http-error";
 import { createId } from "~/shared/id";
-import { assertAccountOwner, personBelongsToAnime } from "./resource-context";
+import { accountBelongsToAnime, assertAccountOwner } from "./resource-context";
 import type { ResourceAudit } from "./resource-write";
 
 async function assertVisibleAccount(db: D1Database, animeId: string, id: string): Promise<void> {
-  const account = await database(db).select({ ownerType: accountsTable.ownerType, ownerId: accountsTable.ownerId })
-    .from(accountsTable).where(eq(accountsTable.id, id)).get();
-  const visible = account?.ownerType === "anime"
-    ? account.ownerId === animeId
-    : account ? await personBelongsToAnime(db, animeId, account.ownerId) : false;
-  if (!visible) throw new HttpError(404, "没有找到账号。");
+  if (!await accountBelongsToAnime(db, animeId, id)) throw new HttpError(404, "没有找到账号。");
 }
 
 export async function createAccount(db: D1Database, animeId: string, value: AccountWrite, audit?: ResourceAudit): Promise<string> {

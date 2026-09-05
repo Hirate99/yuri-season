@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Search } from "lucide-react";
+import { Check, ChevronDown, ListFilter, Search } from "lucide-react";
 import { useSelect } from "downshift";
 import { useMemo, useState } from "react";
 import type { AnimeOption } from "@/domain";
@@ -11,10 +11,12 @@ export function AnimeCombobox({
   anime,
   value,
   onChange,
+  compact = false,
 }: {
   anime: AnimeOption[];
   value: string;
   onChange: (slug: string) => void;
+  compact?: boolean;
 }) {
   const options = useMemo(() => [
     allAnimeOption,
@@ -66,28 +68,25 @@ export function AnimeCombobox({
         {...getToggleButtonProps({
           type: "button",
           "aria-label": "按作品筛选",
-          className: "group flex h-11 w-full items-center rounded-xl border border-black/[0.06] bg-white px-3.5 text-ink shadow-[0_1px_2px_rgba(15,23,42,0.03)] outline-none transition hover:border-black/10 hover:bg-[#fafafa] focus:border-[#786bd1]/25 focus:ring-3 focus:ring-[#786bd1]/10",
+          title: selected.label,
+          className: `group relative flex h-10 w-full items-center rounded-lg bg-white text-ink transition focus-visible:outline-2 focus-visible:outline-accent ${compact ? "justify-center px-2 hover:bg-accent-soft/40 md:justify-end" : "border border-line px-3 hover:border-accent/40"}`,
         })}
       >
-        <span className="shrink-0 border-r border-black/[0.07] pr-2.5 text-[10px] font-semibold tracking-[0.08em] text-muted uppercase">
-          作品
-        </span>
-        <span className="min-w-0 flex-1 truncate pl-2.5 text-left text-xs font-semibold">{selected.label}</span>
+        {compact && <ListFilter size={18} className={value ? "text-accent md:hidden" : "text-muted md:hidden"} aria-hidden="true" />}
+        {compact && value && <span className="absolute top-1 right-1 size-1.5 rounded-full bg-accent md:hidden" aria-hidden="true" />}
+        <span className={`min-w-0 truncate text-sm ${compact ? "hidden md:block" : "flex-1 text-left"}`}>{selected.label}</span>
         <ChevronDown
           aria-hidden="true"
           size={15}
-          className={`ml-2 shrink-0 text-muted transition-transform duration-200 group-hover:text-ink ${isOpen ? "rotate-180" : ""}`}
+          className={`ml-2 shrink-0 text-muted transition-transform duration-200 group-hover:text-ink ${compact ? "hidden md:block" : ""} ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 
       {isOpen && (
         <div
           {...getMenuProps()}
-          className="absolute top-[calc(100%+10px)] right-0 z-50 w-[min(22rem,calc(100vw-1.5rem))] origin-top-right overflow-hidden rounded-2xl border border-black/[0.07] bg-white/95 p-1.5 shadow-[0_24px_70px_rgba(15,23,42,0.14)] backdrop-blur-2xl"
+          className="absolute top-[calc(100%+8px)] right-0 z-50 w-[min(20rem,calc(100vw-2rem))] origin-top-right overflow-hidden rounded-xl border border-line bg-white p-2 shadow-[0_8px_24px_rgba(37,35,43,0.12)]"
         >
-          <div className="px-2.5 pt-2 pb-1.5">
-            <p className="text-[10px] font-semibold tracking-[0.08em] text-muted uppercase">选择作品</p>
-          </div>
           <div className="relative px-1 pb-1.5">
             <Search className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" size={14} />
             <input
@@ -119,17 +118,17 @@ export function AnimeCombobox({
               spellCheck={false}
               enterKeyHint="search"
               aria-label="搜索作品"
-              className="h-10 w-full appearance-none rounded-xl border border-transparent bg-raised pl-9 pr-3 text-base outline-none transition placeholder:text-muted focus:border-[#786bd1]/15 focus:bg-white focus:ring-3 focus:ring-[#786bd1]/10 md:text-xs"
+              className="h-10 w-full appearance-none rounded-lg bg-raised pl-9 pr-3 text-base outline-none placeholder:text-muted focus:bg-white focus:ring-2 focus:ring-accent-soft md:text-sm"
             />
           </div>
-          <ul className="max-h-[320px] overflow-y-auto border-t border-black/[0.05] pt-1.5">
+          <ul className="max-h-[min(18rem,calc(100dvh-17rem))] overflow-y-auto pt-1.5">
             {filtered.map((item, index) => {
               const active = item.slug === selected.slug;
               return (
                 <li
                   {...getItemProps({ item, index })}
                   key={item.id}
-                  className={`flex min-h-10 cursor-default items-center gap-2.5 rounded-xl px-3 text-xs text-ink outline-none transition-colors ${highlightedIndex === index ? "bg-[#f1efff]" : ""} ${active ? "font-semibold text-[#554aaf]" : ""}`}
+                  className={`flex min-h-10 cursor-pointer items-center gap-2.5 rounded-lg px-3 text-sm text-ink outline-none transition-colors ${highlightedIndex === index ? "bg-accent-soft/60" : ""} ${active ? "font-semibold text-accent" : ""}`}
                 >
                   <Check className={`shrink-0 text-[#786bd1] ${active ? "visible" : "invisible"}`} size={14} />
                   <span className="truncate">{item.label}</span>

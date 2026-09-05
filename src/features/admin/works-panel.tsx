@@ -5,13 +5,12 @@ import { cn } from "@/lib/ui";
 import { NewWorkEditor } from "./new-work-editor";
 import { WorkEditor } from "./work-editor";
 
-export function WorksPanel({ anime, seasons, busyId, onPatch, onCreate, onChanged }: {
+export function WorksPanel({ anime, seasons, busyId, onPatch, onCreate }: {
   anime: AdminAnimeSummary[];
   seasons: SeasonSummary[];
   busyId: string | null;
   onPatch: (id: string, patch: AnimePatch) => Promise<void>;
   onCreate: (value: AnimeCreate) => Promise<void>;
-  onChanged: () => void;
 }) {
   const currentSeason = seasons.find((season) => season.isCurrent)?.id ?? "all";
   const [query, setQuery] = useState("");
@@ -52,7 +51,7 @@ export function WorksPanel({ anime, seasons, busyId, onPatch, onCreate, onChange
 
       <section className="min-w-0">
         {creating ? <NewWorkEditor seasons={seasons} busy={busyId === "new-work"} onCreate={async (value) => { await onCreate(value); setCreating(false); }} open />
-          : selected ? <WorkEditor key={selected.id} item={selected} anime={anime} busy={busyId === selected.id} onSave={onPatch} onResourcesChanged={onChanged} />
+          : selected ? <WorkEditor key={selected.id} item={selected} anime={anime} busy={busyId === selected.id} onSave={onPatch} />
             : <div className="rounded-3xl bg-white p-8 text-sm text-muted">请选择一部作品</div>}
       </section>
     </div>

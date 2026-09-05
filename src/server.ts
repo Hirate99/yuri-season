@@ -2,7 +2,7 @@ import startHandler from "@tanstack/react-start/server-entry";
 import { api } from "~/http/api";
 import { redirectPublicAdmin } from "~/platform/admin-boundary";
 import { laneForCron, runResearch } from "~/research/scheduler";
-import { viewerTimeZoneFromRequest, type ServerRequestContext } from "./server-context";
+import { publicApiOriginFromRequest, viewerTimeZoneFromRequest, type ServerRequestContext } from "./server-context";
 
 function withServerTiming(response: Response, name: string, startedAt: number): Response {
   const headers = new Headers(response.headers);
@@ -28,6 +28,7 @@ export default {
       env,
       executionContext,
       viewerTimeZone: viewerTimeZoneFromRequest(request),
+      publicApiOrigin: publicApiOriginFromRequest(request),
     };
     const response = await startHandler.fetch(request, { context });
     return withServerTiming(response, "ssr", startedAt);

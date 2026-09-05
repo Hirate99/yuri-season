@@ -14,6 +14,14 @@ bun run dev
 
 站点默认在 `http://localhost:3000`。Admin 位于 `/admin`；生产环境由独立 Admin Worker 承接，并由 Cloudflare Access 和 Worker 邮箱白名单共同保护。公开 Worker 不受 Access 影响。`ADMIN_TOKEN` 只供本地开发和自动化脚本使用，页面不会要求手填 token。
 
+需要以生产域名调试本地页面、同时读取生产数据时，先启动开发服务器：
+
+```powershell
+bun run dev
+```
+
+然后在 Whistle 的 Rules 面板新建规则，直接粘贴 [`whistle.rules`](./whistle.rules) 的内容并启用，再访问 `https://i-yuri.com`。页面、前端资源和 Vite HMR 会转到本机的 `[::1]:3000`，`/api/**` 与 `r2.i-yuri.com` 保持生产链路；本地 SSR 也会只读生产公开 API，而不会连接生产 D1。这里明确使用 IPv6，是为了避免 Windows 上其他系统进程占用 `127.0.0.1:3000`。这个切换标记仅在 Vite 开发环境生效。首次使用 HTTPS 抓包时仍需按 Whistle 提示安装并信任其根证书。
+
 ## Local-first 更新
 
 第一阶段不注册 Cloudflare Cron，也不让 Worker 常驻调用模型。配置本地环境变量后运行确定性增量检查：

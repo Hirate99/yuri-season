@@ -1,16 +1,24 @@
 import { z } from "zod";
-import { accountSchema } from './account';
-import { broadcastSchema } from './broadcast';
-import { castSchema } from './cast';
+import { accountSchema } from "./account";
+import { broadcastSchema } from "./broadcast";
+import { castSchema } from "./cast";
 import { discussionSchema } from "./discussion";
 import { eventSchema } from "./event";
 import { mediaSchema } from "./media";
-import { sourceSchema } from './source';
-import { staffSchema } from './staff';
+import { sourceSchema } from "./source";
+import { staffSchema } from "./staff";
 import { themeSongSchema } from "./theme-song";
 
 export const resourceKindSchema = z.enum([
-  "broadcast", "account", "staff", "cast", "source", "event", "media", "discussion", "theme_song",
+  "broadcast",
+  "account",
+  "staff",
+  "cast",
+  "source",
+  "event",
+  "media",
+  "discussion",
+  "theme_song",
 ]);
 
 export const resourceEnvelopeSchema = z.discriminatedUnion("kind", [

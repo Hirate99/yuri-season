@@ -18,6 +18,10 @@
     "deploy:cloudflare:public": "bun run cf-typegen && bun test && bun run db:migrate:remote && bun run deploy",
     "deploy:cloudflare:admin": "bun run cf-typegen && bun test && bun run deploy:admin",
     "dev": "vite dev",
+    "format": "prettier --write \"{src,backend,scripts,tests}/**/*.{ts,tsx,js,mjs,cjs,css}\" \"*.{ts,json,jsonc}\"",
+    "format:check": "prettier --check \"{src,backend,scripts,tests}/**/*.{ts,tsx,js,mjs,cjs,css}\" \"*.{ts,json,jsonc}\"",
+    "lint:staged": "lint-staged",
+    "prepare": "husky",
     "preview": "vite preview",
     "research": "bun scripts/research.ts",
     "research:commit": "bun scripts/source-diff.ts commit",
@@ -40,6 +44,9 @@
     "research:music:apple-covers": "bun scripts/prefer-apple-theme-covers.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs,css,json,jsonc}": "prettier --write"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -77,6 +84,9 @@
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^5.1.0",
+    "husky": "9.1.7",
+    "lint-staged": "17.5.0",
+    "prettier": "3.9.6",
     "sharp": "0.35.2",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",

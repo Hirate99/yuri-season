@@ -7,6 +7,7 @@ import { createQueryClient } from "./lib/queries";
 export function getRouter() {
   const queryClient = createQueryClient();
   let restoreSpaScroll = false;
+
   const router = createRouter({
     routeTree,
     defaultPreload: "intent",
@@ -16,6 +17,7 @@ export function getRouter() {
     // `undefined` value in the router's base context.
     context: { queryClient } satisfies RouterContext,
   });
+
   setupRouterSsrQueryIntegration({ router, queryClient });
 
   if (typeof window !== "undefined") {
@@ -29,9 +31,13 @@ export function getRouter() {
 }
 
 declare module "@tanstack/react-router" {
-  interface Register { router: ReturnType<typeof getRouter> }
+  interface Register {
+    router: ReturnType<typeof getRouter>;
+  }
 }
 
 declare module "@tanstack/history" {
-  interface HistoryState { yuriReturnToPrevious?: boolean }
+  interface HistoryState {
+    yuriReturnToPrevious?: boolean;
+  }
 }

@@ -39,18 +39,27 @@ describe("feed search", () => {
   });
 
   test("returns feed and media timestamps as explicit UTC instants", async () => {
-    database.sqlite.query(`
+    database.sqlite
+      .query(
+        `
       UPDATE feed_items SET published_at = '2026-08-14 06:48:00' WHERE id = 'feed-tai-sf6'
-    `).run();
-    database.sqlite.query(`
+    `,
+      )
+      .run();
+    database.sqlite
+      .query(
+        `
       UPDATE media_items SET published_at = '2026-08-14 06:47:00'
       WHERE id = 'media-kimi-official-key'
-    `).run();
+    `,
+      )
+      .run();
 
     const item = (await readFeed(database.binding(), { query: "Street Fighter" })).items[0];
     expect(item.publishedAt).toBe("2026-08-14T06:48:00.000Z");
-    const media = (await readMedia(database.binding(), "anime-kimishinu"))
-      .find(({ id }) => id === "media-kimi-official-key");
+    const media = (await readMedia(database.binding(), "anime-kimishinu")).find(
+      ({ id }) => id === "media-kimi-official-key",
+    );
     expect(media?.publishedAt).toBe("2026-08-14T06:47:00.000Z");
   });
 
@@ -61,14 +70,18 @@ describe("feed search", () => {
     expect(first.nextCursor).not.toBeNull();
 
     const second = await readFeed(database.binding(), { limit: 2, cursor: first.nextCursor! });
-    expect(new Set([...first.items, ...second.items].map((item) => item.id)).size)
-      .toBe(first.items.length + second.items.length);
-    expect([...first.items, ...second.items].map((item) => item.id))
-      .toEqual(all.items.slice(0, 4).map((item) => item.id));
+    expect(new Set([...first.items, ...second.items].map((item) => item.id)).size).toBe(
+      first.items.length + second.items.length,
+    );
+    expect([...first.items, ...second.items].map((item) => item.id)).toEqual(
+      all.items.slice(0, 4).map((item) => item.id),
+    );
   });
 
   test("rejects malformed feed cursors", async () => {
-    await expect(readFeed(database.binding(), { cursor: "not-a-cursor" })).rejects.toMatchObject({ status: 400 });
+    await expect(readFeed(database.binding(), { cursor: "not-a-cursor" })).rejects.toMatchObject({
+      status: 400,
+    });
   });
 
   test("keeps feed query count constant across page sizes", async () => {

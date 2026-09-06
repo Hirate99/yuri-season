@@ -35,7 +35,9 @@ describe("publication policy", () => {
   });
 
   test("holds unknown safety regardless of model decision", () => {
-    expect(applyReviewPolicy(context, { ...review, safetyRating: "unknown" }).decision).toBe("hold");
+    expect(applyReviewPolicy(context, { ...review, safetyRating: "unknown" }).decision).toBe(
+      "hold",
+    );
   });
 
   test("holds major spoilers", () => {
@@ -43,15 +45,20 @@ describe("publication policy", () => {
   });
 
   test("uses a stricter threshold for unverified sources", () => {
-    expect(applyReviewPolicy({ ...context, sourceTrust: "unverified" }, { ...review, confidence: 0.87 }).decision).toBe("hold");
+    expect(
+      applyReviewPolicy({ ...context, sourceTrust: "unverified" }, { ...review, confidence: 0.87 })
+        .decision,
+    ).toBe("hold");
   });
 
   test("always holds newly discovered fanwork", () => {
-    expect(applyReviewPolicy(context, {
-      ...review,
-      contentClass: "fanwork",
-      confidence: 0.99,
-      decision: "publish",
-    }).decision).toBe("hold");
+    expect(
+      applyReviewPolicy(context, {
+        ...review,
+        contentClass: "fanwork",
+        confidence: 0.99,
+        decision: "publish",
+      }).decision,
+    ).toBe("hold");
   });
 });

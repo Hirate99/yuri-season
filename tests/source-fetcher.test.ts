@@ -33,9 +33,13 @@ describe("bounded source fetching", () => {
     expect(new TextEncoder().encode(payload).byteLength).toBeGreaterThan(128_000);
     expect(new TextEncoder().encode(payload).byteLength).toBeLessThan(256_000);
 
-    const result = await fetchSource(source, async () => new Response(payload, {
-      headers: { "content-type": "application/json" },
-    }));
+    const result = await fetchSource(
+      source,
+      async () =>
+        new Response(payload, {
+          headers: { "content-type": "application/json" },
+        }),
+    );
 
     expect(result.items).toHaveLength(24);
     expect(result.items[0].canonicalUrl).toBe("https://example.test/news/news-0/");

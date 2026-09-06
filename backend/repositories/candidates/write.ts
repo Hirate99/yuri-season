@@ -16,14 +16,19 @@ import { createId } from "~/shared/id";
 import { canonicalInstant } from "~/shared/time";
 
 function candidateAnimeIds(draft: CandidateDraft): string[] {
-  return [...new Set([draft.animeId, ...(draft.animeIds ?? [])].filter((id): id is string => Boolean(id)))];
+  return [
+    ...new Set(
+      [draft.animeId, ...(draft.animeIds ?? [])].filter((id): id is string => Boolean(id)),
+    ),
+  ];
 }
 
 function candidateAnimeQueries(db: D1Database, candidateId: string, draft: CandidateDraft) {
   const orm = database(db);
-  return candidateAnimeIds(draft).map((animeId) => orm.insert(candidateAnimeTable)
-    .values({ candidateId, animeId })
-    .onConflictDoNothing());
+
+  return candidateAnimeIds(draft).map((animeId) =>
+    orm.insert(candidateAnimeTable).values({ candidateId, animeId }).onConflictDoNothing(),
+  );
 }
 
 async function existingCandidateId(
@@ -32,61 +37,86 @@ async function existingCandidateId(
   fingerprint: string,
 ): Promise<string | null> {
   const field = draft.originKey ? feedCandidatesTable.originKey : feedCandidatesTable.fingerprint;
-  const row = await database(db).select({ id: feedCandidatesTable.id }).from(feedCandidatesTable)
-    .where(eq(field, draft.originKey ?? fingerprint)).get();
+
+  const row = await database(db)
+    .select({ id: feedCandidatesTable.id })
+    .from(feedCandidatesTable)
+    .where(eq(field, draft.originKey ?? fingerprint))
+    .get();
   if (row?.id) return row.id;
   if (!draft.platformObjectId || !draft.animeId) return null;
-  const stableObject = await database(db).select({ id: feedCandidatesTable.id })
+
+  const stableObject = await database(db)
+    .select({ id: feedCandidatesTable.id })
     .from(feedCandidatesTable)
     .leftJoin(feedItemsTable, eq(feedItemsTable.candidateId, feedCandidatesTable.id))
-    .where(and(
-      eq(feedCandidatesTable.platformObjectId, draft.platformObjectId),
-      eq(feedCandidatesTable.animeId, draft.animeId),
-      eq(feedCandidatesTable.url, draft.url),
-      or(isNull(feedItemsTable.id), isNull(feedItemsTable.withdrawnAt)),
-    )).get();
+    .where(
+      and(
+        eq(feedCandidatesTable.platformObjectId, draft.platformObjectId),
+        eq(feedCandidatesTable.animeId, draft.animeId),
+        eq(feedCandidatesTable.url, draft.url),
+        or(isNull(feedItemsTable.id), isNull(feedItemsTable.withdrawnAt)),
+      ),
+    )
+    .get();
+
   return stableObject?.id ?? null;
 }
 
 function evidenceQuery(db: D1Database, candidateId: string, draft: CandidateDraft) {
   if (!draft.observationId && !draft.claimId) return null;
-  return database(db).insert(candidateEvidenceTable).values({
-    id: createId("evidence"),
-    candidateId,
-    observationId: draft.observationId ?? null,
-    claimId: draft.claimId ?? null,
-    relation: "supports",
-  }).onConflictDoNothing();
+
+  return database(db)
+    .insert(candidateEvidenceTable)
+    .values({
+      id: createId("evidence"),
+      candidateId,
+      observationId: draft.observationId ?? null,
+      claimId: draft.claimId ?? null,
+      relation: "supports",
+    })
+    .onConflictDoNothing();
 }
 
 async function mediaWrite(db: D1Database, draft: CandidateDraft) {
   if (!draft.media) return { id: null, queries: [] as BatchItem<"sqlite">[] };
+
   const orm = database(db);
-  const existing = await orm.select({ id: mediaItemsTable.id }).from(mediaItemsTable)
-    .where(eq(mediaItemsTable.originalUrl, draft.media.originalUrl)).get();
+
+  const existing = await orm
+    .select({ id: mediaItemsTable.id })
+    .from(mediaItemsTable)
+    .where(eq(mediaItemsTable.originalUrl, draft.media.originalUrl))
+    .get();
+
   const id = existing?.id ?? createId("media");
   const queries: BatchItem<"sqlite">[] = [];
+
   if (!existing) {
-    queries.push(orm.insert(mediaItemsTable).values({
-      id,
-      animeId: draft.animeId ?? null,
-      personId: draft.personId ?? null,
-      characterId: draft.characterId ?? null,
-      contentClass: draft.media.contentClass,
-      title: draft.media.title,
-      creatorName: draft.media.creatorName,
-      creatorUrl: draft.media.creatorUrl ?? null,
-      originalUrl: draft.media.originalUrl,
-      previewUrl: draft.media.previewUrl ?? null,
-      presentationMode: draft.media.presentationMode ?? "link_only",
-      safetyRating: draft.media.safetyRating ?? draft.safetyRating ?? "unknown",
-      spoilerLevel: draft.media.spoilerLevel ?? draft.spoilerLevel ?? "none",
-      rightsNote: draft.media.rightsNote ?? null,
-      publishedAt: draft.publishedAt,
-    }));
+    queries.push(
+      orm.insert(mediaItemsTable).values({
+        id,
+        animeId: draft.animeId ?? null,
+        personId: draft.personId ?? null,
+        characterId: draft.characterId ?? null,
+        contentClass: draft.media.contentClass,
+        title: draft.media.title,
+        creatorName: draft.media.creatorName,
+        creatorUrl: draft.media.creatorUrl ?? null,
+        originalUrl: draft.media.originalUrl,
+        previewUrl: draft.media.previewUrl ?? null,
+        presentationMode: draft.media.presentationMode ?? "link_only",
+        safetyRating: draft.media.safetyRating ?? draft.safetyRating ?? "unknown",
+        spoilerLevel: draft.media.spoilerLevel ?? draft.spoilerLevel ?? "none",
+        rightsNote: draft.media.rightsNote ?? null,
+        publishedAt: draft.publishedAt,
+      }),
+    );
   }
+
   for (const asset of draft.media.assets ?? []) {
     const { r2Key, ...fields } = asset;
+
     const values = {
       ...fields,
       contentHash: asset.contentHash.toLowerCase(),
@@ -97,16 +127,27 @@ async function mediaWrite(db: D1Database, draft: CandidateDraft) {
       status: "active" as const,
       withdrawnAt: null,
     };
-    queries.push(orm.insert(mediaAssetsTable).values({ id: createId("asset"), mediaId: id, r2Key, ...values })
-      .onConflictDoUpdate({ target: mediaAssetsTable.r2Key, set: values }));
+
+    queries.push(
+      orm
+        .insert(mediaAssetsTable)
+        .values({ id: createId("asset"), mediaId: id, r2Key, ...values })
+        .onConflictDoUpdate({ target: mediaAssetsTable.r2Key, set: values }),
+    );
   }
+
   return { id, queries };
 }
 
 export async function createCandidate(db: D1Database, draft: CandidateDraft): Promise<string> {
   draft = { ...draft, publishedAt: canonicalInstant(draft.publishedAt) };
-  const fingerprint = await stableFingerprint(draft.originKey ?? `${draft.url}|${draft.title}|${draft.publishedAt}`);
+
+  const fingerprint = await stableFingerprint(
+    draft.originKey ?? `${draft.url}|${draft.title}|${draft.publishedAt}`,
+  );
+
   const orm = database(db);
+
   const content = {
     title: draft.title,
     summary: draft.summary,
@@ -118,64 +159,86 @@ export async function createCandidate(db: D1Database, draft: CandidateDraft): Pr
     safetyRating: draft.safetyRating ?? "unknown",
     spoilerLevel: draft.spoilerLevel ?? "none",
   };
+
   const existingId = await existingCandidateId(db, draft, fingerprint);
+
   if (existingId) {
     const queries: BatchItem<"sqlite">[] = candidateAnimeQueries(db, existingId, draft);
     const media = await mediaWrite(db, draft);
+
     queries.push(...media.queries);
-    queries.push(orm.update(feedCandidatesTable).set({
-      ...content,
-      observationId: sql`COALESCE(${draft.observationId ?? null}, ${feedCandidatesTable.observationId})`,
-      mediaId: sql`COALESCE(${media.id}, ${feedCandidatesTable.mediaId})`,
-      platformObjectId: sql`COALESCE(${draft.platformObjectId ?? null}, ${feedCandidatesTable.platformObjectId})`,
-      originKey: sql`COALESCE(${draft.originKey ?? null}, ${feedCandidatesTable.originKey})`,
-      presentationMode: draft.presentationMode ?? "link_only",
-      confidence: draft.confidence ?? 0,
-      extractorVersion: draft.extractorVersion ?? "manual@1",
-      policyVersion: draft.policyVersion ?? "publish-policy@1",
-    }).where(eq(feedCandidatesTable.id, existingId)));
-    queries.push(orm.update(feedItemsTable).set({
-      ...content,
-      mediaId: sql`COALESCE(${media.id}, ${feedItemsTable.mediaId})`,
-      platformObjectId: sql`COALESCE(${draft.platformObjectId ?? null}, ${feedItemsTable.platformObjectId})`,
-      originKey: sql`COALESCE(${draft.originKey ?? null}, ${feedItemsTable.originKey})`,
-    }).where(eq(feedItemsTable.candidateId, existingId)));
+    queries.push(
+      orm
+        .update(feedCandidatesTable)
+        .set({
+          ...content,
+          observationId: sql`COALESCE(${draft.observationId ?? null}, ${feedCandidatesTable.observationId})`,
+          mediaId: sql`COALESCE(${media.id}, ${feedCandidatesTable.mediaId})`,
+          platformObjectId: sql`COALESCE(${draft.platformObjectId ?? null}, ${feedCandidatesTable.platformObjectId})`,
+          originKey: sql`COALESCE(${draft.originKey ?? null}, ${feedCandidatesTable.originKey})`,
+          presentationMode: draft.presentationMode ?? "link_only",
+          confidence: draft.confidence ?? 0,
+          extractorVersion: draft.extractorVersion ?? "manual@1",
+          policyVersion: draft.policyVersion ?? "publish-policy@1",
+        })
+        .where(eq(feedCandidatesTable.id, existingId)),
+    );
+    queries.push(
+      orm
+        .update(feedItemsTable)
+        .set({
+          ...content,
+          mediaId: sql`COALESCE(${media.id}, ${feedItemsTable.mediaId})`,
+          platformObjectId: sql`COALESCE(${draft.platformObjectId ?? null}, ${feedItemsTable.platformObjectId})`,
+          originKey: sql`COALESCE(${draft.originKey ?? null}, ${feedItemsTable.originKey})`,
+        })
+        .where(eq(feedItemsTable.candidateId, existingId)),
+    );
+
     const evidence = evidenceQuery(db, existingId, draft);
     if (evidence) queries.push(evidence);
+
     await orm.batch(queries as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+
     return existingId;
   }
 
   const id = createId("candidate");
   const media = await mediaWrite(db, draft);
   const queries: BatchItem<"sqlite">[] = [];
+
   queries.push(...media.queries);
-  queries.push(orm.insert(feedCandidatesTable).values({
-    ...content,
-    id,
-    observationId: draft.observationId ?? null,
-    animeId: draft.animeId ?? draft.animeIds?.[0] ?? null,
-    personId: draft.personId ?? null,
-    characterId: draft.characterId ?? null,
-    eventId: null,
-    mediaId: media.id,
-    accountId: draft.accountId ?? null,
-    platformObjectId: draft.platformObjectId ?? null,
-    originKey: draft.originKey ?? null,
-    contentClass: draft.contentClass,
-    sourceIdentity: draft.sourceIdentity,
-    presentationMode: draft.presentationMode ?? "link_only",
-    confidence: draft.confidence ?? 0,
-    status: "pending",
-    discoveredBy: draft.discoveredBy ?? "manual",
-    extractorVersion: draft.extractorVersion ?? "manual@1",
-    policyVersion: draft.policyVersion ?? "publish-policy@1",
-    fingerprint,
-    reviewedAt: null,
-  }));
+  queries.push(
+    orm.insert(feedCandidatesTable).values({
+      ...content,
+      id,
+      observationId: draft.observationId ?? null,
+      animeId: draft.animeId ?? draft.animeIds?.[0] ?? null,
+      personId: draft.personId ?? null,
+      characterId: draft.characterId ?? null,
+      eventId: null,
+      mediaId: media.id,
+      accountId: draft.accountId ?? null,
+      platformObjectId: draft.platformObjectId ?? null,
+      originKey: draft.originKey ?? null,
+      contentClass: draft.contentClass,
+      sourceIdentity: draft.sourceIdentity,
+      presentationMode: draft.presentationMode ?? "link_only",
+      confidence: draft.confidence ?? 0,
+      status: "pending",
+      discoveredBy: draft.discoveredBy ?? "manual",
+      extractorVersion: draft.extractorVersion ?? "manual@1",
+      policyVersion: draft.policyVersion ?? "publish-policy@1",
+      fingerprint,
+      reviewedAt: null,
+    }),
+  );
+
   const evidence = evidenceQuery(db, id, draft);
   if (evidence) queries.push(evidence);
+
   queries.push(...candidateAnimeQueries(db, id, draft));
   await orm.batch(queries as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+
   return id;
 }

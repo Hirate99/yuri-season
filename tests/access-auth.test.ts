@@ -20,8 +20,10 @@ async function fixture(overrides: Record<string, unknown> = {}) {
     nbf: now - 10,
     exp: now + 300,
     ...overrides,
-  }).setProtectedHeader({ alg: "RS256", kid: "test-key" }).sign(pair.privateKey);
-  return { token, keys: [{ ...await exportJWK(pair.publicKey), kid: "test-key" }] };
+  })
+    .setProtectedHeader({ alg: "RS256", kid: "test-key" })
+    .sign(pair.privateKey);
+  return { token, keys: [{ ...(await exportJWK(pair.publicKey)), kid: "test-key" }] };
 }
 
 describe("Cloudflare Access identity", () => {
@@ -30,7 +32,10 @@ describe("Cloudflare Access identity", () => {
     const fetchKeys = spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ keys }));
     try {
       for (let index = 0; index < 2; index += 1) {
-        await expect(verifyAccessJwt(token, config)).resolves.toEqual({ email: "haonan.su@outlook.com", subject: "user-1" });
+        await expect(verifyAccessJwt(token, config)).resolves.toEqual({
+          email: "haonan.su@outlook.com",
+          subject: "user-1",
+        });
       }
       expect(fetchKeys).toHaveBeenCalledTimes(1);
     } finally {
@@ -57,7 +62,9 @@ describe("Admin automation identity", () => {
         "cf-access-jwt-assertion": "service-token-assertion",
       },
     });
-    await expect(requireAdmin(request, { ADMIN_TOKEN: "local-agent-secret" } as Env)).resolves.toEqual({
+    await expect(
+      requireAdmin(request, { ADMIN_TOKEN: "local-agent-secret" } as Env),
+    ).resolves.toEqual({
       kind: "automation",
       subject: "admin-token",
     });
@@ -70,6 +77,8 @@ describe("Admin automation identity", () => {
         "cf-access-jwt-assertion": "service-token-assertion",
       },
     });
-    await expect(requireAdmin(request, { ADMIN_TOKEN: "local-agent-secret" } as Env)).rejects.toMatchObject({ status: 401 });
+    await expect(
+      requireAdmin(request, { ADMIN_TOKEN: "local-agent-secret" } as Env),
+    ).rejects.toMatchObject({ status: 401 });
   });
 });

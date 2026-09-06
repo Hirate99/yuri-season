@@ -4,6 +4,7 @@ import type { ApiType } from "~/http/api";
 
 export function createApiClient(baseUrl = "/", headers?: HeadersInit) {
   const headerRecord = headers ? Object.fromEntries(new Headers(headers)) : undefined;
+
   return hc<ApiType>(baseUrl, headerRecord ? { headers: headerRecord } : undefined);
 }
 
@@ -18,6 +19,7 @@ export async function rpcData<T extends ClientResponse<unknown>>(request: T | Pr
       const message = error.detail?.data?.message;
       if (typeof message === "string") throw new Error(message);
     }
+
     throw error;
   }
 }

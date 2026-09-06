@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
 import type { CatalogAnime, Season } from "@/domain";
 import { SeasonHero } from "@/components/season-hero";
 
@@ -71,13 +76,16 @@ test("season hero uses one composition for all four season glyphs", async () => 
 });
 
 test("season hero binds the cover, pagination, schedule, and archive copy into the same hierarchy", async () => {
-  const html = await renderHero({
-    id: "autumn",
-    slug: "2026-autumn",
-    label: "2026 秋",
-    startsOn: "2026-10-01",
-    endsOn: "2026-12-31",
-  }, true);
+  const html = await renderHero(
+    {
+      id: "autumn",
+      slug: "2026-autumn",
+      label: "2026 秋",
+      startsOn: "2026-10-01",
+      endsOn: "2026-12-31",
+    },
+    true,
+  );
 
   expect(html).toContain("https://example.com/featured.webp");
   expect(html).toContain("显示 候选作品 2");

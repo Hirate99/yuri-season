@@ -8,9 +8,9 @@ const researchRunSchema = z.object({
   lane: z.enum(["rapid", "standard", "discovery"], "未知的更新通道。").default("standard"),
 });
 
-export const runRoutes = new Hono<ApiEnvironment>()
-  .post(
-    "/research/run",
-    validate("json", researchRunSchema),
-    async (context) => context.json(await context.var.services.research.run(context.req.valid("json").lane)),
-  );
+export const runRoutes = new Hono<ApiEnvironment>().post(
+  "/research/run",
+  validate("json", researchRunSchema),
+  async (context) =>
+    context.json(await context.var.services.research.run(context.req.valid("json").lane)),
+);

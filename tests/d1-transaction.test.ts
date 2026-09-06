@@ -8,12 +8,24 @@ describe("D1 atomic writes", () => {
     const database = new TestD1();
     database.exec("CREATE TABLE entries (id TEXT PRIMARY KEY, label TEXT NOT NULL)");
 
-    await expect(database.binding().batch([
-      database.binding().prepare("INSERT INTO entries (id, label) VALUES (?, ?)").bind("one", "first"),
-      database.binding().prepare("INSERT INTO entries (id, label) VALUES (?, ?)").bind("one", "duplicate"),
-    ])).rejects.toThrow();
+    await expect(
+      database
+        .binding()
+        .batch([
+          database
+            .binding()
+            .prepare("INSERT INTO entries (id, label) VALUES (?, ?)")
+            .bind("one", "first"),
+          database
+            .binding()
+            .prepare("INSERT INTO entries (id, label) VALUES (?, ?)")
+            .bind("one", "duplicate"),
+        ]),
+    ).rejects.toThrow();
 
-    expect(database.sqlite.query("SELECT COUNT(*) AS count FROM entries").get()).toEqual({ count: 0 });
+    expect(database.sqlite.query("SELECT COUNT(*) AS count FROM entries").get()).toEqual({
+      count: 0,
+    });
     database.close();
   });
 
@@ -40,9 +52,11 @@ describe("D1 atomic writes", () => {
     Reflect.set(invalidDraft, "contentClass", "invalid-class");
 
     await expect(createCandidate(database.binding(), invalidDraft)).rejects.toThrow();
-    expect(database.sqlite.query(
-      "SELECT COUNT(*) AS count FROM media_items WHERE original_url = ?",
-    ).get(invalidDraft.media!.originalUrl)).toEqual({ count: 0 });
+    expect(
+      database.sqlite
+        .query("SELECT COUNT(*) AS count FROM media_items WHERE original_url = ?")
+        .get(invalidDraft.media!.originalUrl),
+    ).toEqual({ count: 0 });
     database.close();
   });
 });

@@ -24,7 +24,9 @@ export async function leaseWorkerJob(
   tokenHash: string,
   leaseMinutes: number,
 ): Promise<NativeWorkerJobRow | null> {
-  return nativeStatement(db, `
+  return nativeStatement(
+    db,
+    `
     UPDATE update_jobs SET
       status = 'leased', research_run_id = ?, lease_token_hash = ?,
       lease_until = datetime('now', '+' || ? || ' minutes'),
@@ -39,7 +41,10 @@ export async function leaseWorkerJob(
     )
     RETURNING id, job_type, scope_type, scope_id, priority, attempt_count,
       max_attempts, input_json, research_run_id, lease_token_hash
-  `).bind(runId, tokenHash, leaseMinutes).first<NativeWorkerJobRow>();
+  `,
+  )
+    .bind(runId, tokenHash, leaseMinutes)
+    .first<NativeWorkerJobRow>();
 }
 
 export async function leaseLocalJob(
@@ -48,7 +53,9 @@ export async function leaseLocalJob(
   tokenHash: string,
   leaseMinutes: number,
 ): Promise<NativeLocalLeaseRow | null> {
-  return nativeStatement(db, `
+  return nativeStatement(
+    db,
+    `
     UPDATE update_jobs SET
       status = 'leased', lease_owner = ?, lease_token_hash = ?,
       lease_until = datetime('now', '+' || ? || ' minutes'),
@@ -63,7 +70,10 @@ export async function leaseLocalJob(
     )
     RETURNING id, job_type, scope_type, scope_id, priority, attempt_count,
       max_attempts, budget_json, input_json, lease_until, research_run_id, lease_token_hash
-  `).bind(owner, tokenHash, leaseMinutes).first<NativeLocalLeaseRow>();
+  `,
+  )
+    .bind(owner, tokenHash, leaseMinutes)
+    .first<NativeLocalLeaseRow>();
 }
 
 export async function heartbeatLocalLease(
@@ -72,7 +82,9 @@ export async function heartbeatLocalLease(
   tokenHash: string,
   leaseMinutes: number,
 ): Promise<{ id: string; status: "running"; lease_until: string } | null> {
-  return nativeStatement(db, `
+  return nativeStatement(
+    db,
+    `
     UPDATE update_jobs SET status = 'running',
       started_at = COALESCE(started_at, CURRENT_TIMESTAMP),
       last_heartbeat_at = CURRENT_TIMESTAMP,
@@ -82,7 +94,10 @@ export async function heartbeatLocalLease(
       AND status IN ('leased', 'running') AND lease_token_hash = ?
       AND lease_until >= CURRENT_TIMESTAMP
     RETURNING id, status, lease_until
-  `).bind(leaseMinutes, jobId, tokenHash).first<{ id: string; status: "running"; lease_until: string }>();
+  `,
+  )
+    .bind(leaseMinutes, jobId, tokenHash)
+    .first<{ id: string; status: "running"; lease_until: string }>();
 }
 
 export async function completeLocalLease(
@@ -100,7 +115,9 @@ export async function completeLocalLease(
     auditDetailJson: string;
   },
 ): Promise<D1Result> {
-  const update = nativeStatement(db, `
+  const update = nativeStatement(
+    db,
+    `
     UPDATE update_jobs SET status = ?, research_run_id = COALESCE(?, research_run_id),
       lease_owner = NULL, lease_token_hash = NULL, lease_until = NULL,
       completion_key = ?, result_json = ?, last_error = ?,
@@ -110,7 +127,8 @@ export async function completeLocalLease(
     WHERE id = ? AND execution_target = 'local'
       AND status IN ('leased', 'running') AND lease_token_hash = ?
       AND lease_until >= CURRENT_TIMESTAMP
-  `).bind(
+  `,
+  ).bind(
     input.status,
     input.runId,
     input.idempotencyKey,
@@ -122,7 +140,10 @@ export async function completeLocalLease(
     input.jobId,
     input.tokenHash,
   );
-  const audit = nativeStatement(db, `
+
+  const audit = nativeStatement(
+    db,
+    `
     INSERT OR IGNORE INTO audit_log (
       id, actor_type, action, entity_type, entity_id, detail_json, created_at
     )
@@ -130,7 +151,8 @@ export async function completeLocalLease(
     WHERE EXISTS (
       SELECT 1 FROM update_jobs WHERE id = ? AND completion_key = ? AND status = ?
     )
-  `).bind(
+  `,
+  ).bind(
     input.auditId,
     input.jobId,
     input.auditDetailJson,
@@ -138,5 +160,6 @@ export async function completeLocalLease(
     input.idempotencyKey,
     input.status,
   );
+
   return (await db.batch([update, audit]))[0];
 }

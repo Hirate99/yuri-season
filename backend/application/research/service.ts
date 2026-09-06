@@ -1,7 +1,11 @@
 import type { ResearchBatch, SearchMemoryWrite, SourceCheckWrite } from "@/domain";
 
 import type { CompleteLocalJobInput, JobLane } from "~/research/types";
-import { readSearchMemory, readSearchMemoryHits, rememberSearch } from "~/repositories/search-memory";
+import {
+  readSearchMemory,
+  readSearchMemoryHits,
+  rememberSearch,
+} from "~/repositories/search-memory";
 import { recordSourceChecks } from "~/repositories/source-checks";
 import { ingestResearchBatch } from "~/research/batch";
 import { completeLocalJob, heartbeatLocalJob, leaseLocalJobs } from "~/research/local-jobs";
@@ -28,6 +32,7 @@ export function createResearchService(env: Env) {
       if (String(env.UPDATE_MODE) !== "worker") {
         throw new HttpError(409, "当前部署使用本地研究模式，不能启动 Worker 研究任务。");
       }
+
       return runResearch(env, lane, "admin");
     },
   };

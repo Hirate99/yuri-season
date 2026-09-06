@@ -40,13 +40,17 @@ describe("Admin work editing", () => {
     });
     await patchAnime(database.binding(), "anime-goodbye-lara", patch);
 
-    const row = database.sqlite.query(`
+    const row = database.sqlite
+      .query(
+        `
       SELECT title_zh, episode_count, episode_duration_min, premiere_episode_count,
         latest_verified_episode, latest_episode_source_url, latest_episode_checked_at,
         studio, source_material,
         yuri_status, official_url, featured
       FROM anime WHERE id = 'anime-goodbye-lara'
-    `).get();
+    `,
+      )
+      .get();
     expect(row).toEqual({
       title_zh: "再见菈菈",
       episode_count: 13,
@@ -65,25 +69,32 @@ describe("Admin work editing", () => {
 
   test("rejects invalid enum, URL and numeric fields", () => {
     expect(() => animePatchSchema.parse({ yuriStatus: "maybe" })).toThrow("yuriStatus 格式不正确");
-    expect(() => animePatchSchema.parse({ officialUrl: "javascript:alert(1)" })).toThrow("只支持 HTTP(S)");
+    expect(() => animePatchSchema.parse({ officialUrl: "javascript:alert(1)" })).toThrow(
+      "只支持 HTTP(S)",
+    );
     expect(() => animePatchSchema.parse({ episodeCount: 12.5 })).toThrow("需要是 1–1000 的整数");
   });
 
   test("creates a work directly in a selected season", async () => {
-    const id = await createAnime(database.binding(), animeCreateSchema.parse({
-      seasonId: "season-2026-summer",
-      slug: "new-yuri-work",
-      titleZh: "新作",
-      titleJa: "新作",
-      synopsis: "用于验证下一季度作品目录创建流程的完整简介。",
-      yuriKind: "adjacent",
-      yuriStatus: "pending",
-      status: "upcoming",
-      premiereAt: "2026-10-01T00:30:00+09:00",
-      visualTheme: "ink",
-      featured: false,
-    }));
-    expect(database.sqlite.query("SELECT season_id, slug, yuri_status FROM anime WHERE id = ?").get(id)).toEqual({
+    const id = await createAnime(
+      database.binding(),
+      animeCreateSchema.parse({
+        seasonId: "season-2026-summer",
+        slug: "new-yuri-work",
+        titleZh: "新作",
+        titleJa: "新作",
+        synopsis: "用于验证下一季度作品目录创建流程的完整简介。",
+        yuriKind: "adjacent",
+        yuriStatus: "pending",
+        status: "upcoming",
+        premiereAt: "2026-10-01T00:30:00+09:00",
+        visualTheme: "ink",
+        featured: false,
+      }),
+    );
+    expect(
+      database.sqlite.query("SELECT season_id, slug, yuri_status FROM anime WHERE id = ?").get(id),
+    ).toEqual({
       season_id: "season-2026-summer",
       slug: "new-yuri-work",
       yuri_status: "pending",

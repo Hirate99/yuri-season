@@ -9,14 +9,17 @@ export const seasonVisuals: Record<SeasonVisualName, { glyph: string; english: s
   winter: { glyph: "冬", english: "WINTER" },
 };
 
-export const seasonPalettes: Record<SeasonVisualName, {
-  base: string;
-  warm: string;
-  light: string;
-  cool: string;
-  deep: string;
-  rotation: number;
-}> = {
+export const seasonPalettes: Record<
+  SeasonVisualName,
+  {
+    base: string;
+    warm: string;
+    light: string;
+    cool: string;
+    deep: string;
+    rotation: number;
+  }
+> = {
   spring: {
     base: "#b9a8d5",
     warm: "#e99aaa",
@@ -52,8 +55,9 @@ export const seasonPalettes: Record<SeasonVisualName, {
 };
 
 export function seasonVisualName(season: Season): SeasonVisualName {
-  const fromSlug = (Object.keys(seasonVisuals) as SeasonVisualName[])
-    .find((name) => season.slug.toLowerCase().includes(name));
+  const fromSlug = (Object.keys(seasonVisuals) as SeasonVisualName[]).find((name) =>
+    season.slug.toLowerCase().includes(name),
+  );
   if (fromSlug) return fromSlug;
 
   const glyph = season.label.match(/[春夏秋冬]/)?.[0];
@@ -66,5 +70,6 @@ export function seasonVisualName(season: Season): SeasonVisualName {
   if (month >= 4 && month <= 6) return "spring";
   if (month >= 7 && month <= 9) return "summer";
   if (month >= 10) return "autumn";
+
   return "winter";
 }

@@ -10,7 +10,13 @@ import {
   readSeasons,
 } from "~/repositories/catalog";
 import { readAnimeDetail, readAnimeId } from "~/repositories/detail";
-import { readDiscussions, readFeed, readFeedItem, readMedia, type FeedOptions } from "~/repositories/feed";
+import {
+  readDiscussions,
+  readFeed,
+  readFeedItem,
+  readMedia,
+  type FeedOptions,
+} from "~/repositories/feed";
 import {
   readPublicationAssets,
   readPublicationCorrections,
@@ -19,19 +25,25 @@ import {
 
 export async function readHomePage(db: D1Database, timeZone: string, seasonSlug?: string) {
   const now = new Date();
+
   const [catalog, feed] = await Promise.all([
     seasonSlug
       ? readCatalogForSeason(db, seasonSlug, { events: "none", now })
       : readCatalog(db, { events: "all", now }),
     seasonSlug ? null : readFeed(db, { limit: 6 }),
   ]);
+
   return { catalog, feed, viewerTimeZone: timeZone, renderedAt: now.toISOString() };
 }
 
 /** Shared application read model used by SSR and the public API. */
-export async function readAnimePage(db: D1Database, slug: string): Promise<AnimePageResponse | null> {
+export async function readAnimePage(
+  db: D1Database,
+  slug: string,
+): Promise<AnimePageResponse | null> {
   const anime = await readAnimeDetail(db, slug);
   if (!anime) return null;
+
   return { anime };
 }
 
@@ -41,11 +53,13 @@ export async function readAnimeRelated(
 ): Promise<AnimeRelatedResponse | null> {
   const animeId = await readAnimeId(db, slug);
   if (!animeId) return null;
+
   const [feed, media, discussions] = await Promise.all([
     readFeed(db, { animeId, limit: 2 }),
     readMedia(db, animeId),
     readDiscussions(db, animeId),
   ]);
+
   return { feed: feed.items, media, discussions };
 }
 
@@ -59,7 +73,9 @@ export async function readPublicationPage(
     readPublicationCorrections(db, id),
   ]);
   if (!item) return null;
+
   const assets = await readPublicationAssets(db, item.media?.id ?? null);
+
   return { item, document, assets, corrections };
 }
 

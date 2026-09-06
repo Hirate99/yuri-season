@@ -22,7 +22,9 @@ export const broadcastSelection = {
 };
 
 export function readBroadcasts(db: D1Database, animeId: string) {
-  return database(db).select(broadcastSelection).from(broadcastSlotsTable)
+  return database(db)
+    .select(broadcastSelection)
+    .from(broadcastSlotsTable)
     .where(eq(broadcastSlotsTable.animeId, animeId))
     .orderBy(
       desc(broadcastSlotsTable.isPrimary),
@@ -41,7 +43,9 @@ export const staffSelection = {
 };
 
 export function readStaff(db: D1Database, animeId: string) {
-  return database(db).select(staffSelection).from(workCreditsTable)
+  return database(db)
+    .select(staffSelection)
+    .from(workCreditsTable)
     .innerJoin(peopleTable, eq(peopleTable.id, workCreditsTable.personId))
     .where(eq(workCreditsTable.animeId, animeId))
     .orderBy(asc(workCreditsTable.sortOrder), asc(workCreditsTable.id));
@@ -52,7 +56,9 @@ export const castSelection = {
   characterId: castCreditsTable.characterId,
   personId: castCreditsTable.personId,
   characterName: sql<string>`${charactersTable.name}`.as("character_name"),
-  characterNameNative: sql<string | null>`${charactersTable.nameNative}`.as("character_name_native"),
+  characterNameNative: sql<string | null>`${charactersTable.nameNative}`.as(
+    "character_name_native",
+  ),
   nameSourceUrl: charactersTable.nameSourceUrl,
   characterProfile: charactersTable.profile,
   profileSourceUrl: charactersTable.profileSourceUrl,
@@ -66,28 +72,26 @@ export const castSelection = {
 };
 
 export function readCast(db: D1Database, animeId: string) {
-  return database(db).select(castSelection).from(castCreditsTable)
+  return database(db)
+    .select(castSelection)
+    .from(castCreditsTable)
     .innerJoin(charactersTable, eq(charactersTable.id, castCreditsTable.characterId))
     .innerJoin(peopleTable, eq(peopleTable.id, castCreditsTable.personId))
-    .where(and(
-      eq(castCreditsTable.animeId, animeId),
-      eq(charactersTable.isMainGroup, true),
-    ))
+    .where(and(eq(castCreditsTable.animeId, animeId), eq(charactersTable.isMainGroup, true)))
     .orderBy(asc(castCreditsTable.sortOrder), asc(castCreditsTable.id));
 }
 
 export function readSources(db: D1Database, animeId: string) {
-  return database(db).select({
-    id: researchSourcesTable.id,
-    label: researchSourcesTable.label,
-    url: researchSourcesTable.url,
-    trustLevel: researchSourcesTable.trustLevel,
-    lastCheckedAt: researchSourcesTable.lastCheckedAt,
-  }).from(researchSourcesTable)
-    .where(and(
-      eq(researchSourcesTable.animeId, animeId),
-      eq(researchSourcesTable.enabled, true),
-    ))
+  return database(db)
+    .select({
+      id: researchSourcesTable.id,
+      label: researchSourcesTable.label,
+      url: researchSourcesTable.url,
+      trustLevel: researchSourcesTable.trustLevel,
+      lastCheckedAt: researchSourcesTable.lastCheckedAt,
+    })
+    .from(researchSourcesTable)
+    .where(and(eq(researchSourcesTable.animeId, animeId), eq(researchSourcesTable.enabled, true)))
     .orderBy(
       sql`CASE ${researchSourcesTable.trustLevel}
         WHEN 'official' THEN 0
@@ -117,13 +121,17 @@ export const themeSongSelection = {
 };
 
 export function readThemeSongs(db: D1Database, animeId: string) {
-  return database(db).select(themeSongSelection).from(animeThemeSongsTable)
+  return database(db)
+    .select(themeSongSelection)
+    .from(animeThemeSongsTable)
     .innerJoin(musicTracksTable, eq(musicTracksTable.id, animeThemeSongsTable.trackId))
-    .where(and(
-      eq(animeThemeSongsTable.animeId, animeId),
-      eq(musicTracksTable.verified, true),
-      isNotNull(musicTracksTable.sourceUrl),
-    ))
+    .where(
+      and(
+        eq(animeThemeSongsTable.animeId, animeId),
+        eq(musicTracksTable.verified, true),
+        isNotNull(musicTracksTable.sourceUrl),
+      ),
+    )
     .orderBy(
       asc(animeThemeSongsTable.sortOrder),
       asc(animeThemeSongsTable.songKind),

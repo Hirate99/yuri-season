@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { animeCreateSchema, animePatchSchema } from "./inputs/anime";
+
 export type YuriKind = "canon" | "strong" | "adjacent";
 export type YuriStatus = "confirmed" | "pending";
 export type AnimeStatus = "airing" | "upcoming" | "finished" | "paused";

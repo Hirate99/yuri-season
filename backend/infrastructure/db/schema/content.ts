@@ -6,7 +6,9 @@ export const eventsTable = sqliteTable("events", {
   animeId: text("anime_id"),
   personId: text("person_id"),
   characterId: text("character_id"),
-  eventType: text("event_type", { enum: ["broadcast", "birthday", "anniversary", "stream", "radio", "event", "release"] }).notNull(),
+  eventType: text("event_type", {
+    enum: ["broadcast", "birthday", "anniversary", "stream", "radio", "event", "release"],
+  }).notNull(),
   title: text("title").notNull(),
   startsAt: text("starts_at"),
   endsAt: text("ends_at"),
@@ -15,7 +17,9 @@ export const eventsTable = sqliteTable("events", {
   sourceUrl: text("source_url"),
   verified: integer("verified", { mode: "boolean" }).notNull(),
   status: text("status", { enum: ["scheduled", "completed", "cancelled"] }).notNull(),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const mediaItemsTable = sqliteTable("media_items", {
@@ -23,18 +27,26 @@ export const mediaItemsTable = sqliteTable("media_items", {
   animeId: text("anime_id"),
   personId: text("person_id"),
   characterId: text("character_id"),
-  contentClass: text("content_class", { enum: ["official_art", "creator_art", "fanart", "fan_video", "cosplay"] }).notNull(),
+  contentClass: text("content_class", {
+    enum: ["official_art", "creator_art", "fanart", "fan_video", "cosplay"],
+  }).notNull(),
   title: text("title").notNull(),
   creatorName: text("creator_name").notNull(),
   creatorUrl: text("creator_url"),
   originalUrl: text("original_url").notNull().unique(),
   previewUrl: text("preview_url"),
-  presentationMode: text("presentation_mode", { enum: ["link_only", "platform_embed", "remote_preview", "mirrored_with_permission"] }).notNull(),
-  safetyRating: text("safety_rating", { enum: ["safe", "suggestive", "adult", "unknown"] }).notNull(),
+  presentationMode: text("presentation_mode", {
+    enum: ["link_only", "platform_embed", "remote_preview", "mirrored_with_permission"],
+  }).notNull(),
+  safetyRating: text("safety_rating", {
+    enum: ["safe", "suggestive", "adult", "unknown"],
+  }).notNull(),
   spoilerLevel: text("spoiler_level", { enum: ["none", "mild", "major"] }).notNull(),
   rightsNote: text("rights_note"),
   publishedAt: text("published_at").notNull(),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const feedItemsTable = sqliteTable("feed_items", {
@@ -49,8 +61,23 @@ export const feedItemsTable = sqliteTable("feed_items", {
   discussionId: text("discussion_id"),
   platformObjectId: text("platform_object_id"),
   originKey: text("origin_key"),
-  contentClass: text("content_class", { enum: ["schedule", "official_news", "official_art", "creator_art", "birthday", "cast_post", "staff_post", "fanwork", "community_thread", "editorial"] }).notNull(),
-  sourceIdentity: text("source_identity", { enum: ["official", "creator", "cast", "community", "editorial"] }).notNull(),
+  contentClass: text("content_class", {
+    enum: [
+      "schedule",
+      "official_news",
+      "official_art",
+      "creator_art",
+      "birthday",
+      "cast_post",
+      "staff_post",
+      "fanwork",
+      "community_thread",
+      "editorial",
+    ],
+  }).notNull(),
+  sourceIdentity: text("source_identity", {
+    enum: ["official", "creator", "cast", "community", "editorial"],
+  }).notNull(),
   title: text("title").notNull(),
   summary: text("summary").notNull(),
   url: text("url").notNull(),
@@ -58,12 +85,16 @@ export const feedItemsTable = sqliteTable("feed_items", {
   sourceAccount: text("source_account"),
   importance: integer("importance").notNull(),
   publishedAt: text("published_at").notNull(),
-  safetyRating: text("safety_rating", { enum: ["safe", "suggestive", "adult", "unknown"] }).notNull(),
+  safetyRating: text("safety_rating", {
+    enum: ["safe", "suggestive", "adult", "unknown"],
+  }).notNull(),
   spoilerLevel: text("spoiler_level", { enum: ["none", "mild", "major"] }).notNull(),
   autoPublished: integer("auto_published", { mode: "boolean" }).notNull(),
   isPinned: integer("is_pinned", { mode: "boolean" }).notNull(),
   withdrawnAt: text("withdrawn_at"),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const publicationDocumentsTable = sqliteTable("publication_documents", {
@@ -75,9 +106,13 @@ export const publicationDocumentsTable = sqliteTable("publication_documents", {
   sourceLanguage: text("source_language"),
   publicText: text("public_text"),
   publicTranslation: text("public_translation"),
-  textMode: text("text_mode", { enum: ["full", "full_with_translation", "excerpt", "summary_only", "link_only", "withdrawn"] }).notNull(),
+  textMode: text("text_mode", {
+    enum: ["full", "full_with_translation", "excerpt", "summary_only", "link_only", "withdrawn"],
+  }).notNull(),
   sourceContentHash: text("source_content_hash"),
-  sourceStatus: text("source_status", { enum: ["active", "unavailable", "deleted", "private", "withdrawn"] }).notNull(),
+  sourceStatus: text("source_status", {
+    enum: ["active", "unavailable", "deleted", "private", "withdrawn"],
+  }).notNull(),
   capturedAt: text("captured_at").notNull(),
   lastVerifiedAt: text("last_verified_at"),
 });
@@ -95,10 +130,21 @@ export const mediaAssetsTable = sqliteTable("media_assets", {
   sortOrder: integer("sort_order").notNull().default(0),
   variant: text("variant", { enum: ["original", "preview", "thumbnail"] }).notNull(),
   altText: text("alt_text"),
-  rightsStatus: text("rights_status", { enum: ["licensed", "press_kit", "official_promo_reviewed", "embed_only", "link_only", "prohibited"] }).notNull(),
+  rightsStatus: text("rights_status", {
+    enum: [
+      "licensed",
+      "press_kit",
+      "official_promo_reviewed",
+      "embed_only",
+      "link_only",
+      "prohibited",
+    ],
+  }).notNull(),
   rightsBasis: text("rights_basis"),
   status: text("status", { enum: ["active", "withdrawn", "purged"] }).notNull(),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
   withdrawnAt: text("withdrawn_at"),
 });
 
@@ -136,18 +182,28 @@ export const musicTracksTable = sqliteTable("music_tracks", {
   coverSourceUrl: text("cover_source_url"),
   sourceUrl: text("source_url"),
   verified: integer("verified", { mode: "boolean" }).notNull(),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const animeThemeSongsTable = sqliteTable("anime_theme_songs", {
   id: text("id").primaryKey(),
   animeId: text("anime_id").notNull(),
   trackId: text("track_id").notNull(),
-  songKind: text("song_kind", { enum: ["opening", "ending", "theme", "insert", "image"] }).notNull(),
+  songKind: text("song_kind", {
+    enum: ["opening", "ending", "theme", "insert", "image"],
+  }).notNull(),
   sequence: integer("sequence").notNull(),
   episodeRange: text("episode_range"),
   sortOrder: integer("sort_order").notNull(),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });

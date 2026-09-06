@@ -6,7 +6,8 @@ import { jobRoutes } from "./jobs";
 import { memoryRoutes } from "./memory";
 import { runRoutes } from "./run";
 
-export const researchRoutes = new Hono<ApiEnvironment>().basePath("/api/admin")
+export const researchRoutes = new Hono<ApiEnvironment>()
+  .basePath("/api/admin")
   .route("/", batchRoutes)
   .route("/", jobRoutes)
   .route("/", memoryRoutes)

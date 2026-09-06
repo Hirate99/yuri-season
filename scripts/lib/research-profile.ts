@@ -5,16 +5,18 @@ export const researchProfiles = [
   "account-discovery",
 ] as const;
 
-export type ResearchProfile = typeof researchProfiles[number];
+export type ResearchProfile = (typeof researchProfiles)[number];
 
 export function parseResearchProfile(
   value: string | null | undefined,
   fallback: ResearchProfile,
 ): ResearchProfile {
   const profile = value ?? fallback;
+
   if (!researchProfiles.includes(profile as ResearchProfile)) {
     throw new Error(`--profile must be one of: ${researchProfiles.join(", ")}`);
   }
+
   return profile as ResearchProfile;
 }
 

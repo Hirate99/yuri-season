@@ -19,21 +19,38 @@ describe("incremental source diff", () => {
   });
 
   test("returns only new or edited fingerprints", () => {
-    expect(changedItems(["a", "b"], [item("a"), item("b-edited"), item("c")]).map((value) => value.contentHash))
-      .toEqual(["b-edited", "c"]);
+    expect(
+      changedItems(["a", "b"], [item("a"), item("b-edited"), item("c")]).map(
+        (value) => value.contentHash,
+      ),
+    ).toEqual(["b-edited", "c"]);
   });
 });
 
 describe("source state compatibility", () => {
   test("rebaselines legacy community state after its normalizer changes", () => {
-    expect(isReusableSourceState({ normalizerVersion: undefined }, "community", "community-thread@1")).toBe(false);
-    expect(isReusableSourceState({ normalizerVersion: "community-thread@1" }, "community", "community-thread@1")).toBe(true);
-    expect(isReusableSourceState({ normalizerVersion: undefined }, "official_page", "generic@1")).toBe(true);
+    expect(
+      isReusableSourceState({ normalizerVersion: undefined }, "community", "community-thread@1"),
+    ).toBe(false);
+    expect(
+      isReusableSourceState(
+        { normalizerVersion: "community-thread@1" },
+        "community",
+        "community-thread@1",
+      ),
+    ).toBe(true);
+    expect(
+      isReusableSourceState({ normalizerVersion: undefined }, "official_page", "generic@1"),
+    ).toBe(true);
   });
 });
 
 describe("routine source boundary", () => {
-  const source = (sourceType: string, trustLevel: string, enabled = true) => ({ sourceType, trustLevel, enabled });
+  const source = (sourceType: string, trustLevel: string, enabled = true) => ({
+    sourceType,
+    trustLevel,
+    enabled,
+  });
 
   test("keeps registered first-party update surfaces", () => {
     expect(isRoutineUpdateSource(source("official_page", "official"))).toBe(true);

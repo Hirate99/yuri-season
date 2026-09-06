@@ -1,9 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import type { AnimeSummary, BroadcastSlot } from "@/domain";
-import { orderByBroadcastFromToday, orderByNextBroadcast, partitionByAiringToday } from "@/lib/home-ordering";
+import {
+  orderByBroadcastFromToday,
+  orderByNextBroadcast,
+  partitionByAiringToday,
+} from "@/lib/home-ordering";
 
 function slot(weekday: number, localTime: string, timezone = "Asia/Tokyo"): BroadcastSlot {
-  return { id: `slot-${weekday}-${localTime}`, label: "TOKYO MX", weekday, localTime, timezone, platformUrl: null, isPrimary: true };
+  return {
+    id: `slot-${weekday}-${localTime}`,
+    label: "TOKYO MX",
+    weekday,
+    localTime,
+    timezone,
+    platformUrl: null,
+    isPrimary: true,
+  };
 }
 
 function anime(id: string, primarySlot: BroadcastSlot | null): AnimeSummary {
@@ -58,13 +70,20 @@ describe("home ordering", () => {
       anime("unknown", null),
     ];
     const original = [...source];
-    expect(orderByBroadcastFromToday(source, "America/Los_Angeles", fridayEvening).map(({ id }) => id))
-      .toEqual(["kore-kaite-shine", "friday-later", "saturday-midnight", "thursday", "unknown"]);
+    expect(
+      orderByBroadcastFromToday(source, "America/Los_Angeles", fridayEvening).map(({ id }) => id),
+    ).toEqual(["kore-kaite-shine", "friday-later", "saturday-midnight", "thursday", "unknown"]);
     expect(source).toEqual(original);
-    expect(orderByBroadcastFromToday(source, "Asia/Tokyo", fridayEvening).map(({ id }) => id))
-      .toEqual(["friday-later", "saturday-midnight", "thursday", "kore-kaite-shine", "unknown"]);
-    expect(orderByBroadcastFromToday(source, "America/Los_Angeles", new Date("2026-09-05T07:00:00Z")).map(({ id }) => id))
-      .toEqual(["saturday-midnight", "thursday", "kore-kaite-shine", "friday-later", "unknown"]);
+    expect(
+      orderByBroadcastFromToday(source, "Asia/Tokyo", fridayEvening).map(({ id }) => id),
+    ).toEqual(["friday-later", "saturday-midnight", "thursday", "kore-kaite-shine", "unknown"]);
+    expect(
+      orderByBroadcastFromToday(
+        source,
+        "America/Los_Angeles",
+        new Date("2026-09-05T07:00:00Z"),
+      ).map(({ id }) => id),
+    ).toEqual(["saturday-midnight", "thursday", "kore-kaite-shine", "friday-later", "unknown"]);
   });
 
   test("orders the full week by next broadcast, moving elapsed airings to next week", () => {
@@ -76,8 +95,13 @@ describe("home ordering", () => {
       anime("thursday", slot(4, "23:00")),
     ];
     const original = [...source];
-    expect(orderByNextBroadcast(source, now).map(({ id }) => id))
-      .toEqual(["tonight", "thursday", "friday", "monday", "already-aired"]);
+    expect(orderByNextBroadcast(source, now).map(({ id }) => id)).toEqual([
+      "tonight",
+      "thursday",
+      "friday",
+      "monday",
+      "already-aired",
+    ]);
     expect(source).toEqual(original);
   });
 
@@ -88,14 +112,30 @@ describe("home ordering", () => {
       anime("japan-evening", slot(3, "23:00")),
       anime("la-morning", slot(3, "06:00", "America/Los_Angeles")),
     ];
-    expect(orderByNextBroadcast(source, now).map(({ id }) => id))
-      .toEqual(["la-morning", "japan-evening", "utc-afternoon", "japan-midnight"]);
+    expect(orderByNextBroadcast(source, now).map(({ id }) => id)).toEqual([
+      "la-morning",
+      "japan-evening",
+      "utc-afternoon",
+      "japan-midnight",
+    ]);
   });
 
   test("puts unscheduled works last and resolves matching times consistently", () => {
-    const source = [anime("unknown-b", null), anime("b", slot(4, "23:00")), anime("unknown-a", null), anime("a", slot(4, "23:00"))];
-    expect(orderByNextBroadcast(source, now).map(({ id }) => id)).toEqual(["a", "b", "unknown-a", "unknown-b"]);
-    expect(orderByNextBroadcast([...source].reverse(), now)).toEqual(orderByNextBroadcast(source, now));
+    const source = [
+      anime("unknown-b", null),
+      anime("b", slot(4, "23:00")),
+      anime("unknown-a", null),
+      anime("a", slot(4, "23:00")),
+    ];
+    expect(orderByNextBroadcast(source, now).map(({ id }) => id)).toEqual([
+      "a",
+      "b",
+      "unknown-a",
+      "unknown-b",
+    ]);
+    expect(orderByNextBroadcast([...source].reverse(), now)).toEqual(
+      orderByNextBroadcast(source, now),
+    );
   });
 
   test("works section puts today's airings first, ascending by air time", () => {
@@ -113,8 +153,12 @@ describe("home ordering", () => {
     const c = anime("c", slot(5, "23:00"));
     const tuesday = new Date("2026-08-11T05:00:00Z");
     const thursday = new Date("2026-08-13T05:00:00Z");
-    const tuesdayOrder = partitionByAiringToday([a, b, c], "Asia/Tokyo", tuesday).rest.map((item) => item.id);
-    const thursdayOrder = partitionByAiringToday([a, b, c], "Asia/Tokyo", thursday).rest.map((item) => item.id);
+    const tuesdayOrder = partitionByAiringToday([a, b, c], "Asia/Tokyo", tuesday).rest.map(
+      (item) => item.id,
+    );
+    const thursdayOrder = partitionByAiringToday([a, b, c], "Asia/Tokyo", thursday).rest.map(
+      (item) => item.id,
+    );
     expect(tuesdayOrder).toEqual(thursdayOrder);
   });
 
@@ -122,10 +166,17 @@ describe("home ordering", () => {
     const monday = anime("monday", slot(1, "23:00"));
     const tuesday = anime("tuesday", slot(2, "23:00"));
     const mondayEvening = new Date("2026-08-10T16:00:00Z");
-    const tokyo = partitionByAiringToday([monday, tuesday], "Asia/Tokyo", mondayEvening).airingToday.map((item) => item.id);
-    const la = partitionByAiringToday([monday, tuesday], "America/Los_Angeles", mondayEvening).airingToday.map((item) => item.id);
+    const tokyo = partitionByAiringToday(
+      [monday, tuesday],
+      "Asia/Tokyo",
+      mondayEvening,
+    ).airingToday.map((item) => item.id);
+    const la = partitionByAiringToday(
+      [monday, tuesday],
+      "America/Los_Angeles",
+      mondayEvening,
+    ).airingToday.map((item) => item.id);
     expect(tokyo).toEqual(["tuesday"]);
     expect(la).toEqual(["monday"]);
   });
-
 });

@@ -32,18 +32,26 @@ describe("Admin seasons", () => {
     await updateSeason(database.binding(), id, { ...value, label: "2026 秋季" });
     seasons = await readSeasons(database.binding());
     expect(seasons.seasons.find((season) => season.id === id)?.label).toBe("2026 秋季");
-    expect(database.sqlite.query(`
+    expect(
+      database.sqlite
+        .query(
+          `
       SELECT action FROM audit_log WHERE entity_id = ? ORDER BY created_at
-    `).all(id)).toEqual([{ action: "create_season" }, { action: "update_season" }]);
+    `,
+        )
+        .all(id),
+    ).toEqual([{ action: "create_season" }, { action: "update_season" }]);
   });
 
   test("does not allow removing the only current season", async () => {
-    await expect(updateSeason(database.binding(), "season-2026-summer", {
-      slug: "2026-summer",
-      label: "2026 夏",
-      startsOn: "2026-07-01",
-      endsOn: "2026-09-30",
-      isCurrent: false,
-    })).rejects.toThrow("先把另一个季度设为当季");
+    await expect(
+      updateSeason(database.binding(), "season-2026-summer", {
+        slug: "2026-summer",
+        label: "2026 夏",
+        startsOn: "2026-07-01",
+        endsOn: "2026-09-30",
+        isCurrent: false,
+      }),
+    ).rejects.toThrow("先把另一个季度设为当季");
   });
 });

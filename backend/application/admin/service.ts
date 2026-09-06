@@ -9,7 +9,17 @@ import type {
 } from "@/domain";
 import type { AdminPrincipal } from "~/infrastructure/auth";
 import { readAdminCoverage } from "~/repositories/admin/coverage";
-import { readAdminDashboardData, readAudit, readCounts, readHeldCandidates, readJobs, readPublications, readRuns, readSources, readWorks } from "~/repositories/admin/dashboard";
+import {
+  readAdminDashboardData,
+  readAudit,
+  readCounts,
+  readHeldCandidates,
+  readJobs,
+  readPublications,
+  readRuns,
+  readSources,
+  readWorks,
+} from "~/repositories/admin/dashboard";
 import { deleteDiscussionEverywhere } from "~/repositories/admin/discussion";
 import { readAdminAnimeResources } from "~/repositories/admin/resources";
 import { createAnime, patchAnime } from "~/repositories/anime/write";
@@ -25,6 +35,7 @@ export async function readAdminDashboard(db: D1Database) {
     readAdminCoverage(db),
     readSeasons(db),
   ]);
+
   return { ...data, coverage, seasons: seasonIndex.seasons };
 }
 
@@ -33,21 +44,36 @@ export function createAdminService(env: Env, principal?: AdminPrincipal) {
     pages: {
       summary: async () => {
         const [counts, { seasons }] = await Promise.all([readCounts(env.DB), readSeasons(env.DB)]);
+
         return { counts, seasons };
       },
       overview: async () => {
         const [sources, recentRuns, recentJobs, coverage] = await Promise.all([
-          readSources(env.DB), readRuns(env.DB), readJobs(env.DB), readAdminCoverage(env.DB),
+          readSources(env.DB),
+          readRuns(env.DB),
+          readJobs(env.DB),
+          readAdminCoverage(env.DB),
         ]);
+
         return { sources, recentRuns, recentJobs, coverage };
       },
       works: () => readWorks(env.DB),
       review: async () => {
-        const [heldCandidates, recentPublications] = await Promise.all([readHeldCandidates(env.DB), readPublications(env.DB)]);
+        const [heldCandidates, recentPublications] = await Promise.all([
+          readHeldCandidates(env.DB),
+          readPublications(env.DB),
+        ]);
+
         return { heldCandidates, recentPublications };
       },
       automation: async () => {
-        const [sources, recentRuns, recentJobs, recentAudit] = await Promise.all([readSources(env.DB), readRuns(env.DB), readJobs(env.DB), readAudit(env.DB)]);
+        const [sources, recentRuns, recentJobs, recentAudit] = await Promise.all([
+          readSources(env.DB),
+          readRuns(env.DB),
+          readJobs(env.DB),
+          readAudit(env.DB),
+        ]);
+
         return { sources, recentRuns, recentJobs, recentAudit };
       },
       coverage: () => readAdminCoverage(env.DB),
@@ -59,18 +85,21 @@ export function createAdminService(env: Env, principal?: AdminPrincipal) {
     },
     candidates: {
       create: (value: CandidateDraft) => createCandidate(env.DB, value),
-      decide: (id: string, decision: ReviewDecision, reason: string) => applyCandidateDecision(env.DB, id, decision, {
-        reviewerType: "admin",
-        reasons: reason ? [reason] : [],
-        principal,
-      }),
+      decide: (id: string, decision: ReviewDecision, reason: string) =>
+        applyCandidateDecision(env.DB, id, decision, {
+          reviewerType: "admin",
+          reasons: reason ? [reason] : [],
+          principal,
+        }),
     },
     discussions: {
-      delete: (id: string, reason: string) => deleteDiscussionEverywhere(env.DB, id, reason, principal),
+      delete: (id: string, reason: string) =>
+        deleteDiscussionEverywhere(env.DB, id, reason, principal),
     },
     resources: {
       list: (animeId: string) => readAdminAnimeResources(env.DB, animeId),
-      create: (animeId: string, value: AdminResourceWrite) => createAdminResource(env.DB, animeId, value, principal),
+      create: (animeId: string, value: AdminResourceWrite) =>
+        createAdminResource(env.DB, animeId, value, principal),
       update: (animeId: string, id: string, value: AdminResourceWrite) =>
         updateAdminResource(env.DB, animeId, id, value, principal),
       delete: (animeId: string, kind: Exclude<AdminResourceKind, "source">, id: string) =>

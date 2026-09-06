@@ -5,6 +5,7 @@ import { parseWithSchema } from "./schema";
 export function parseResourceKind(value: string) {
   const result = resourceKindSchema.safeParse(value);
   if (!result.success) throw new HttpError(404, "未知的资源类型。");
+
   return result.data;
 }
 

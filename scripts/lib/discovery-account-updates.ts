@@ -16,16 +16,19 @@ export type AccountUpdateTarget = {
 };
 
 function hasRegisteredSource(resources: AdminAnimeResources, accountId: string) {
-  return resources.sources.some((source) => source.enabled
-    && source.accountId === accountId
-    && source.changeKind === "feed_candidate");
+  return resources.sources.some(
+    (source) =>
+      source.enabled && source.accountId === accountId && source.changeKind === "feed_candidate",
+  );
 }
 
 function priority(resources: AdminAnimeResources, account: AdminAccount) {
   if (account.ownerType === "anime") return 5;
+
   const staff = resources.staff.find((item) => item.personId === account.ownerId);
   if (staff?.primaryKind === "author" || staff?.primaryKind === "artist") return 4;
   if (staff || resources.cast.some((item) => item.personId === account.ownerId)) return 3;
+
   return 2;
 }
 
@@ -35,10 +38,14 @@ function normalizedIdentity(value: string | null | undefined) {
 
 function isProjectPersonaAccount(resources: AdminAnimeResources, account: AdminAccount) {
   if (account.ownerType !== "person") return false;
-  return resources.cast.some((item) => item.isMainGroup
-    && item.personId === account.ownerId
-    && normalizedIdentity(item.personNameNative || item.personName)
-      === normalizedIdentity(item.characterNameNative || item.characterName));
+
+  return resources.cast.some(
+    (item) =>
+      item.isMainGroup &&
+      item.personId === account.ownerId &&
+      normalizedIdentity(item.personNameNative || item.personName) ===
+        normalizedIdentity(item.characterNameNative || item.characterName),
+  );
 }
 
 export function accountUpdateTarget(
@@ -48,22 +55,35 @@ export function accountUpdateTarget(
 ): AccountUpdateTarget | null {
   if (!account.verified || account.monitorMode === "disabled") return null;
   if (account.monitorMode !== "local" && hasRegisteredSource(resources, account.id)) return null;
+
   const cast = resources.cast.filter((item) => item.personId === account.ownerId);
   const staff = resources.staff.find((item) => item.personId === account.ownerId);
   const projectPersona = isProjectPersonaAccount(resources, account);
   const isX = ["x", "twitter"].includes(account.platform.toLowerCase());
-  const timelineMode = account.ownerType === "anime"
-    ? "official" as const
-    : projectPersona ? "project_persona" as const
-      : isX && (cast.length > 0 || staff) ? "related_person" as const : null;
-  const contentLane = account.ownerType === "anime"
-    ? "official" as const
-    : cast.length > 0 ? "cast" as const : "creator" as const;
+
+  const timelineMode =
+    account.ownerType === "anime"
+      ? ("official" as const)
+      : projectPersona
+        ? ("project_persona" as const)
+        : isX && (cast.length > 0 || staff)
+          ? ("related_person" as const)
+          : null;
+
+  const contentLane =
+    account.ownerType === "anime"
+      ? ("official" as const)
+      : cast.length > 0
+        ? ("cast" as const)
+        : ("creator" as const);
+
   return {
     scopeType: account.ownerType === "person" ? "person" : "anime",
     scopeId: account.ownerType === "person" ? account.ownerId : animeId,
     targetKey: `updates:${animeId}:${account.id}`,
-    priority: projectPersona ? Math.max(4, priority(resources, account)) : priority(resources, account),
+    priority: projectPersona
+      ? Math.max(4, priority(resources, account))
+      : priority(resources, account),
     accountId: account.id,
     personId: account.ownerType === "person" ? account.ownerId : null,
     characterIds: cast.map((item) => item.characterId),
@@ -71,18 +91,18 @@ export function accountUpdateTarget(
     contentLane,
     projectPersona,
     timelineMode,
-    socialAuditEligible: account.ownerType === "anime"
-      || projectPersona
-      || cast.some((item) => item.isMainGroup)
-      || Boolean(staff),
+    socialAuditEligible:
+      account.ownerType === "anime" ||
+      projectPersona ||
+      cast.some((item) => item.isMainGroup) ||
+      Boolean(staff),
   };
 }
 
 export function afterDate(searchedAt: string | null, now: Date) {
   const previous = searchedAt ? Date.parse(searchedAt) : Number.NaN;
-  const anchor = Number.isNaN(previous)
-    ? now.valueOf() - 30 * 86_400_000
-    : previous - 86_400_000;
+  const anchor = Number.isNaN(previous) ? now.valueOf() - 30 * 86_400_000 : previous - 86_400_000;
+
   return new Date(anchor).toISOString().slice(0, 10);
 }
 
@@ -95,29 +115,40 @@ export function accountUpdateQuery(
 ) {
   const after = afterDate(searchedAt, now);
   const accountName = account.handle?.trim() || account.platform.trim();
+
   try {
     const parsed = new URL(account.url);
     const pathname = parsed.pathname.replace(/^\/+|\/+$/g, "");
+
     if (timelineMode === "project_persona" && pathname) {
       return `${account.platform} account timeline: ${account.url}; inspect original posts after:${after}; include project/anime posts and public professional or creative activity; exclude private routine, unrelated ads/giveaways, and repost-only items`;
     }
+
     if (timelineMode === "official" && pathname) {
       return `${account.platform} official account timeline: ${account.url}; inspect every original post after:${after}; extract official news, events, schedules, videos, art, and other visible media; create linked media records for eligible images and preserve stable post IDs`;
     }
+
     if (timelineMode === "related_person" && pathname) {
       return `${account.platform} verified cast/creator/staff timeline: ${account.url}; inspect every original post after:${after}; keep posts explicitly connected to "${title}", its characters, episodes, events, credited production work, or related creative material; record every inspected stable post ID, including ignored items`;
     }
+
     if ((parsed.hostname === "x.com" || parsed.hostname === "twitter.com") && pathname) {
       return `site:x.com/${pathname.split("/")[0]} "${title}" after:${after}`;
     }
-    if ((parsed.hostname === "instagram.com" || parsed.hostname === "www.instagram.com") && pathname) {
+
+    if (
+      (parsed.hostname === "instagram.com" || parsed.hostname === "www.instagram.com") &&
+      pathname
+    ) {
       return `site:instagram.com/${pathname.split("/")[0]} "${title}" after:${after}`;
     }
+
     if (parsed.hostname === "bsky.app" && pathname.startsWith("profile/")) {
       return `site:bsky.app/${pathname} "${title}" after:${after}`;
     }
   } catch {
     // Old imported rows can predate current URL validation.
   }
+
   return `"${accountName}" "${title}" ${account.platform} after:${after}`;
 }

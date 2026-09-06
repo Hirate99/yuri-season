@@ -7,12 +7,14 @@ import { seasonsDescription } from "@/lib/seo-descriptions";
 
 export const Route = createFileRoute("/seasons")({
   staleTime: 900_000,
-  loader: (loaderContext) => loadSeasonsData({ serverContext: serverContextFromLoader(loaderContext) }),
-  head: ({ loaderData }) => seoHead({
-    title: "季度片单",
-    description: loaderData ? seasonsDescription(loaderData) : undefined,
-    path: "/seasons",
-  }),
+  loader: (loaderContext) =>
+    loadSeasonsData({ serverContext: serverContextFromLoader(loaderContext) }),
+  head: ({ loaderData }) =>
+    seoHead({
+      title: "季度片单",
+      description: loaderData ? seasonsDescription(loaderData) : undefined,
+      path: "/seasons",
+    }),
   component: SeasonsRoute,
 });
 

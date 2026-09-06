@@ -5,7 +5,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { CalendarEventCard } from "@/features/calendar/calendar-event-card";
 import { CalendarPage } from "@/pages/calendar-page";
 import { ViewerTimeZoneContext } from "@/hooks/use-viewer-timezone";
-import { eventDateKey, eventIsOngoing, eventOccursToday, partitionCalendarEvents } from "@/lib/calendar-events";
+import {
+  eventDateKey,
+  eventIsOngoing,
+  eventOccursToday,
+  partitionCalendarEvents,
+} from "@/lib/calendar-events";
 
 function event(id: string, startsAt: string, timezone = "Asia/Tokyo"): CalendarEvent {
   return {
@@ -13,10 +18,10 @@ function event(id: string, startsAt: string, timezone = "Asia/Tokyo"): CalendarE
     animeId: null,
     animeSlug: null,
     animeTitle: null,
-  characterId: null,
-  characterName: null,
-  characterPortraitUrl: null,
-  characterPortraitSourceUrl: null,
+    characterId: null,
+    characterName: null,
+    characterPortraitUrl: null,
+    characterPortraitSourceUrl: null,
     eventType: "event",
     title: id,
     startsAt,
@@ -32,11 +37,14 @@ function event(id: string, startsAt: string, timezone = "Asia/Tokyo"): CalendarE
 describe("calendar event dates", () => {
   test("compares each event on its source calendar day", () => {
     const now = new Date("2026-08-11T00:30:00Z");
-    const groups = partitionCalendarEvents([
-      event("past", "2026-08-10T23:00:00+09:00"),
-      event("today", "2026-08-11T00:00:00+09:00"),
-      event("future", "2026-08-12"),
-    ], now);
+    const groups = partitionCalendarEvents(
+      [
+        event("past", "2026-08-10T23:00:00+09:00"),
+        event("today", "2026-08-11T00:00:00+09:00"),
+        event("future", "2026-08-12"),
+      ],
+      now,
+    );
 
     expect(groups.upcoming.map(({ id }) => id)).toEqual(["today", "future"]);
     expect(groups.past.map(({ id }) => id)).toEqual(["past"]);
@@ -47,7 +55,10 @@ describe("calendar event dates", () => {
   });
 
   test("uses source date for birthdays and viewer date for timed events", () => {
-    const birthday = { ...event("birthday", "2026-08-15T00:00:00+09:00"), eventType: "birthday" as const };
+    const birthday = {
+      ...event("birthday", "2026-08-15T00:00:00+09:00"),
+      eventType: "birthday" as const,
+    };
     const timed = event("stream", "2026-08-15T00:30:00+09:00");
     const now = new Date("2026-08-14T16:00:00Z");
     expect(eventOccursToday(birthday, "America/Los_Angeles", now)).toBe(true);
@@ -56,7 +67,9 @@ describe("calendar event dates", () => {
 
   test("ignores the stored occurrence year when matching a recurring birthday", () => {
     const birthday = { ...event("birthday", "2027-02-07"), eventType: "birthday" as const };
-    expect(eventOccursToday(birthday, "America/Los_Angeles", new Date("2026-02-06T15:30:00Z"))).toBe(true);
+    expect(
+      eventOccursToday(birthday, "America/Los_Angeles", new Date("2026-02-06T15:30:00Z")),
+    ).toBe(true);
   });
 
   test("groups recurring birthdays within the current year", () => {
@@ -65,12 +78,15 @@ describe("calendar event dates", () => {
       eventType: "birthday" as const,
       recurrenceRule: "FREQ=YEARLY",
     });
-    const groups = partitionCalendarEvents([
-      birthday("february", "2027-02-07"),
-      event("next-year-event", "2027-01-10"),
-      birthday("september", "2026-09-25"),
-      birthday("july", "2027-07-15"),
-    ], new Date("2026-08-22T19:00:00Z"));
+    const groups = partitionCalendarEvents(
+      [
+        birthday("february", "2027-02-07"),
+        event("next-year-event", "2027-01-10"),
+        birthday("september", "2026-09-25"),
+        birthday("july", "2027-07-15"),
+      ],
+      new Date("2026-08-22T19:00:00Z"),
+    );
 
     expect(groups.upcoming.map(({ id }) => id)).toEqual(["september", "next-year-event"]);
     expect(groups.past.map(({ id }) => id)).toEqual(["february", "july"]);
@@ -104,10 +120,15 @@ describe("calendar event dates", () => {
     expect(eventIsOngoing(active, new Date("2026-09-05T10:00:00Z"))).toBe(true);
     expect(eventIsOngoing(active, new Date(active.endsAt))).toBe(false);
     for (const candidate of [
-      active, { ...active, status: "cancelled" as const }, { ...active, status: "completed" as const },
-      { ...active, endsAt: null }, { ...active, eventType: "birthday" as const },
+      active,
+      { ...active, status: "cancelled" as const },
+      { ...active, status: "completed" as const },
+      { ...active, endsAt: null },
+      { ...active, eventType: "birthday" as const },
     ]) {
-      const html = renderToStaticMarkup(createElement(CalendarEventCard, { event: candidate, now }));
+      const html = renderToStaticMarkup(
+        createElement(CalendarEventCard, { event: candidate, now }),
+      );
       expect(html.includes("进行中")).toBe(candidate === active);
       expect(html.includes("bg-[#eaf4dc]")).toBe(candidate === active);
     }
@@ -125,12 +146,30 @@ describe("calendar event dates", () => {
         { ...event("小蓝生日", "2000-09-06"), eventType: "birthday" as const },
         event("明天的活动", "2026-09-07"),
       ];
-      const data = { season: { id: "summer", slug: "2026-summer", label: "2026 夏", startsOn: "2026-07-01", endsOn: "2026-09-30" }, entries: [], events };
-      const html = renderToStaticMarkup(createElement(ViewerTimeZoneContext.Provider, { value: "America/Los_Angeles" },
-        createElement(CalendarPage, { data }),
-      ));
-      const panel = html.slice(html.indexOf('aria-labelledby="today-events-title"'), html.indexOf("之后的事件"));
-      for (const title of ["ABEMA", "碧蓝航线舞台", "今天已结束", "JST今晚的活动"]) expect(panel.split(title)).toHaveLength(2);
+      const data = {
+        season: {
+          id: "summer",
+          slug: "2026-summer",
+          label: "2026 夏",
+          startsOn: "2026-07-01",
+          endsOn: "2026-09-30",
+        },
+        entries: [],
+        events,
+      };
+      const html = renderToStaticMarkup(
+        createElement(
+          ViewerTimeZoneContext.Provider,
+          { value: "America/Los_Angeles" },
+          createElement(CalendarPage, { data }),
+        ),
+      );
+      const panel = html.slice(
+        html.indexOf('aria-labelledby="today-events-title"'),
+        html.indexOf("之后的事件"),
+      );
+      for (const title of ["ABEMA", "碧蓝航线舞台", "今天已结束", "JST今晚的活动"])
+        expect(panel.split(title)).toHaveLength(2);
       expect(panel).toContain("祝 小蓝 生日快乐！");
       expect(panel).toContain("9月6日 · JST");
       expect(panel).toContain("21:50");
@@ -138,10 +177,16 @@ describe("calendar event dates", () => {
       expect(panel).not.toContain("JST昨天的活动");
       expect(html.match(/进行中/g)).toHaveLength(1);
       expect(html.split("今天已结束")).toHaveLength(2);
-      const empty = renderToStaticMarkup(createElement(CalendarPage, { data: { ...data, events: [event("未来活动", "2026-09-07")] } }));
+      const empty = renderToStaticMarkup(
+        createElement(CalendarPage, {
+          data: { ...data, events: [event("未来活动", "2026-09-07")] },
+        }),
+      );
       expect(empty).toContain("未来活动");
       expect(empty).not.toContain("today-events-title");
       expect(empty).not.toContain("今日生日祝福");
-    } finally { setSystemTime(); }
+    } finally {
+      setSystemTime();
+    }
   });
 });

@@ -7,10 +7,11 @@ import { publicationHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/updates/$id")({
   staleTime: 180_000,
-  loader: (loaderContext) => loadPublicationData({
-    serverContext: serverContextFromLoader(loaderContext),
-    id: loaderContext.params.id,
-  }),
+  loader: (loaderContext) =>
+    loadPublicationData({
+      serverContext: serverContextFromLoader(loaderContext),
+      id: loaderContext.params.id,
+    }),
   head: ({ loaderData, params }) => publicationHead(loaderData, params.id),
   component: PublicationRoute,
 });
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/updates/$id")({
 function PublicationRoute() {
   const router = useRouter();
   const canGoBack = useCanGoBack();
+
   const returnToPrevious = useRouterState({
     select: (state) => state.location.state.yuriReturnToPrevious === true,
   });

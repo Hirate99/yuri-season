@@ -15,33 +15,42 @@ beforeEach(async () => {
 afterEach(() => database.close());
 
 function batch(outcome: "seen" | "published" = "seen") {
-  return searchMemoryBatchSchema.parse({ records: [{
-    scopeType: "source",
-    scopeId: "source-kimi-news",
-    searchKind: "registered_source",
-    targetKey: "https://example.com/news/",
-    queryText: "https://example.com/news/",
-    status: "active",
-    cursor: {},
-    lastResultHash: "abc",
-    lastResultCount: 1,
-    usefulResultCount: outcome === "seen" ? 0 : 1,
-    searchedAt: "2026-08-11T20:00:00Z",
-    nextSearchAt: "2026-08-18T20:00:00Z",
-    hits: [{
-      canonicalUrl: "https://example.com/news/1",
-      title: "公式更新",
-      contentHash: "item-1",
-      outcome,
-      metadata: { sourceItemId: "1" },
-    }],
-  }] });
+  return searchMemoryBatchSchema.parse({
+    records: [
+      {
+        scopeType: "source",
+        scopeId: "source-kimi-news",
+        searchKind: "registered_source",
+        targetKey: "https://example.com/news/",
+        queryText: "https://example.com/news/",
+        status: "active",
+        cursor: {},
+        lastResultHash: "abc",
+        lastResultCount: 1,
+        usefulResultCount: outcome === "seen" ? 0 : 1,
+        searchedAt: "2026-08-11T20:00:00Z",
+        nextSearchAt: "2026-08-18T20:00:00Z",
+        hits: [
+          {
+            canonicalUrl: "https://example.com/news/1",
+            title: "公式更新",
+            contentHash: "item-1",
+            outcome,
+            metadata: { sourceItemId: "1" },
+          },
+        ],
+      },
+    ],
+  });
 }
 
 describe("search memory", () => {
   test("remembers seen URLs and does not downgrade a resolved outcome", async () => {
     const [published] = batch("published");
-    published.hits = Array.from({ length: 100 }, (_, index) => ({ ...published.hits[0], canonicalUrl: `https://example.com/news/${index}` }));
+    published.hits = Array.from({ length: 100 }, (_, index) => ({
+      ...published.hits[0],
+      canonicalUrl: `https://example.com/news/${index}`,
+    }));
     database.resetMetrics();
     await rememberSearch(database.binding(), [published]);
     expect(database.calls).toBe(1);
@@ -55,22 +64,39 @@ describe("search memory", () => {
       publishedCount: 100,
       seenCount: 0,
     });
-    expect(database.sqlite.query("SELECT COUNT(*) AS count FROM search_memory_hits").get())
-      .toEqual({ count: 100 });
+    expect(database.sqlite.query("SELECT COUNT(*) AS count FROM search_memory_hits").get()).toEqual(
+      { count: 100 },
+    );
 
-    database.exec("CREATE TRIGGER reject_hit BEFORE INSERT ON search_memory_hits WHEN NEW.canonical_url LIKE '%failure' BEGIN SELECT RAISE(ABORT, 'hit unavailable'); END;");
-    await expect(rememberSearch(database.binding(), [{ ...published, notes: "must roll back", hits: [
-      { ...published.hits[0], canonicalUrl: "https://example.com/new" },
-      { ...published.hits[0], canonicalUrl: "https://example.com/failure" },
-    ] }])).rejects.toThrow("hit unavailable");
+    database.exec(
+      "CREATE TRIGGER reject_hit BEFORE INSERT ON search_memory_hits WHEN NEW.canonical_url LIKE '%failure' BEGIN SELECT RAISE(ABORT, 'hit unavailable'); END;",
+    );
+    await expect(
+      rememberSearch(database.binding(), [
+        {
+          ...published,
+          notes: "must roll back",
+          hits: [
+            { ...published.hits[0], canonicalUrl: "https://example.com/new" },
+            { ...published.hits[0], canonicalUrl: "https://example.com/failure" },
+          ],
+        },
+      ]),
+    ).rejects.toThrow("hit unavailable");
     expect(await readSearchMemory(database.binding())).toEqual(records);
   });
 
   test("rejects non-http hit URLs", () => {
     const input = batch("seen")[0];
-    expect(() => searchMemoryBatchSchema.parse({ records: [{
-      ...input,
-      hits: [{ ...input.hits[0], canonicalUrl: "javascript:alert(1)" }],
-    }] })).toThrow("只支持 HTTP(S)");
+    expect(() =>
+      searchMemoryBatchSchema.parse({
+        records: [
+          {
+            ...input,
+            hits: [{ ...input.hits[0], canonicalUrl: "javascript:alert(1)" }],
+          },
+        ],
+      }),
+    ).toThrow("只支持 HTTP(S)");
   });
 });

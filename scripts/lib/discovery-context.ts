@@ -16,13 +16,16 @@ export type DiscoveryContext = {
 
 export async function fetchDiscoveryContext(): Promise<DiscoveryContext> {
   const dashboard = await fetchAdminDashboard();
+
   const [resourcePairs, memory] = await Promise.all([
-    mapConcurrent(dashboard.anime, 4, async (anime) => [
-      anime.id,
-      await fetchAdminResources(anime.id),
-    ] as const),
+    mapConcurrent(
+      dashboard.anime,
+      4,
+      async (anime) => [anime.id, await fetchAdminResources(anime.id)] as const,
+    ),
     fetchSearchMemory(true),
   ]);
+
   return {
     dashboard,
     resources: Object.fromEntries(resourcePairs),

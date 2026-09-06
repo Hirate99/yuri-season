@@ -14,13 +14,16 @@ export function redirectPublicAdmin(request: Request, env: AdminBoundaryEnv): Re
   if (!isAdminPage(requestUrl.pathname)) return null;
 
   let adminOrigin: URL;
+
   try {
     adminOrigin = new URL(env.ADMIN_ORIGIN);
   } catch {
     return null;
   }
+
   if (adminOrigin.protocol !== "https:" && adminOrigin.hostname !== "localhost") return null;
 
   const target = new URL(`${requestUrl.pathname}${requestUrl.search}`, adminOrigin);
+
   return Response.redirect(target, 307);
 }

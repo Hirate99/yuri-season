@@ -28,17 +28,31 @@ export async function resourceAuditSnapshot(
 ) {
   const orm = database(db);
   let before: Record<string, unknown> | undefined;
+
   if (kind === "discussion") {
-    before = await orm.select().from(discussionsTable)
+    before = await orm
+      .select()
+      .from(discussionsTable)
       .innerJoin(discussionAnimeTable, eq(discussionAnimeTable.discussionId, discussionsTable.id))
-      .where(and(eq(discussionsTable.id, id), eq(discussionAnimeTable.animeId, animeId))).get();
+      .where(and(eq(discussionsTable.id, id), eq(discussionAnimeTable.animeId, animeId)))
+      .get();
   } else {
     const table = tables[kind];
-    before = await orm.select().from(table).where(and(
-      eq(table.id, id), eq(table.animeId, animeId),
-      kind === "event" ? ne(eventsTable.eventType, "birthday") : undefined,
-    )).get();
+
+    before = await orm
+      .select()
+      .from(table)
+      .where(
+        and(
+          eq(table.id, id),
+          eq(table.animeId, animeId),
+          kind === "event" ? ne(eventsTable.eventType, "birthday") : undefined,
+        ),
+      )
+      .get();
   }
+
   if (!before) throw new HttpError(404, "没有找到资源。");
+
   return before;
 }

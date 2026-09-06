@@ -8,6 +8,7 @@ export function isReusableSourceState(
 ): boolean {
   if (!previous) return false;
   if (previous.normalizerVersion === currentNormalizerVersion) return true;
+
   return previous.normalizerVersion === undefined && sourceType !== "community";
 }
 
@@ -16,6 +17,8 @@ export function changedItems<T extends FingerprintedItem>(
   currentItems: T[],
 ): T[] {
   if (!previousHashes) return [];
+
   const previous = new Set(previousHashes);
+
   return currentItems.filter((item) => !previous.has(item.contentHash));
 }

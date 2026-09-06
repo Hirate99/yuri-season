@@ -2,7 +2,11 @@ import type { LocalJobCompletion, LocalJobLease } from "@/domain";
 import { and, eq, sql } from "drizzle-orm";
 
 import { database } from "~/infrastructure/db/client";
-import { completeLocalLease, heartbeatLocalLease, leaseLocalJob } from "~/infrastructure/db/native/jobs";
+import {
+  completeLocalLease,
+  heartbeatLocalLease,
+  leaseLocalJob,
+} from "~/infrastructure/db/native/jobs";
 import { researchRunsTable, updateJobsTable } from "~/infrastructure/db/schema";
 import type { CompleteLocalJobInput } from "./types";
 import { stableFingerprint } from "~/shared/fingerprint";
@@ -14,8 +18,9 @@ const LEASE_MINUTES = 20;
 function objectJson(value: string): Record<string, unknown> {
   try {
     const parsed: unknown = JSON.parse(value);
+
     return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
+      ? (parsed as Record<string, unknown>)
       : {};
   } catch {
     return {};
@@ -23,16 +28,23 @@ function objectJson(value: string): Record<string, unknown> {
 }
 
 export async function recoverExpiredJobs(db: D1Database): Promise<number> {
-  const result = await database(db).update(updateJobsTable).set({
-    status: sql`CASE WHEN ${updateJobsTable.attemptCount} >= ${updateJobsTable.maxAttempts} THEN 'dead' ELSE 'retry' END`,
-    leaseOwner: null,
-    leaseTokenHash: null,
-    leaseUntil: null,
-    lastError: sql`COALESCE(${updateJobsTable.lastError}, 'lease expired')`,
-    finishedAt: sql`CASE WHEN ${updateJobsTable.attemptCount} >= ${updateJobsTable.maxAttempts} THEN CURRENT_TIMESTAMP ELSE NULL END`,
-    updatedAt: sql`CURRENT_TIMESTAMP`,
-  }).where(sql`${updateJobsTable.status} IN ('leased', 'running')
-    AND ${updateJobsTable.leaseUntil} IS NOT NULL AND ${updateJobsTable.leaseUntil} < CURRENT_TIMESTAMP`).run();
+  const result = await database(db)
+    .update(updateJobsTable)
+    .set({
+      status: sql`CASE WHEN ${updateJobsTable.attemptCount} >= ${updateJobsTable.maxAttempts} THEN 'dead' ELSE 'retry' END`,
+      leaseOwner: null,
+      leaseTokenHash: null,
+      leaseUntil: null,
+      lastError: sql`COALESCE(${updateJobsTable.lastError}, 'lease expired')`,
+      finishedAt: sql`CASE WHEN ${updateJobsTable.attemptCount} >= ${updateJobsTable.maxAttempts} THEN CURRENT_TIMESTAMP ELSE NULL END`,
+      updatedAt: sql`CURRENT_TIMESTAMP`,
+    })
+    .where(
+      sql`${updateJobsTable.status} IN ('leased', 'running')
+    AND ${updateJobsTable.leaseUntil} IS NOT NULL AND ${updateJobsTable.leaseUntil} < CURRENT_TIMESTAMP`,
+    )
+    .run();
+
   return result.meta.changes ?? 0;
 }
 
@@ -42,12 +54,15 @@ export async function leaseLocalJobs(
   limit: number,
 ): Promise<LocalJobLease[]> {
   await recoverExpiredJobs(db);
+
   const jobs: LocalJobLease[] = [];
+
   for (let index = 0; index < limit; index += 1) {
     const leaseToken = createId("lease");
     const tokenHash = await stableFingerprint(leaseToken);
     const row = await leaseLocalJob(db, owner, tokenHash, LEASE_MINUTES);
     if (!row) break;
+
     jobs.push({
       id: row.id,
       jobType: row.job_type,
@@ -62,6 +77,7 @@ export async function leaseLocalJobs(
       input: objectJson(row.input_json),
     });
   }
+
   return jobs;
 }
 
@@ -73,22 +89,24 @@ export async function heartbeatLocalJob(
   const tokenHash = await stableFingerprint(leaseToken);
   const row = await heartbeatLocalLease(db, jobId, tokenHash, LEASE_MINUTES);
   if (!row) throw new HttpError(409, "任务租约已失效或不属于当前执行者。");
+
   return { id: row.id, status: row.status, leaseUntil: row.lease_until };
 }
 
 function readCompletion(db: D1Database, jobId: string) {
-  return database(db).select({
-    id: updateJobsTable.id,
-    status: updateJobsTable.status,
-    research_run_id: updateJobsTable.researchRunId,
-    lease_token_hash: updateJobsTable.leaseTokenHash,
-    attempt_count: updateJobsTable.attemptCount,
-    max_attempts: updateJobsTable.maxAttempts,
-    completion_key: updateJobsTable.completionKey,
-  }).from(updateJobsTable).where(and(
-    eq(updateJobsTable.id, jobId),
-    eq(updateJobsTable.executionTarget, "local"),
-  )).get();
+  return database(db)
+    .select({
+      id: updateJobsTable.id,
+      status: updateJobsTable.status,
+      research_run_id: updateJobsTable.researchRunId,
+      lease_token_hash: updateJobsTable.leaseTokenHash,
+      attempt_count: updateJobsTable.attemptCount,
+      max_attempts: updateJobsTable.maxAttempts,
+      completion_key: updateJobsTable.completionKey,
+    })
+    .from(updateJobsTable)
+    .where(and(eq(updateJobsTable.id, jobId), eq(updateJobsTable.executionTarget, "local")))
+    .get();
 }
 
 export async function completeLocalJob(
@@ -98,29 +116,48 @@ export async function completeLocalJob(
 ): Promise<LocalJobCompletion> {
   const current = await readCompletion(db, jobId);
   if (!current) throw new HttpError(404, "没有找到这个本地任务。");
-  if (current.completion_key === input.idempotencyKey && ["completed", "partial", "retry", "dead"].includes(current.status)) {
-    return { id: current.id, status: current.status as LocalJobCompletion["status"], duplicate: true, runId: current.research_run_id };
+
+  if (
+    current.completion_key === input.idempotencyKey &&
+    ["completed", "partial", "retry", "dead"].includes(current.status)
+  ) {
+    return {
+      id: current.id,
+      status: current.status as LocalJobCompletion["status"],
+      duplicate: true,
+      runId: current.research_run_id,
+    };
   }
 
   const tokenHash = await stableFingerprint(input.leaseToken);
+
   if (!["leased", "running"].includes(current.status) || current.lease_token_hash !== tokenHash) {
     throw new HttpError(409, "任务租约已失效或不属于当前执行者。");
   }
+
   if (input.runId) {
-    const run = await database(db).select({ id: researchRunsTable.id }).from(researchRunsTable).where(and(
-      eq(researchRunsTable.id, input.runId),
-      eq(researchRunsTable.triggerType, "local_skill"),
-    )).get();
+    const run = await database(db)
+      .select({ id: researchRunsTable.id })
+      .from(researchRunsTable)
+      .where(
+        and(
+          eq(researchRunsTable.id, input.runId),
+          eq(researchRunsTable.triggerType, "local_skill"),
+        ),
+      )
+      .get();
     if (!run) throw new HttpError(400, "runId 不是有效的本地研究批次。");
   }
 
   const exhausted = current.attempt_count >= current.max_attempts;
-  const status: LocalJobCompletion["status"] = input.outcome === "failed"
-    ? exhausted ? "dead" : "retry"
-    : input.outcome;
+
+  const status: LocalJobCompletion["status"] =
+    input.outcome === "failed" ? (exhausted ? "dead" : "retry") : input.outcome;
+
   const delayMinutes = Math.min(360, 5 * 2 ** Math.max(0, current.attempt_count - 1));
   const resultJson = JSON.stringify(input.result);
   const auditDetailJson = JSON.stringify({ status, runId: input.runId, message: input.message });
+
   const update = await completeLocalLease(db, {
     status,
     runId: input.runId,
@@ -133,11 +170,22 @@ export async function completeLocalJob(
     auditId: `audit-${await stableFingerprint(`${jobId}|${input.idempotencyKey}`)}`,
     auditDetailJson,
   });
+
   if ((update.meta.changes ?? 0) === 0) {
     const latest = await readCompletion(db, jobId);
-    if (latest?.completion_key === input.idempotencyKey && ["completed", "partial", "retry", "dead"].includes(latest.status)) {
-      return { id: latest.id, status: latest.status as LocalJobCompletion["status"], duplicate: true, runId: latest.research_run_id };
+
+    if (
+      latest?.completion_key === input.idempotencyKey &&
+      ["completed", "partial", "retry", "dead"].includes(latest.status)
+    ) {
+      return {
+        id: latest.id,
+        status: latest.status as LocalJobCompletion["status"],
+        duplicate: true,
+        runId: latest.research_run_id,
+      };
     }
+
     throw new HttpError(409, "任务状态已经变化，请重新领取。");
   }
 

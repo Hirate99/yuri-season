@@ -25,6 +25,7 @@ export async function runResearch(
   const runId = createId("run");
   const startedAt = new Date().toISOString();
   const orm = database(env.DB);
+
   await orm.insert(researchRunsTable).values({
     id: runId,
     externalBatchId: null,
@@ -50,58 +51,85 @@ export async function runResearch(
     held: 0,
     rejected: 0,
   };
+
   const errors: string[] = [];
+
   try {
     const planned = await planSourceJobs(env.DB, lane, limits[lane].planned);
     const jobs = await leaseJobs(env.DB, runId, limits[lane].leased);
-    const outcomes = await Promise.all(jobs.map(async (job) => {
-      try {
-        await startJob(env.DB, job);
-        if (job.job_type !== "sync_source") throw new Error(`unsupported worker job ${job.job_type}`);
-        const outcome = await syncSourceJob(env, job, undefined, () => heartbeatJob(env.DB, job));
-        await completeJob(env.DB, job, outcome.partial);
-        return { counters: outcome.counters, error: null };
-      } catch (error) {
+
+    const outcomes = await Promise.all(
+      jobs.map(async (job) => {
         try {
-          await failJob(env.DB, job, error);
-        } catch (leaseError) {
-          console.warn(JSON.stringify({
-            message: "worker job could not be failed after losing its lease",
-            jobId: job.id,
-            error: leaseError instanceof Error ? leaseError.message : String(leaseError),
-          }));
+          await startJob(env.DB, job);
+
+          if (job.job_type !== "sync_source")
+            throw new Error(`unsupported worker job ${job.job_type}`);
+
+          const outcome = await syncSourceJob(env, job, undefined, () => heartbeatJob(env.DB, job));
+
+          await completeJob(env.DB, job, outcome.partial);
+
+          return { counters: outcome.counters, error: null };
+        } catch (error) {
+          try {
+            await failJob(env.DB, job, error);
+          } catch (leaseError) {
+            console.warn(
+              JSON.stringify({
+                message: "worker job could not be failed after losing its lease",
+                jobId: job.id,
+                error: leaseError instanceof Error ? leaseError.message : String(leaseError),
+              }),
+            );
+          }
+
+          return {
+            counters: null,
+            error: error instanceof Error ? error.message : String(error),
+          };
         }
-        return {
-          counters: null,
-          error: error instanceof Error ? error.message : String(error),
-        };
-      }
-    }));
+      }),
+    );
+
     for (const outcome of outcomes) {
       if (outcome.counters) addCounters(counters, outcome.counters);
       if (outcome.error) errors.push(outcome.error);
     }
 
-    const status = errors.length > 0 && counters.sources === 0 ? "failed" : jobs.length === 0 ? "skipped" : "completed";
-    await orm.update(researchRunsTable).set({
-      status,
-      sourceCount: counters.sources,
-      observationCount: counters.observations,
-      candidateCount: counters.candidates,
-      publishedCount: counters.published,
-      heldCount: counters.held,
-      rejectedCount: counters.rejected,
-      jobCount: jobs.length,
-      message: JSON.stringify({ lane, planned, errors: errors.slice(0, 5) }),
-      finishedAt: sql`CURRENT_TIMESTAMP`,
-    }).where(eq(researchRunsTable.id, runId));
+    const status =
+      errors.length > 0 && counters.sources === 0
+        ? "failed"
+        : jobs.length === 0
+          ? "skipped"
+          : "completed";
+
+    await orm
+      .update(researchRunsTable)
+      .set({
+        status,
+        sourceCount: counters.sources,
+        observationCount: counters.observations,
+        candidateCount: counters.candidates,
+        publishedCount: counters.published,
+        heldCount: counters.held,
+        rejectedCount: counters.rejected,
+        jobCount: jobs.length,
+        message: JSON.stringify({ lane, planned, errors: errors.slice(0, 5) }),
+        finishedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(eq(researchRunsTable.id, runId));
+
     return { id: runId, lane, status, planned, jobs: jobs.length, ...counters };
   } catch (error) {
-    await orm.update(researchRunsTable).set({
-      status: "failed",
-      message: error instanceof Error ? error.message.slice(0, 800) : String(error).slice(0, 800),
-      finishedAt: sql`CURRENT_TIMESTAMP`,
-    }).where(eq(researchRunsTable.id, runId));
+    await orm
+      .update(researchRunsTable)
+      .set({
+        status: "failed",
+        message: error instanceof Error ? error.message.slice(0, 800) : String(error).slice(0, 800),
+        finishedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(eq(researchRunsTable.id, runId));
     throw error;
   }
 }
@@ -109,5 +137,6 @@ export async function runResearch(
 export function laneForCron(cron: string): JobLane {
   if (cron === "*/5 * * * *") return "rapid";
   if (cron === "17,47 * * * *") return "standard";
+
   return "discovery";
 }

@@ -1,9 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
 
 import type { PublicationDetailResponse } from "@/domain";
-import { PublicationMediaCarousel, publicationCarouselImages } from "@/components/publication-media-carousel";
+import {
+  PublicationMediaCarousel,
+  publicationCarouselImages,
+} from "@/components/publication-media-carousel";
 import { PublicationPage } from "@/pages/publication-page";
 
 const data: PublicationDetailResponse = {
@@ -63,34 +71,110 @@ const data: PublicationDetailResponse = {
 describe("publication page presentation", () => {
   test("renders server-selected images in their supplied editorial order", () => {
     const assets: PublicationDetailResponse["assets"] = [
-      { id: "first-preview", url: "https://cdn.test/first-preview.webp", sourceUrl: "https://source.test/first.jpg", mimeType: "image/webp", width: 1000, height: 1000, sortOrder: 0, variant: "preview", altText: "第一张", rightsStatus: "press_kit" },
-      { id: "second-preview", url: "https://cdn.test/second-preview.webp", sourceUrl: "https://source.test/second.jpg", mimeType: "image/webp", width: 1000, height: 1000, sortOrder: 1, variant: "preview", altText: "第二张", rightsStatus: "press_kit" },
+      {
+        id: "first-preview",
+        url: "https://cdn.test/first-preview.webp",
+        sourceUrl: "https://source.test/first.jpg",
+        mimeType: "image/webp",
+        width: 1000,
+        height: 1000,
+        sortOrder: 0,
+        variant: "preview",
+        altText: "第一张",
+        rightsStatus: "press_kit",
+      },
+      {
+        id: "second-preview",
+        url: "https://cdn.test/second-preview.webp",
+        sourceUrl: "https://source.test/second.jpg",
+        mimeType: "image/webp",
+        width: 1000,
+        height: 1000,
+        sortOrder: 1,
+        variant: "preview",
+        altText: "第二张",
+        rightsStatus: "press_kit",
+      },
     ];
 
     expect(publicationCarouselImages(assets, null, "图片")).toEqual([
-      expect.objectContaining({ id: "first-preview", sourceUrl: "https://source.test/first.jpg", width: 1000, height: 1000 }),
-      expect.objectContaining({ id: "second-preview", sourceUrl: "https://source.test/second.jpg", width: 1000, height: 1000 }),
+      expect.objectContaining({
+        id: "first-preview",
+        sourceUrl: "https://source.test/first.jpg",
+        width: 1000,
+        height: 1000,
+      }),
+      expect.objectContaining({
+        id: "second-preview",
+        sourceUrl: "https://source.test/second.jpg",
+        width: 1000,
+        height: 1000,
+      }),
     ]);
   });
 
   test("gives each carousel slide its source aspect ratio for auto height", () => {
     const assets: PublicationDetailResponse["assets"] = [
-      { id: "wide", url: "https://cdn.test/wide.webp", sourceUrl: "https://source.test/wide.jpg", mimeType: "image/webp", width: 1200, height: 800, sortOrder: 0, variant: "preview", altText: "横图", rightsStatus: "press_kit" },
-      { id: "tall", url: "https://cdn.test/tall.webp", sourceUrl: "https://source.test/tall.jpg", mimeType: "image/webp", width: 800, height: 1200, sortOrder: 1, variant: "preview", altText: "竖图", rightsStatus: "press_kit" },
+      {
+        id: "wide",
+        url: "https://cdn.test/wide.webp",
+        sourceUrl: "https://source.test/wide.jpg",
+        mimeType: "image/webp",
+        width: 1200,
+        height: 800,
+        sortOrder: 0,
+        variant: "preview",
+        altText: "横图",
+        rightsStatus: "press_kit",
+      },
+      {
+        id: "tall",
+        url: "https://cdn.test/tall.webp",
+        sourceUrl: "https://source.test/tall.jpg",
+        mimeType: "image/webp",
+        width: 800,
+        height: 1200,
+        sortOrder: 1,
+        variant: "preview",
+        altText: "竖图",
+        rightsStatus: "press_kit",
+      },
     ];
     const html = renderToStaticMarkup(
       <PublicationMediaCarousel assets={assets} media={null} fallbackAlt="图片" />,
     );
 
-    expect(html).toContain("aria-roledescription=\"carousel\"");
+    expect(html).toContain('aria-roledescription="carousel"');
     expect(html).toContain("aspect-ratio:1200 / 800");
     expect(html).toContain("aspect-ratio:800 / 1200");
   });
 
   test("reserves carousel height while image dimensions are still unknown", () => {
     const assets: PublicationDetailResponse["assets"] = [
-      { id: "unknown-first", url: "https://cdn.test/first.webp", sourceUrl: "https://source.test/first.jpg", mimeType: "image/webp", width: null, height: null, sortOrder: 0, variant: "preview", altText: "第一张", rightsStatus: "press_kit" },
-      { id: "unknown-second", url: "https://cdn.test/second.webp", sourceUrl: "https://source.test/second.jpg", mimeType: "image/webp", width: null, height: null, sortOrder: 1, variant: "preview", altText: "第二张", rightsStatus: "press_kit" },
+      {
+        id: "unknown-first",
+        url: "https://cdn.test/first.webp",
+        sourceUrl: "https://source.test/first.jpg",
+        mimeType: "image/webp",
+        width: null,
+        height: null,
+        sortOrder: 0,
+        variant: "preview",
+        altText: "第一张",
+        rightsStatus: "press_kit",
+      },
+      {
+        id: "unknown-second",
+        url: "https://cdn.test/second.webp",
+        sourceUrl: "https://source.test/second.jpg",
+        mimeType: "image/webp",
+        width: null,
+        height: null,
+        sortOrder: 1,
+        variant: "preview",
+        altText: "第二张",
+        rightsStatus: "press_kit",
+      },
     ];
     const html = renderToStaticMarkup(
       <PublicationMediaCarousel assets={assets} media={null} fallbackAlt="图片" />,
@@ -109,7 +193,7 @@ describe("publication page presentation", () => {
     );
 
     expect(html).toContain("https://r2.i-yuri.com/yuri/example.jpg");
-    expect(html).not.toContain("aria-roledescription=\"carousel\"");
+    expect(html).not.toContain('aria-roledescription="carousel"');
     expect(html).not.toContain("上一张图片");
     expect(html).not.toContain("下一张图片");
   });

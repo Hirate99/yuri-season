@@ -12,15 +12,17 @@ export function auditInsert(
   entityId: string,
   detail: Record<string, unknown> = {},
 ) {
-  return database(db).insert(auditLogTable).values({
-    id: createId("audit"),
-    actorType,
-    action,
-    entityType,
-    entityId,
-    detailJson: JSON.stringify(detail),
-    createdAt: sql`CURRENT_TIMESTAMP`,
-  });
+  return database(db)
+    .insert(auditLogTable)
+    .values({
+      id: createId("audit"),
+      actorType,
+      action,
+      entityType,
+      entityId,
+      detailJson: JSON.stringify(detail),
+      createdAt: sql`CURRENT_TIMESTAMP`,
+    });
 }
 
 export async function recordAudit(

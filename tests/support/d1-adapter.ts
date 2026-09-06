@@ -10,41 +10,46 @@ class TestStatement {
   ) {}
 
   bind(...values: unknown[]): TestStatement {
-    if (values.length > 100) throw new RangeError("D1 allows at most 100 bound parameters per query");
+    if (values.length > 100)
+      throw new RangeError("D1 allows at most 100 bound parameters per query");
     this.bindings = values;
     return this;
   }
 
   async first<T = Record<string, unknown>>(column?: string): Promise<T | null> {
     this.onExecute();
-    const row = this.database.query(this.sql).get(...this.bindings as SQLQueryBindings[]) as Record<string, unknown> | null;
+    const row = this.database
+      .query(this.sql)
+      .get(...(this.bindings as SQLQueryBindings[])) as Record<string, unknown> | null;
     if (!row) return null;
     return (column ? row[column] : row) as T;
   }
 
   async all<T = Record<string, unknown>>() {
     this.onExecute();
-    const results = this.database.query(this.sql).all(...this.bindings as SQLQueryBindings[]) as T[];
+    const results = this.database
+      .query(this.sql)
+      .all(...(this.bindings as SQLQueryBindings[])) as T[];
     return { results, success: true, meta: { changes: 0 } };
   }
 
   async raw<T = unknown[]>(): Promise<T[]> {
     this.onExecute();
-    return this.database.query(this.sql).values(...this.bindings as SQLQueryBindings[]) as T[];
+    return this.database.query(this.sql).values(...(this.bindings as SQLQueryBindings[])) as T[];
   }
 
   run() {
     this.onExecute();
-    const result = this.database.query(this.sql).run(...this.bindings as SQLQueryBindings[]);
+    const result = this.database.query(this.sql).run(...(this.bindings as SQLQueryBindings[]));
     return Promise.resolve({ success: true, meta: { changes: result.changes } });
   }
 
   batchResult() {
     if (/^\s*(?:SELECT|WITH|PRAGMA|EXPLAIN)\b/i.test(this.sql)) {
-      const results = this.database.query(this.sql).all(...this.bindings as SQLQueryBindings[]);
+      const results = this.database.query(this.sql).all(...(this.bindings as SQLQueryBindings[]));
       return { results, success: true, meta: { changes: 0 } };
     }
-    const result = this.database.query(this.sql).run(...this.bindings as SQLQueryBindings[]);
+    const result = this.database.query(this.sql).run(...(this.bindings as SQLQueryBindings[]));
     return { results: [], success: true, meta: { changes: result.changes } };
   }
 }
@@ -75,8 +80,9 @@ export class TestD1 {
   async batch(statements: D1PreparedStatement[]) {
     this.calls += 1;
     this.executedStatements += statements.length;
-    const results = this.sqlite.transaction(() => statements.map((statement) =>
-      (statement as unknown as TestStatement).batchResult()))();
+    const results = this.sqlite.transaction(() =>
+      statements.map((statement) => (statement as unknown as TestStatement).batchResult()),
+    )();
     return results;
   }
 

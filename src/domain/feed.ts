@@ -13,8 +13,10 @@ export type ContentClass =
 export type SourceIdentity = "official" | "creator" | "cast" | "community" | "editorial";
 export type SafetyRating = "safe" | "suggestive" | "adult" | "unknown";
 export type SpoilerLevel = "none" | "mild" | "major";
-export type PresentationMode = "link_only" | "platform_embed" | "remote_preview" | "mirrored_with_permission";
-export type PublicTextMode = "full" | "full_with_translation" | "excerpt" | "summary_only" | "link_only" | "withdrawn";
+export type PresentationMode =
+  "link_only" | "platform_embed" | "remote_preview" | "mirrored_with_permission";
+export type PublicTextMode =
+  "full" | "full_with_translation" | "excerpt" | "summary_only" | "link_only" | "withdrawn";
 export type SourceStatus = "active" | "unavailable" | "deleted" | "private" | "withdrawn";
 
 export type MediaItem = {

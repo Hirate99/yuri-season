@@ -6,15 +6,21 @@ describe("keyed serial execution", () => {
     const run = keyedSerial();
     const order: string[] = [];
     let releaseFirst!: () => void;
-    const firstGate = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    const firstGate = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
 
     const first = run("same.example", async () => {
       order.push("first-start");
       await firstGate;
       order.push("first-end");
     });
-    const second = run("same.example", async () => { order.push("second"); });
-    const other = run("other.example", async () => { order.push("other"); });
+    const second = run("same.example", async () => {
+      order.push("second");
+    });
+    const other = run("other.example", async () => {
+      order.push("other");
+    });
 
     await other;
     expect(order).toEqual(["first-start", "other"]);

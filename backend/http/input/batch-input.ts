@@ -55,63 +55,75 @@ function isSocialPostUrl(value: string) {
   const url = new URL(value);
   const host = url.hostname.toLowerCase().replace(/^www\./, "");
   if (!socialPostHosts.has(host)) return false;
-  if (host === "x.com" || host === "twitter.com") return /^\/[^/]+\/status\/[^/]+/.test(url.pathname);
+
+  if (host === "x.com" || host === "twitter.com")
+    return /^\/[^/]+\/status\/[^/]+/.test(url.pathname);
+
   if (host === "instagram.com") return /^\/(p|reel|tv)\/[^/]+/.test(url.pathname);
   if (host === "bsky.app") return /^\/profile\/[^/]+\/post\/[^/]+/.test(url.pathname);
   if (host === "threads.net") return /^\/@[^/]+\/post\/[^/]+/.test(url.pathname);
+
   return false;
 }
 
-const themeSongSchema = z.object({
-  animeId: requiredText(120, "themeSong.animeId"),
-  songKind: z.enum(["opening", "ending", "theme", "insert", "image"]),
-  sequence: integerBetween(1, 99, "themeSong.sequence"),
-  title: requiredText(300, "themeSong.title"),
-  artist: requiredText(300, "themeSong.artist"),
-  lyricist: nullableText(300, "themeSong.lyricist").default(null),
-  composer: nullableText(300, "themeSong.composer").default(null),
-  arranger: nullableText(300, "themeSong.arranger").default(null),
-  episodeRange: nullableText(120, "themeSong.episodeRange").default(null),
-  officialUrl: nullableHttpUrl("themeSong.officialUrl").default(null),
-  coverUrl: nullableHttpUrl("themeSong.coverUrl").default(null),
-  coverSourceUrl: nullableHttpUrl("themeSong.coverSourceUrl").default(null),
-  sortOrder: integerBetween(0, 10_000, "themeSong.sortOrder"),
-  review: reviewSchema,
-}).refine((value) => !value.coverUrl || Boolean(value.coverSourceUrl), {
-  message: "主题曲封面必须保留图片来源。",
-  path: ["coverSourceUrl"],
-});
+const themeSongSchema = z
+  .object({
+    animeId: requiredText(120, "themeSong.animeId"),
+    songKind: z.enum(["opening", "ending", "theme", "insert", "image"]),
+    sequence: integerBetween(1, 99, "themeSong.sequence"),
+    title: requiredText(300, "themeSong.title"),
+    artist: requiredText(300, "themeSong.artist"),
+    lyricist: nullableText(300, "themeSong.lyricist").default(null),
+    composer: nullableText(300, "themeSong.composer").default(null),
+    arranger: nullableText(300, "themeSong.arranger").default(null),
+    episodeRange: nullableText(120, "themeSong.episodeRange").default(null),
+    officialUrl: nullableHttpUrl("themeSong.officialUrl").default(null),
+    coverUrl: nullableHttpUrl("themeSong.coverUrl").default(null),
+    coverSourceUrl: nullableHttpUrl("themeSong.coverSourceUrl").default(null),
+    sortOrder: integerBetween(0, 10_000, "themeSong.sortOrder"),
+    review: reviewSchema,
+  })
+  .refine((value) => !value.coverUrl || Boolean(value.coverSourceUrl), {
+    message: "主题曲封面必须保留图片来源。",
+    path: ["coverSourceUrl"],
+  });
 
-const baseObservationSchema = z.object({
-  sourceId: optionalNullableText(120, "sourceId"),
-  accountId: optionalNullableText(120, "accountId"),
-  source: inlineSourceSchema.nullable().optional(),
-  sourceItemId: optionalNullableText(240, "sourceItemId"),
-  canonicalUrl: httpUrl("canonicalUrl"),
-  title: optionalNullableText(300, "title"),
-  excerpt: requiredText(24_000, "excerpt"),
-  publicText: optionalNullableText(24_000, "publicText"),
-  publicTranslation: optionalNullableText(24_000, "publicTranslation"),
-  mediaDisposition: z.enum(["none", "attached", "unavailable", "link_only_policy"]).optional(),
-  mediaDispositionReason: optionalNullableText(1_000, "mediaDispositionReason"),
-  authorName: optionalNullableText(200, "authorName"),
-  publishedAt: temporal("publishedAt").optional(),
-  contentType: requiredText(120, "contentType").optional(),
-  language: optionalNullableText(40, "language"),
-  metadata: jsonObject.default({}),
-  candidates: z.array(candidateSchema).max(10, "每条 observation 最多包含 10 条候选。"),
-  accountDiscoveries: z.array(accountDiscoverySchema).max(8).optional(),
-  themeSongs: z.array(themeSongSchema).max(8).optional(),
-}).refine(
-  (value) => [value.sourceId, value.accountId, value.source].filter((item) => item != null).length === 1,
-  "每条 observation 必须且只能提供 sourceId、accountId 或内联 source 中的一种。",
-);
+const baseObservationSchema = z
+  .object({
+    sourceId: optionalNullableText(120, "sourceId"),
+    accountId: optionalNullableText(120, "accountId"),
+    source: inlineSourceSchema.nullable().optional(),
+    sourceItemId: optionalNullableText(240, "sourceItemId"),
+    canonicalUrl: httpUrl("canonicalUrl"),
+    title: optionalNullableText(300, "title"),
+    excerpt: requiredText(24_000, "excerpt"),
+    publicText: optionalNullableText(24_000, "publicText"),
+    publicTranslation: optionalNullableText(24_000, "publicTranslation"),
+    mediaDisposition: z.enum(["none", "attached", "unavailable", "link_only_policy"]).optional(),
+    mediaDispositionReason: optionalNullableText(1_000, "mediaDispositionReason"),
+    authorName: optionalNullableText(200, "authorName"),
+    publishedAt: temporal("publishedAt").optional(),
+    contentType: requiredText(120, "contentType").optional(),
+    language: optionalNullableText(40, "language"),
+    metadata: jsonObject.default({}),
+    candidates: z.array(candidateSchema).max(10, "每条 observation 最多包含 10 条候选。"),
+    accountDiscoveries: z.array(accountDiscoverySchema).max(8).optional(),
+    themeSongs: z.array(themeSongSchema).max(8).optional(),
+  })
+  .refine(
+    (value) =>
+      [value.sourceId, value.accountId, value.source].filter((item) => item != null).length === 1,
+    "每条 observation 必须且只能提供 sourceId、accountId 或内联 source 中的一种。",
+  );
 
 const observationSchema = baseObservationSchema.superRefine((value, context) => {
-  const publishedCandidates = value.candidates.filter((candidate) => candidate.review.decision === "publish");
+  const publishedCandidates = value.candidates.filter(
+    (candidate) => candidate.review.decision === "publish",
+  );
+
   const publishesObservation = publishedCandidates.length > 0;
-  const publishesSocialPost = isSocialPostUrl(value.canonicalUrl)
-    && publishesObservation;
+  const publishesSocialPost = isSocialPostUrl(value.canonicalUrl) && publishesObservation;
+
   if (publishesSocialPost && !value.publicText) {
     context.addIssue({
       code: "custom",
@@ -119,6 +131,7 @@ const observationSchema = baseObservationSchema.superRefine((value, context) => 
       path: ["publicText"],
     });
   }
+
   if (publishesObservation && !value.mediaDisposition) {
     context.addIssue({
       code: "custom",
@@ -126,6 +139,7 @@ const observationSchema = baseObservationSchema.superRefine((value, context) => 
       path: ["mediaDisposition"],
     });
   }
+
   if (publishesObservation && value.mediaDisposition === "attached") {
     value.candidates.forEach((candidate, index) => {
       if (candidate.review.decision === "publish" && !candidate.media?.assets?.length) {
@@ -137,25 +151,38 @@ const observationSchema = baseObservationSchema.superRefine((value, context) => 
       }
     });
   }
-  if (publishesObservation
-    && (value.mediaDisposition === "unavailable" || value.mediaDisposition === "link_only_policy")
-    && !value.mediaDispositionReason) {
+
+  if (
+    publishesObservation &&
+    (value.mediaDisposition === "unavailable" || value.mediaDisposition === "link_only_policy") &&
+    !value.mediaDispositionReason
+  ) {
     context.addIssue({
       code: "custom",
       message: "媒体不可用或仅链接展示时必须记录 mediaDispositionReason。",
       path: ["mediaDispositionReason"],
     });
   }
-  if (publishesObservation && value.mediaDisposition === "link_only_policy"
-    && value.mediaDispositionReason && !/https?:\/\/\S+/i.test(value.mediaDispositionReason)) {
+
+  if (
+    publishesObservation &&
+    value.mediaDisposition === "link_only_policy" &&
+    value.mediaDispositionReason &&
+    !/https?:\/\/\S+/i.test(value.mediaDispositionReason)
+  ) {
     context.addIssue({
       code: "custom",
-      message: "mediaDisposition=link_only_policy 必须在理由中提供明确禁止转载、再托管或嵌入的规则 URL。",
+      message:
+        "mediaDisposition=link_only_policy 必须在理由中提供明确禁止转载、再托管或嵌入的规则 URL。",
       path: ["mediaDispositionReason"],
     });
   }
-  if (publishesObservation && value.mediaDisposition === "none"
-    && publishedCandidates.some((candidate) => Boolean(candidate.media?.assets?.length))) {
+
+  if (
+    publishesObservation &&
+    value.mediaDisposition === "none" &&
+    publishedCandidates.some((candidate) => Boolean(candidate.media?.assets?.length))
+  ) {
     context.addIssue({
       code: "custom",
       message: "包含 media.assets 的自动发布条目不能声明 mediaDisposition=none。",

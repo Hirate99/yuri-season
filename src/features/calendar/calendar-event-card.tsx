@@ -3,14 +3,16 @@ import type { CalendarEvent } from "@/domain";
 import { Badge } from "@/components/badge";
 import { CoverImage } from "@/components/cover-image";
 import { EventTime } from "@/components/event-time";
+import { eventIsOngoing } from "@/lib/calendar-events";
 import { verifiedBirthdayPortrait } from "@/lib/character-portraits";
 import { eventPresentation, eventTitle } from "@/lib/event-presentation";
 import { cn } from "@/lib/ui";
 
-export function CalendarEventCard({ event }: { event: CalendarEvent }) {
+export function CalendarEventCard({ event, now }: { event: CalendarEvent; now?: Date }) {
   const presentation = eventPresentation(event.eventType);
   const portrait = verifiedBirthdayPortrait(event);
   const isBirthday = event.eventType === "birthday";
+  const isOngoing = eventIsOngoing(event, now);
 
   return (
     <article className={cn(
@@ -19,9 +21,10 @@ export function CalendarEventCard({ event }: { event: CalendarEvent }) {
         ? "border-[#f2dce3] bg-[linear-gradient(110deg,#fff8fa_0%,#ffffff_52%)]"
         : "border-line bg-white",
     )}>
-      <div className={cn("flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1", isBirthday && "text-[#a84863]")}>
-        <EventTime event={event} />
+      <div className={cn("flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 [&_time>span]:whitespace-normal [&_time>small]:whitespace-normal", isBirthday && "text-[#a84863]")}>
+        <EventTime event={event} showTime />
         <Badge tone={presentation.tone}>{presentation.label}</Badge>
+        {isOngoing && <Badge tone="lime">进行中</Badge>}
       </div>
 
       <div className="col-span-2 col-start-1 row-start-2 flex min-w-0 items-center gap-3">

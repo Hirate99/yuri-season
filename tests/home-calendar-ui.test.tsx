@@ -171,7 +171,7 @@ test("home calendar pages a crowded broadcast day inside the fixed panel", async
   expect(html).not.toContain("周五作品 5");
 });
 
-test("home calendar marks an event occurring today on the Japan calendar", async () => {
+test("home calendar keeps today's birthdays ahead of other events", async () => {
   const sourceEvent = catalog.events[0]!;
   const html = await renderCalendar({
     ...catalog,
@@ -196,4 +196,22 @@ test("home calendar marks an event occurring today on the Japan calendar", async
   expect(html).toContain(">今天</span>");
   expect(html).toContain("今天的特别活动");
   expect(html.indexOf("紫阳花")).toBeLessThan(html.indexOf("今天的特别活动"));
+});
+
+test("home calendar prioritizes local-day starts and short events over long ongoing events", async () => {
+  const html = await renderCalendar({
+    ...catalog,
+    generatedAt: "2026-09-04T16:00:00Z",
+    events: [
+      ["长期活动", "2026-07-01", "2026-09-30"],
+      ["三日活动", "2026-09-03", "2026-09-05"],
+      ["两日活动", "2026-09-04", "2026-09-05"],
+      ["当地今天开始", "2026-09-05T01:00:00+09:00", "2026-09-30T18:00:00+09:00"],
+      ["未来单日活动", "2026-09-06", null],
+    ].map(([title, startsAt, endsAt]) => ({ ...catalog.events[0]!, id: title!, title: title!, startsAt: startsAt!, endsAt: endsAt! })),
+  });
+  expect(html.indexOf("当地今天开始")).toBeLessThan(html.indexOf("两日活动"));
+  expect(html.indexOf("两日活动")).toBeLessThan(html.indexOf("三日活动"));
+  expect(html).not.toContain("长期活动");
+  expect(html).not.toContain("未来单日活动");
 });

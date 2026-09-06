@@ -1,23 +1,38 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CalendarResponse } from "@/domain";
 import { BroadcastTime } from "@/components/broadcast-time";
 import { CoverImage } from "@/components/cover-image";
 import { EmptyState } from "@/components/empty-state";
 import { EpisodeProgressBadge } from "@/components/episode-progress-badge";
 import { CalendarEventCard } from "@/features/calendar/calendar-event-card";
-import { partitionCalendarEvents } from "@/lib/calendar-events";
+import { eventOccursToday, partitionCalendarEvents, prioritizeCalendarEvents } from "@/lib/calendar-events";
+import { eventTitle } from "@/lib/event-presentation";
 import { weekdayLabel } from "@/lib/format";
 import { bangumiCoverUrl } from "@/lib/media-url";
 import { weekdayInTimeZone } from "@/lib/timezone";
 import { cn, page } from "@/lib/ui";
 
 const days = [1, 2, 3, 4, 5, 6, 0];
+const calendarTimeZone = "Asia/Tokyo";
 
 export function CalendarPage({ data, seasonSlug }: { data: CalendarResponse; seasonSlug?: string }) {
-  const eventGroups = partitionCalendarEvents(data.events);
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const update = () => setNow(new Date());
+    const timer = window.setInterval(update, 30_000);
+    window.addEventListener("focus", update);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", update); };
+  }, []);
+  const todayEvents = prioritizeCalendarEvents(
+    data.events.filter((event) => eventOccursToday(event, calendarTimeZone, now)), calendarTimeZone, now,
+  );
+  const todayIds = new Set(todayEvents.map((event) => event.id));
+  const birthdayNames = todayEvents.filter((event) => event.eventType === "birthday")
+    .map((event) => event.characterName ?? eventTitle(event));
+  const eventGroups = partitionCalendarEvents(data.events.filter((event) => !todayIds.has(event.id)), now);
   const [renderPastEvents, setRenderPastEvents] = useState(Boolean(seasonSlug));
-  const today = weekdayInTimeZone("Asia/Tokyo");
+  const today = weekdayInTimeZone(calendarTimeZone, now);
   const [selectedDay, setSelectedDay] = useState(today);
 
   return (
@@ -66,14 +81,31 @@ export function CalendarPage({ data, seasonSlug }: { data: CalendarResponse; sea
 
       <section className="mt-10">
         <h2 className="mb-5 text-2xl font-bold">事件</h2>
-        <div className="grid gap-3 md:grid-cols-2">
-          {eventGroups.upcoming.map((event) => <CalendarEventCard event={event} key={event.id} />)}
-          {!eventGroups.upcoming.length && <EmptyState title="暂无事件" />}
-        </div>
+        {todayEvents.length > 0 && <section className="rounded-2xl border border-accent/15 bg-accent-soft/40 p-4 md:p-6" aria-labelledby="today-events-title">
+          <header className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <h3 id="today-events-title" className="text-lg font-semibold">今天的事件 <span className="ml-1 text-xs font-normal text-muted">{todayEvents.length}</span></h3>
+            <p className="text-xs text-muted">{new Intl.DateTimeFormat("zh-CN", { timeZone: calendarTimeZone, month: "long", day: "numeric" }).format(now)} · JST</p>
+          </header>
+          {birthdayNames.length > 0 && <div className="relative mb-4 overflow-hidden rounded-xl border border-rose-200/60 bg-gradient-to-r from-rose-50 via-white to-amber-50 px-5 py-5 md:px-6" role="note" aria-label="今日生日祝福">
+            <span aria-hidden="true" className="pointer-events-none absolute top-2 right-4 text-5xl text-rose-200/60">✦</span>
+            <p className="relative text-xs font-medium text-rose-700">今日生日</p>
+            <p className="relative mt-2 text-lg leading-relaxed font-semibold text-rose-900 md:text-xl">祝 {birthdayNames.join("、")} 生日快乐！</p>
+          </div>}
+          <div className="grid gap-3 md:grid-cols-2">
+            {todayEvents.map((event) => <CalendarEventCard event={event} now={now} key={event.id} />)}
+          </div>
+        </section>}
+        {!data.events.length && <EmptyState title="暂无事件" />}
+        {eventGroups.upcoming.length > 0 && <div className="mt-6">
+          <h3 className="mb-3 text-sm font-semibold text-muted">之后的事件</h3>
+          <div className="grid gap-3 md:grid-cols-2">
+            {eventGroups.upcoming.map((event) => <CalendarEventCard event={event} now={now} key={event.id} />)}
+          </div>
+        </div>}
         {eventGroups.past.length > 0 && <details className="mt-5" open={Boolean(seasonSlug)}
           onToggle={(event) => { if (event.currentTarget.open) setRenderPastEvents(true); }}>
           <summary className="cursor-pointer text-sm font-semibold text-muted">过去的事件 · {eventGroups.past.length}</summary>
-          {renderPastEvents && <div className="mt-3 grid gap-3 md:grid-cols-2">{eventGroups.past.map((event) => <CalendarEventCard event={event} key={event.id} />)}</div>}
+          {renderPastEvents && <div className="mt-3 grid gap-3 md:grid-cols-2">{eventGroups.past.map((event) => <CalendarEventCard event={event} now={now} key={event.id} />)}</div>}
         </details>}
       </section>
     </div>

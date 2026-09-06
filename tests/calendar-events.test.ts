@@ -1,6 +1,11 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setSystemTime, test } from "bun:test";
 import type { CalendarEvent } from "@/domain";
-import { eventDateKey, eventOccursToday, partitionCalendarEvents } from "@/lib/calendar-events";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { CalendarEventCard } from "@/features/calendar/calendar-event-card";
+import { CalendarPage } from "@/pages/calendar-page";
+import { ViewerTimeZoneContext } from "@/hooks/use-viewer-timezone";
+import { eventDateKey, eventIsOngoing, eventOccursToday, partitionCalendarEvents } from "@/lib/calendar-events";
 
 function event(id: string, startsAt: string, timezone = "Asia/Tokyo"): CalendarEvent {
   return {
@@ -78,6 +83,8 @@ describe("calendar event dates", () => {
 
     expect(groups.upcoming.map(({ id }) => id)).toEqual(["convention"]);
     expect(eventOccursToday(multiDay, "America/Los_Angeles", now)).toBe(true);
+    expect(eventIsOngoing(multiDay, new Date("2026-09-06T14:59:59Z"))).toBe(true);
+    expect(eventIsOngoing(multiDay, new Date("2026-09-06T15:00:00Z"))).toBe(false);
   });
 
   test("matches each viewer day touched by a timed event range", () => {
@@ -88,5 +95,53 @@ describe("calendar event dates", () => {
 
     expect(eventOccursToday(multiDay, "Asia/Tokyo", new Date("2026-09-06T03:00:00Z"))).toBe(true);
     expect(eventOccursToday(multiDay, "Asia/Tokyo", new Date("2026-09-07T03:00:00Z"))).toBe(false);
+  });
+
+  test("only marks an active timed range as ongoing on calendar cards", () => {
+    const active = { ...event("stream", "2026-09-05T10:00:00Z"), endsAt: "2026-09-05T12:00:00Z" };
+    const now = new Date("2026-09-05T11:00:00Z");
+    expect(eventIsOngoing(active, new Date("2026-09-05T09:59:59Z"))).toBe(false);
+    expect(eventIsOngoing(active, new Date("2026-09-05T10:00:00Z"))).toBe(true);
+    expect(eventIsOngoing(active, new Date(active.endsAt))).toBe(false);
+    for (const candidate of [
+      active, { ...active, status: "cancelled" as const }, { ...active, status: "completed" as const },
+      { ...active, endsAt: null }, { ...active, eventType: "birthday" as const },
+    ]) {
+      const html = renderToStaticMarkup(createElement(CalendarEventCard, { event: candidate, now }));
+      expect(html.includes("进行中")).toBe(candidate === active);
+      expect(html.includes("bg-[#eaf4dc]")).toBe(candidate === active);
+    }
+  });
+
+  test("today's panel uses JST independently of the viewer, with birthday wishes and only active green badges", () => {
+    setSystemTime(new Date("2026-09-06T03:28:00Z"));
+    try {
+      const events = [
+        { ...event("ABEMA", "2026-09-06T01:30:00Z"), endsAt: "2026-09-06T06:00:00Z" },
+        { ...event("碧蓝航线舞台", "2026-09-06T04:50:00Z"), endsAt: "2026-09-06T05:45:00Z" },
+        { ...event("今天已结束", "2026-09-06T00:00:00Z"), endsAt: "2026-09-06T01:00:00Z" },
+        event("JST昨天的活动", "2026-09-05T08:00:00Z"),
+        event("JST今晚的活动", "2026-09-06T14:00:00Z"),
+        { ...event("小蓝生日", "2000-09-06"), eventType: "birthday" as const },
+        event("明天的活动", "2026-09-07"),
+      ];
+      const data = { season: { id: "summer", slug: "2026-summer", label: "2026 夏", startsOn: "2026-07-01", endsOn: "2026-09-30" }, entries: [], events };
+      const html = renderToStaticMarkup(createElement(ViewerTimeZoneContext.Provider, { value: "America/Los_Angeles" },
+        createElement(CalendarPage, { data }),
+      ));
+      const panel = html.slice(html.indexOf('aria-labelledby="today-events-title"'), html.indexOf("之后的事件"));
+      for (const title of ["ABEMA", "碧蓝航线舞台", "今天已结束", "JST今晚的活动"]) expect(panel.split(title)).toHaveLength(2);
+      expect(panel).toContain("祝 小蓝 生日快乐！");
+      expect(panel).toContain("9月6日 · JST");
+      expect(panel).toContain("21:50");
+      expect(panel).not.toContain("明天的活动");
+      expect(panel).not.toContain("JST昨天的活动");
+      expect(html.match(/进行中/g)).toHaveLength(1);
+      expect(html.split("今天已结束")).toHaveLength(2);
+      const empty = renderToStaticMarkup(createElement(CalendarPage, { data: { ...data, events: [event("未来活动", "2026-09-07")] } }));
+      expect(empty).toContain("未来活动");
+      expect(empty).not.toContain("today-events-title");
+      expect(empty).not.toContain("今日生日祝福");
+    } finally { setSystemTime(); }
   });
 });

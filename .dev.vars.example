@@ -1,2 +1,8 @@
 # 本地更新脚本使用；生产环境通过 `wrangler secret put ADMIN_TOKEN` 配置。
 ADMIN_TOKEN=replace-with-a-long-random-token
+
+# 用户登录：与浏览器实际访问的本地地址一致；勿将真实密钥提交到 Git。
+BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_SECRET=replace-with-another-random-secret-at-least-32-characters
+# 本地 Cloudflare Email Sending 不投递真实邮件；集成测试通过内存发送器验证 OTP。
+AUTH_EMAIL_FROM=noreply@i-yuri.com

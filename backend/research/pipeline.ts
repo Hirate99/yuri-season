@@ -59,6 +59,7 @@ export async function syncSourceJob(
 
       let candidateId: string | null = null;
       try {
+        if (!env.AI) throw new Error("当前环境未配置 AI，无法自动提取和审核候选内容。");
         const draft = await extractCandidate(env.AI, source, item, observation.id);
         if (!draft) continue;
         const claimId = await storeClaim(env.DB, observation.id, draft);

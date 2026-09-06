@@ -1,6 +1,7 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { ViewerTimeZoneContext, useDetectedViewerTimeZone } from "@/hooks/use-viewer-timezone";
 import { BrandMark } from "./brand-mark";
+import { authClient } from "@/features/community/auth-client";
 
 const nav = [
   { to: "/", label: "当季", exact: true },
@@ -8,6 +9,12 @@ const nav = [
   { to: "/feed", label: "情报", exact: false },
   { to: "/seasons", label: "季度", exact: false },
 ] as const;
+
+function AccountLink() {
+  const { data: session } = authClient.useSession();
+  const name = session?.user.name || "我的账号";
+  return <Link to="/account" title={name} className="max-w-28 truncate justify-self-end rounded-full bg-raised px-3 py-2 text-xs font-semibold text-muted hover:text-accent sm:max-w-44">{name}</Link>;
+}
 
 function Navigation({ mobile = false }: { mobile?: boolean }) {
   return (
@@ -52,7 +59,7 @@ export function AppShell() {
           <div className="mx-auto grid h-full w-[calc(100%-1.5rem)] max-w-[1320px] grid-cols-[1fr_auto] items-center md:w-[calc(100%-3rem)] md:grid-cols-[1fr_auto_1fr]">
             <Link to="/" className="inline-flex w-max items-center gap-2 text-[15px] font-semibold tracking-[-0.02em] text-[#25242b]" aria-label="YuriSeason 首页"><BrandMark className="size-7 text-[#786bd1]" /><span>YuriSeason</span></Link>
             <Navigation />
-            <div className="hidden md:block" aria-hidden="true" />
+            <AccountLink />
           </div>
         </header>
         <Navigation mobile />

@@ -41,7 +41,7 @@ export function DiscussionsSection({ discussions }: { discussions: Discussion[] 
   if (discussions.length === 0) return null;
   return (
     <section id="discussions">
-      <SectionHeading title="讨论" />
+      <SectionHeading title="站外讨论" />
       <div className="grid gap-3 md:grid-cols-2">
         {discussions.map((thread) => (
           <a className="surface grid grid-cols-[1fr_auto] items-center gap-3 p-4 text-sm transition hover:border-accent/30 hover:text-accent" key={thread.id} href={thread.url} target="_blank" rel="noreferrer">

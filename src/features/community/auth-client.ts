@@ -5,8 +5,8 @@ export const authClient = createAuthClient({ plugins: [emailOTPClient(), inferAd
   user: { banned: { type: "boolean", input: false } },
 })] });
 
-export async function authResult<T extends { error: { message?: string } | null }>(result: Promise<T>) {
+export async function authResult<T extends { error: { message?: string; status?: number } | null }>(result: Promise<T>) {
   const response = await result;
-  if (response.error) throw new Error(response.error.message || "操作失败，请稍后重试。");
+  if (response.error) throw new Error(response.error.status === 429 ? "操作太频繁，请稍后再试。" : response.error.message || "操作失败，请稍后重试。");
   return response;
 }

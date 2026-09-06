@@ -16,14 +16,14 @@ Choose stories, organize sources, translate, attribute, and resolve duplicates y
 - Routine: [update-policy.md](references/update-policy.md).
 - Publishing: [publication-policy.md](references/publication-policy.md) owns copy, media, and public verification requirements.
 - Recording leased coverage: [discovery-results.md](references/discovery-results.md); constructing imports: relevant sections of [batch-schema.md](references/batch-schema.md). These describe data formats, not additional approval stages.
-- Encountered events: [event-calendar-policy.md](references/event-calendar-policy.md). Annual audits apply only when explicitly requested or scheduled.
+- Sources with attendance, appearance, viewing, or schedule information: [event-calendar-policy.md](references/event-calendar-policy.md), before deciding whether an event is needed. Annual audits apply only when explicitly requested or scheduled.
 - Explicit specialist discovery: relevant sections of [research-policy.md](references/research-policy.md).
 
 ## Working loop
 
 1. Restore due unfinished work from `.research-cache/routine-editorial.md`, then run `bun run research -- cycle --profile=routine`.
 2. Process source differences and lease due timelines with `bun run research -- next --profile=routine --limit=<n>`. Interleave useful discovery and publication according to urgency; do not accumulate all candidates until scanning ends.
-3. Open originals and adjudicate each item. Complete ready items through media, import, and public verification in manageable batches. A partial timeline does not prevent publishing an independently verified post; publication does not prove timeline completion.
+3. Open originals and decide both their Feed value and the event/schedule or other structured facts they support. Reconcile those facts even when no new Feed card is needed. Complete ready items through media, content/resource imports, and public verification in manageable batches. A partial timeline does not prevent publishing an independently verified post; publication does not prove timeline completion.
 4. Record leased coverage with `bun run research -- submit <results.json> --profile=routine`. Resolve source differences before rerunning `cycle`; repeat the work, then run `bun run research -- finish --profile=routine`.
 5. Check remaining editorial and public-verification work separately. CLI convergence proves planned coverage only.
 

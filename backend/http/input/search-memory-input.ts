@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-import type { SearchMemoryWrite } from "@/domain";
-import { httpUrl, jsonObject, nullableText, offsetDateTime, parseWithSchema, requiredText } from "./schema";
-
-const timestamp = (label: string) => offsetDateTime(label);
+import { httpUrl, jsonObject, nullableText, offsetDateTime, requiredText } from "./schema";
 
 const nullableTimestamp = (label: string) => nullableText(60, label)
   .refine(
@@ -34,18 +31,12 @@ const memorySchema = z.object({
   lastResultHash: nullableText(128, "lastResultHash").default(null),
   lastResultCount: nonNegativeInteger("lastResultCount"),
   usefulResultCount: nonNegativeInteger("usefulResultCount"),
-  searchedAt: timestamp("searchedAt"),
+  searchedAt: offsetDateTime("searchedAt"),
   nextSearchAt: nullableTimestamp("nextSearchAt").default(null),
   notes: nullableText(1_000, "notes").default(null),
   hits: z.array(hitSchema).max(100, "每条 memory 最多 100 个 hit。"),
 });
 
-const batchSchema = z.object({
+export const searchMemoryBatchSchema = z.object({
   records: z.array(memorySchema).max(100, "records 必须是至多 100 条的数组。"),
 }).transform((value) => value.records);
-
-export type SearchMemoryBatchRequest = z.input<typeof batchSchema>;
-
-export function parseSearchMemoryBatch(input: unknown): SearchMemoryWrite[] {
-  return parseWithSchema(batchSchema, input);
-}

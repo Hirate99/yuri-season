@@ -1,5 +1,4 @@
 import { nativeStatement } from "./statement";
-import { atomicBatch } from "../transaction";
 
 export type NativeWorkerJobRow = {
   id: string;
@@ -108,7 +107,9 @@ export async function completeLocalLease(
       scheduled_at = CASE WHEN ? = 'retry' THEN datetime('now', '+' || ? || ' minutes') ELSE scheduled_at END,
       finished_at = CASE WHEN ? IN ('completed', 'partial', 'dead') THEN CURRENT_TIMESTAMP ELSE NULL END,
       updated_at = CURRENT_TIMESTAMP
-    WHERE id = ? AND status IN ('leased', 'running') AND lease_token_hash = ?
+    WHERE id = ? AND execution_target = 'local'
+      AND status IN ('leased', 'running') AND lease_token_hash = ?
+      AND lease_until >= CURRENT_TIMESTAMP
   `).bind(
     input.status,
     input.runId,
@@ -137,5 +138,5 @@ export async function completeLocalLease(
     input.idempotencyKey,
     input.status,
   );
-  return (await atomicBatch(db, [update, audit]))[0];
+  return (await db.batch([update, audit]))[0];
 }

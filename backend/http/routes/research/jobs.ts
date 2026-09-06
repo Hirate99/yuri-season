@@ -1,27 +1,21 @@
 import { Hono } from "hono";
 
 import {
-  parseCompleteLocalJob,
-  parseHeartbeatLocalJob,
-  parseLeaseLocalJobs,
-  type CompleteLocalJobRequest,
-  type HeartbeatLocalJobInput,
-  type HeartbeatLocalJobRequest,
-  type LeaseLocalJobsInput,
-  type LeaseLocalJobsRequest,
+  completeLocalJobSchema,
+  heartbeatLocalJobSchema,
+  leaseLocalJobsSchema,
 } from "~/http/input/job-input";
-import type { CompleteLocalJobInput } from "~/research/types";
 import type { ApiEnvironment } from "~/http/shared";
-import { validatedJson } from "~/http/shared";
+import { validate } from "~/http/shared";
 
 export const jobRoutes = new Hono<ApiEnvironment>()
-  .post("/jobs/lease", validatedJson<LeaseLocalJobsRequest, LeaseLocalJobsInput>(parseLeaseLocalJobs), async (context) => {
+  .post("/jobs/lease", validate("json", leaseLocalJobsSchema), async (context) => {
     const input = context.req.valid("json");
     return context.json({ jobs: await context.var.services.research.jobs.lease(input.owner, input.limit) });
   })
   .post(
     "/jobs/:id/heartbeat",
-    validatedJson<HeartbeatLocalJobRequest, HeartbeatLocalJobInput>(parseHeartbeatLocalJob),
+    validate("json", heartbeatLocalJobSchema),
     async (context) => {
       const input = context.req.valid("json");
       return context.json(await context.var.services.research.jobs.heartbeat(
@@ -32,7 +26,7 @@ export const jobRoutes = new Hono<ApiEnvironment>()
   )
   .post(
     "/jobs/:id/complete",
-    validatedJson<CompleteLocalJobRequest, CompleteLocalJobInput>(parseCompleteLocalJob),
+    validate("json", completeLocalJobSchema),
     async (context) => context.json(await context.var.services.research.jobs.complete(
       context.req.param("id"),
       context.req.valid("json"),

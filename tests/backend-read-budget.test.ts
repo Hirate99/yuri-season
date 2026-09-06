@@ -87,7 +87,7 @@ describe("D1 read budgets", () => {
 
   test("batches admin resource sections and preserves character/person columns", async () => {
     const resources = await readAdminAnimeResources(database.binding(), "anime-kimishinu");
-    expect(database.calls).toBe(4);
+    expect(database.calls).toBe(3);
     expect(database.executedStatements).toBe(11);
     expect(resources.cast.find(credit => credit.characterId === "char-sheena")).toMatchObject({
       characterName: "席娜", personName: "高桥李依",

@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-import type { ResearchBatch } from "@/domain";
-import { candidateDraftSchema } from "./anime-input";
+import { candidateDraftSchema } from "@/domain/inputs/anime";
 import {
   httpUrl,
   integerBetween,
@@ -11,7 +10,6 @@ import {
   numberBetween,
   offsetDateTime,
   optionalNullableText,
-  parseWithSchema,
   requiredText,
   temporal,
 } from "./schema";
@@ -166,7 +164,7 @@ const observationSchema = baseObservationSchema.superRefine((value, context) => 
   }
 });
 
-const researchBatchSchema = z.object({
+export const researchBatchSchema = z.object({
   schemaVersion: z.literal("1", "不支持这个 batch 版本。"),
   batchId: requiredText(160, "batchId"),
   createdAt: offsetDateTime("createdAt"),
@@ -175,7 +173,3 @@ const researchBatchSchema = z.object({
   note: requiredText(1_000, "note").optional(),
   observations: z.array(observationSchema).max(100, "observations 必须是至多 100 条的数组。"),
 });
-
-export function parseResearchBatch(input: unknown): ResearchBatch {
-  return parseWithSchema(researchBatchSchema, input);
-}

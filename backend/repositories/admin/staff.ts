@@ -5,9 +5,10 @@ import { peopleTable, workCreditsTable } from "~/infrastructure/db/schema";
 import { HttpError } from "~/shared/http-error";
 import { createId } from "~/shared/id";
 import { personForWrite, personInsert } from "./resource-context";
-import type { ResourceAudit } from "./resource-write";
+import type { ResourceAudit, ResourceChangeAudit } from "./resource-write";
+import { resourceAuditSnapshot } from "./resource-audit";
 
-export async function createStaff(db: D1Database, animeId: string, value: StaffWrite, audit?: ResourceAudit): Promise<string> {
+export async function createStaff(db: D1Database, animeId: string, value: StaffWrite, audit: ResourceAudit): Promise<string> {
   const person = await personForWrite(db, value);
   const id = createId("credit");
   const orm = database(db);
@@ -19,36 +20,35 @@ export async function createStaff(db: D1Database, animeId: string, value: StaffW
     profileUrl: value.profileUrl,
     sortOrder: value.sortOrder,
   });
-  if (person.create) await orm.batch([personInsert(db, person.id, value), insertCredit, ...(audit ? [audit(id)] : [])]);
-  else if (audit) await orm.batch([insertCredit, audit(id)]);
-  else await insertCredit;
+  await orm.batch(person.create ? [personInsert(db, person.id, value), insertCredit, audit(id)] : [insertCredit, audit(id)]);
   return id;
 }
 
-export async function updateStaff(db: D1Database, animeId: string, id: string, value: StaffWrite, audit?: ResourceAudit): Promise<void> {
+export async function updateStaff(db: D1Database, animeId: string, id: string, value: StaffWrite, audit: ResourceChangeAudit): Promise<void> {
   const orm = database(db);
-  const row = await orm.select({ personId: workCreditsTable.personId }).from(workCreditsTable)
+  const before = await orm.select().from(workCreditsTable)
     .where(and(eq(workCreditsTable.id, id), eq(workCreditsTable.animeId, animeId))).get();
-  if (!row) throw new HttpError(404, "没有找到 Staff 项。");
+  if (!before) throw new HttpError(404, "没有找到 Staff 项。");
   await orm.batch([
     orm.update(peopleTable).set({
       name: value.name,
       nameNative: value.nameNative,
       primaryKind: value.primaryKind,
       updatedAt: sql`CURRENT_TIMESTAMP`,
-    }).where(eq(peopleTable.id, row.personId)),
+    }).where(eq(peopleTable.id, before.personId)),
     orm.update(workCreditsTable).set({
       role: value.role,
       profileUrl: value.profileUrl,
       sortOrder: value.sortOrder,
     }).where(and(eq(workCreditsTable.id, id), eq(workCreditsTable.animeId, animeId))),
-    ...(audit ? [audit(id)] : []),
+    audit(before),
   ]);
 }
 
-export async function deleteStaff(db: D1Database, animeId: string, id: string, audit?: ResourceAudit): Promise<D1Result> {
+export async function deleteStaff(db: D1Database, animeId: string, id: string, audit: ResourceChangeAudit): Promise<D1Result> {
+  const before = await resourceAuditSnapshot(db, animeId, "staff", id);
   const orm = database(db);
   const remove = orm.delete(workCreditsTable)
     .where(and(eq(workCreditsTable.id, id), eq(workCreditsTable.animeId, animeId)));
-  return audit ? (await orm.batch([remove, audit(id)]))[0] : remove.run();
+  return (await orm.batch([remove, audit(before)]))[0];
 }

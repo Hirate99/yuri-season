@@ -8,7 +8,12 @@ import {
 
 import { HttpError } from "~/shared/http-error";
 
-type AccessJsonWebKey = JsonWebKey & { kid?: string };
+const remoteKeySets = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
+
+function remoteKeys(issuer: string) {
+  if (!remoteKeySets.has(issuer)) remoteKeySets.set(issuer, createRemoteJWKSet(new URL(`${issuer}/cdn-cgi/access/certs`)));
+  return remoteKeySets.get(issuer)!;
+}
 
 export type AccessIdentity = {
   email: string;
@@ -26,13 +31,13 @@ function allowedEmails(value: string): Set<string> {
 export async function verifyAccessJwt(
   token: string,
   config: { teamDomain: string; audience: string; adminEmails: string },
-  keys?: AccessJsonWebKey[],
+  keys?: JSONWebKeySet["keys"],
 ): Promise<AccessIdentity> {
   const teamDomain = normalizeTeamDomain(config.teamDomain);
   const issuer = `https://${teamDomain}`;
   const keySet = keys
-    ? createLocalJWKSet({ keys: keys as unknown as JSONWebKeySet["keys"] })
-    : createRemoteJWKSet(new URL(`${issuer}/cdn-cgi/access/certs`));
+    ? createLocalJWKSet({ keys })
+    : remoteKeys(issuer);
 
   let payload;
   try {

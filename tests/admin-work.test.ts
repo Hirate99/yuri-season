@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { parseAnimeCreate, parseAnimePatch } from "~/http/input/anime-input";
+import { animeCreateSchema, animePatchSchema } from "@/domain/inputs/anime";
 import { createAnime, patchAnime } from "~/repositories/anime/write";
 import { TestD1 } from "./support/d1-adapter";
 
@@ -16,7 +16,7 @@ afterEach(() => database.close());
 
 describe("Admin work editing", () => {
   test("validates and persists the full work profile through Drizzle", async () => {
-    const patch = parseAnimePatch({
+    const patch = animePatchSchema.parse({
       titleZh: "再见菈菈",
       titleJa: "さよならララ",
       synopsis: "两百年后苏醒的人鱼菈菈，与大津茉里共同生活。",
@@ -64,13 +64,13 @@ describe("Admin work editing", () => {
   });
 
   test("rejects invalid enum, URL and numeric fields", () => {
-    expect(() => parseAnimePatch({ yuriStatus: "maybe" })).toThrow("yuriStatus 格式不正确");
-    expect(() => parseAnimePatch({ officialUrl: "javascript:alert(1)" })).toThrow("只支持 HTTP(S)");
-    expect(() => parseAnimePatch({ episodeCount: 12.5 })).toThrow("需要是 1–1000 的整数");
+    expect(() => animePatchSchema.parse({ yuriStatus: "maybe" })).toThrow("yuriStatus 格式不正确");
+    expect(() => animePatchSchema.parse({ officialUrl: "javascript:alert(1)" })).toThrow("只支持 HTTP(S)");
+    expect(() => animePatchSchema.parse({ episodeCount: 12.5 })).toThrow("需要是 1–1000 的整数");
   });
 
   test("creates a work directly in a selected season", async () => {
-    const id = await createAnime(database.binding(), parseAnimeCreate({
+    const id = await createAnime(database.binding(), animeCreateSchema.parse({
       seasonId: "season-2026-summer",
       slug: "new-yuri-work",
       titleZh: "新作",

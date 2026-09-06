@@ -48,8 +48,8 @@ code. Server refreshes must not reset dirty form values.
 seasons routes. Review and automation tabs use validated search parameters.
 Each form owns its mutation state; query and mutation options live together in
 `src/features/admin/queries.ts`. The layout owns only the shared summary query.
-Dedicated page read endpoints return their own data, without unrelated empty
-arrays. The existing dashboard endpoint remains compatible with research scripts.
+Dedicated page read endpoints return their own data. The dashboard endpoint returns
+the full snapshot for research scripts; it no longer has page-specific view modes.
 Overview and coverage use `src/domain/coverage.ts` for the same completeness rules.
 
 TanStack Query owns admin server state and Feed pagination. Each router gets its
@@ -72,6 +72,13 @@ remain router-owned. Local selections and search inputs stay in component state.
 - Every native statement is parameterized and returns a declared row type.
 - Multi-row business writes use D1 batch semantics and include their audit write in
   the same atomic batch.
+- Resource changes read their scoped pre-write row once for both mutation and audit.
+  Admin-only writes require an audit; theme-song creation also supports research
+  ingestion. Track upserts and work associations execute in one atomic batch.
+- Search records and their hits use one upsert batch per record; resolved hit
+  outcomes survive repeat discovery. Lease expiry is checked in the completion SQL.
+- Keep database-derived ID sets in Drizzle subqueries rather than expanding them
+  into parameters; D1 limits each statement to 100 bound parameters.
 - Never keep a database transaction open across a network or model call.
 
 ## Query performance

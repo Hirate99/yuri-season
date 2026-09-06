@@ -1,4 +1,3 @@
-import type { ResearchBatch } from "@/domain";
 import { apiClient, rpcData } from "@/lib/api";
 import { primaryButton } from "@/lib/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +8,7 @@ export function BatchImporter() {
   const client = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const mutation = useMutation({
-    mutationFn: async (file: File) => rpcData(apiClient.api.admin.batches.$post({ json: JSON.parse(await file.text()) as ResearchBatch })),
+    mutationFn: async (file: File) => rpcData(apiClient.api.admin.batches.$post({ json: JSON.parse(await file.text()) })),
     onSuccess: () => client.invalidateQueries({ queryKey: ["admin"] }),
   });
   const result = mutation.data;

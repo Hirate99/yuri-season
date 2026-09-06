@@ -195,13 +195,11 @@ Before uploading a large original, run `bun run research:media:variants -- <inpu
 }
 ```
 
-Use `excerpt` for internal evidence and close paraphrase. When the source policy permits text redistribution, provide the source's readable original-language body in `publicText` (plain text, at most 24,000 characters). A faithful Chinese translation may be provided separately in `publicTranslation` (also at most 24,000 characters). The translation must preserve meaning, must not replace `publicText`, and must not be copied from `excerpt`, the candidate summary, or a search snippet. Omit both public fields for link-only, private, deleted, or prohibited content. The server still applies the registered source's public-text policy before publishing.
+Use `excerpt` for internal evidence and close paraphrase. When the source policy permits text redistribution, provide the source's readable original-language body in `publicText` (plain text, at most 24,000 characters). A faithful Chinese translation may be provided separately in `publicTranslation` (also at most 24,000 characters). The translation must preserve meaning, must not replace `publicText`, and must not be copied from `excerpt`, the candidate summary, or a search snippet. For non-social material, omit public fields when source policy prohibits their publication. Social-post requirements follow below; presentationMode alone does not determine text rights. The server still applies the registered source's public-text policy before publishing.
 
 For a newly published social post, `publicText` is required even when `presentationMode` is `link_only`. If the source is private, deleted, inaccessible, or its text cannot be preserved under policy, set the review decision to `hold` or `reject`; do not publish a title-and-summary-only social card.
 
-Every newly published observation, including an official webpage, must provide `mediaDisposition`: `none` when the opened original has no media, `attached` when its actual assets are linked, `unavailable` when the source bytes cannot be recovered after reasonable attempts, or `link_only_policy` when an opened source or platform rule explicitly prohibits redistribution, rehosting, or embedding. `attached` requires non-empty `candidate.media.assets`. The two exception values require `mediaDispositionReason`; for `link_only_policy`, it must identify the reviewed rule and include its URL. Absence of affirmative permission, an unexamined policy, importer defaults, missing storage access, or upload failure is not a policy prohibition. If an official page or social post contains media and no explicit prohibition is found, use `attached` and complete upload plus public readback before publication; otherwise hold the item as incomplete. Do not substitute an anime cover for source media.
-
-Before translating, read the related anime/person/character resources and use their canonical public names verbatim in candidate titles, summaries, `publicTranslation`, and any translated hashtags. A literal translation that conflicts with an existing canonical name fails preflight.
+For media disposition, canonical names, source text/translation, and public verification, follow `publication-policy.md`. This schema reference does not add an approval stage.
 
 Allowed content classes are `schedule`, `official_news`, `official_art`, `creator_art`, `cast_post`, `staff_post`, `fanwork`, `community_thread`, and `editorial`. Birthdays are never feed candidates: a verified birthday updates the character record and calendar event only; birthday-related celebration art enters the feed as `official_art` / `creator_art` (or `cast_post` for a cast birthday post) under that lane's rules. Candidate `presentationMode: link_only` during phase-one review does not justify `mediaDisposition: link_only_policy` and does not permit publishing an image-bearing social update without its required assets. Every candidate needs a review object with `decision`, `confidence`, and evidence-based reasons.
 
@@ -228,9 +226,9 @@ Create one candidate for one canonical thread URL. Keep one covered work in `ani
   "safetyRating": "safe",
   "spoilerLevel": "mild",
   "review": {
-    "decision": "hold",
+    "decision": "publish",
     "confidence": 0.95,
-    "reasons": ["已打开原始综合讨论串", "跨作品社区内容需人工复核"]
+    "reasons": ["已打开原始综合讨论串", "已核实关联作品并通过自动发布条件"]
   }
 }
 ```

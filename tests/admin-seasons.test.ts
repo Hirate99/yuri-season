@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { parseSeasonWrite } from "~/http/input/season-input";
+import { seasonSchema } from "@/domain/inputs/season";
 import { readSeasons } from "~/repositories/catalog";
 import { createSeason, updateSeason } from "~/repositories/seasons/write";
 import { TestD1 } from "./support/d1-adapter";
@@ -17,7 +17,7 @@ afterEach(() => database.close());
 
 describe("Admin seasons", () => {
   test("creates the next season and atomically switches the current catalog", async () => {
-    const value = parseSeasonWrite({
+    const value = seasonSchema.parse({
       slug: "2026-autumn",
       label: "2026 秋",
       startsOn: "2026-10-01",

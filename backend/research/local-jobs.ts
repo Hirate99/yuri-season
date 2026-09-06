@@ -11,17 +11,6 @@ import { createId } from "~/shared/id";
 
 const LEASE_MINUTES = 20;
 
-type CompletionRow = {
-  id: string;
-  status: "planned" | "leased" | "running" | "completed" | "partial" | "retry" | "dead";
-  research_run_id: string | null;
-  lease_token_hash: string | null;
-  lease_until: string | null;
-  attempt_count: number;
-  max_attempts: number;
-  completion_key: string | null;
-};
-
 function objectJson(value: string): Record<string, unknown> {
   try {
     const parsed: unknown = JSON.parse(value);
@@ -87,13 +76,12 @@ export async function heartbeatLocalJob(
   return { id: row.id, status: row.status, leaseUntil: row.lease_until };
 }
 
-async function readCompletion(db: D1Database, jobId: string): Promise<CompletionRow | null> {
-  const row = await database(db).select({
+function readCompletion(db: D1Database, jobId: string) {
+  return database(db).select({
     id: updateJobsTable.id,
     status: updateJobsTable.status,
     research_run_id: updateJobsTable.researchRunId,
     lease_token_hash: updateJobsTable.leaseTokenHash,
-    lease_until: updateJobsTable.leaseUntil,
     attempt_count: updateJobsTable.attemptCount,
     max_attempts: updateJobsTable.maxAttempts,
     completion_key: updateJobsTable.completionKey,
@@ -101,7 +89,6 @@ async function readCompletion(db: D1Database, jobId: string): Promise<Completion
     eq(updateJobsTable.id, jobId),
     eq(updateJobsTable.executionTarget, "local"),
   )).get();
-  return row ?? null;
 }
 
 export async function completeLocalJob(
@@ -118,9 +105,6 @@ export async function completeLocalJob(
   const tokenHash = await stableFingerprint(input.leaseToken);
   if (!["leased", "running"].includes(current.status) || current.lease_token_hash !== tokenHash) {
     throw new HttpError(409, "任务租约已失效或不属于当前执行者。");
-  }
-  if (current.lease_until && Date.parse(`${current.lease_until.replace(" ", "T")}Z`) < Date.now()) {
-    throw new HttpError(409, "任务租约已经过期。");
   }
   if (input.runId) {
     const run = await database(db).select({ id: researchRunsTable.id }).from(researchRunsTable).where(and(
@@ -151,7 +135,7 @@ export async function completeLocalJob(
   });
   if ((update.meta.changes ?? 0) === 0) {
     const latest = await readCompletion(db, jobId);
-    if (latest?.completion_key === input.idempotencyKey) {
+    if (latest?.completion_key === input.idempotencyKey && ["completed", "partial", "retry", "dead"].includes(latest.status)) {
       return { id: latest.id, status: latest.status as LocalJobCompletion["status"], duplicate: true, runId: latest.research_run_id };
     }
     throw new HttpError(409, "任务状态已经变化，请重新领取。");

@@ -133,13 +133,7 @@ async function calendarForSeason(db: D1Database, season: Season): Promise<Calend
     yuriStatus: row.yuriStatus,
     visualTheme: row.visualTheme,
     coverUrl: row.coverUrl,
-    currentEpisode: resolveCurrentEpisode({
-      status: row.status,
-      premiereAt: row.premiereAt,
-      episodeCount: row.episodeCount,
-      premiereEpisodeCount: row.premiereEpisodeCount,
-      latestVerifiedEpisode: row.latestVerifiedEpisode,
-    }),
+    currentEpisode: resolveCurrentEpisode(row),
     slot: {
       id: row.slotId,
       label: row.slotLabel,

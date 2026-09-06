@@ -21,7 +21,7 @@ beforeEach(async () => {
 afterEach(() => database.close());
 
 describe("Admin related content", () => {
-  test("resolves a shared track in one statement, filling only missing credits", async () => {
+  test("atomically links a shared track, filling only missing credits", async () => {
     const value = themeSongSchema.parse({
       songKind: "opening", sequence: 1, title: "Merged Song", artist: "Shared Artist",
       lyricist: "Original lyricist", composer: null, verified: true,
@@ -29,16 +29,27 @@ describe("Admin related content", () => {
     });
     database.resetMetrics();
     await createThemeSong(database.binding(), "anime-kimishinu", value);
-    expect(database.calls).toBe(2); // Resolve track + insert work association.
+    expect(database.calls).toBe(1);
     expect(database.executedStatements).toBe(2);
     database.resetMetrics();
     await createThemeSong(database.binding(), "anime-taiari", {
       ...value, lyricist: "Replacement", composer: "New composer", verified: false,
     });
-    expect(database.calls).toBe(2);
+    expect(database.calls).toBe(1);
     expect(database.executedStatements).toBe(2);
     expect(database.sqlite.query("SELECT lyricist, composer, verified FROM music_tracks WHERE title = ?").all(value.title))
       .toEqual([{ lyricist: "Original lyricist", composer: "New composer", verified: 1 }]);
+    const conflicting = parseResourceWrite("theme_song", { ...value, title: "Orphan track" });
+    await expect(createAdminResource(database.binding(), "anime-kimishinu", conflicting)).rejects.toMatchObject({ status: 409 });
+    expect(database.sqlite.query("SELECT id FROM music_tracks WHERE title = 'Orphan track'").get()).toBeNull();
+    const tracks = database.sqlite.query("SELECT * FROM music_tracks").all();
+    const resources = await readAdminAnimeResources(database.binding(), "anime-goodbye-lara");
+    database.exec("CREATE TRIGGER reject_audit BEFORE INSERT ON audit_log BEGIN SELECT RAISE(ABORT, 'audit unavailable'); END;");
+    await expect(createAdminResource(database.binding(), "anime-goodbye-lara", conflicting)).rejects.toThrow("audit unavailable");
+    await expect(createAdminResource(database.binding(), "anime-goodbye-lara",
+      parseResourceWrite("theme_song", { ...value, arranger: "Uncommitted arranger" }))).rejects.toThrow("audit unavailable");
+    expect(database.sqlite.query("SELECT * FROM music_tracks").all()).toEqual(tracks);
+    expect(await readAdminAnimeResources(database.binding(), "anime-goodbye-lara")).toEqual(resources);
   });
 
   test("maintains events, media and concentrated discussion threads", async () => {
@@ -70,9 +81,9 @@ describe("Admin related content", () => {
     expect((await readMedia(database.binding(), animeId)).some((item) => item.id === mediaId)).toBe(false);
     expect((await readDiscussions(database.binding(), animeId)).some((item) => item.id === discussionId)).toBe(true);
 
-    await updateAdminResource(database.binding(), animeId, "media", mediaId,
+    await updateAdminResource(database.binding(), animeId, mediaId,
       parseResourceWrite("media", { ...mediaWrite.value, safetyRating: "safe" }));
-    await updateAdminResource(database.binding(), animeId, "discussion", discussionId,
+    await updateAdminResource(database.binding(), animeId, discussionId,
       parseResourceWrite("discussion", { ...discussionWrite.value, isActive: false }));
     expect((await readMedia(database.binding(), animeId)).some((item) => item.id === mediaId)).toBe(true);
     expect((await readDiscussions(database.binding(), animeId)).some((item) => item.id === discussionId)).toBe(false);
@@ -113,7 +124,9 @@ describe("Admin related content", () => {
     expect((await readAdminAnimeResources(database.binding(), "anime-kimishinu"))
       .discussions.find((item) => item.id === firstId)?.sharedAnimeCount).toBe(2);
 
+    database.resetMetrics();
     await deleteAdminResource(database.binding(), "anime-kimishinu", "discussion", firstId);
+    expect(database.calls).toBe(3);
     expect((await readDiscussions(database.binding(), "anime-taiari"))
       .some((item) => item.id === firstId)).toBe(true);
     expect(database.sqlite.query("SELECT COUNT(*) AS count FROM discussions WHERE id = ?").get(firstId))

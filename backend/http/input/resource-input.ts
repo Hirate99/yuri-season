@@ -10,4 +10,3 @@ export function parseResourceKind(value: string) {
 
 export const parseResourceWrite = (kind: string, input: unknown) =>
   parseWithSchema(resourceEnvelopeSchema, { kind: parseResourceKind(kind), value: input });
-export const parseResourceEnvelope = (input: unknown) => parseWithSchema(resourceEnvelopeSchema, input);

@@ -10,6 +10,7 @@ class TestStatement {
   ) {}
 
   bind(...values: unknown[]): TestStatement {
+    if (values.length > 100) throw new RangeError("D1 allows at most 100 bound parameters per query");
     this.bindings = values;
     return this;
   }

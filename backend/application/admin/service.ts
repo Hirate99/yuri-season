@@ -1,5 +1,4 @@
 import type {
-  AdminDashboardView,
   AdminResourceKind,
   AdminResourceWrite,
   AnimeCreate,
@@ -20,10 +19,10 @@ import { readSeasons } from "~/repositories/catalog";
 import { createSeason, updateSeason } from "~/repositories/seasons/write";
 import { createAdminResource, deleteAdminResource, updateAdminResource } from "./resources";
 
-export async function readAdminDashboard(db: D1Database, view: AdminDashboardView = "all") {
+export async function readAdminDashboard(db: D1Database) {
   const [data, coverage, seasonIndex] = await Promise.all([
-    readAdminDashboardData(db, view),
-    view === "all" || view === "overview" || view === "coverage" ? readAdminCoverage(db) : [],
+    readAdminDashboardData(db),
+    readAdminCoverage(db),
     readSeasons(db),
   ]);
   return { ...data, coverage, seasons: seasonIndex.seasons };
@@ -53,7 +52,7 @@ export function createAdminService(env: Env, principal?: AdminPrincipal) {
       },
       coverage: () => readAdminCoverage(env.DB),
     },
-    dashboard: (view?: AdminDashboardView) => readAdminDashboard(env.DB, view),
+    dashboard: () => readAdminDashboard(env.DB),
     anime: {
       create: (value: AnimeCreate) => createAnime(env.DB, value, principal),
       patch: (id: string, value: AnimePatch) => patchAnime(env.DB, id, value, principal),
@@ -72,8 +71,8 @@ export function createAdminService(env: Env, principal?: AdminPrincipal) {
     resources: {
       list: (animeId: string) => readAdminAnimeResources(env.DB, animeId),
       create: (animeId: string, value: AdminResourceWrite) => createAdminResource(env.DB, animeId, value, principal),
-      update: (animeId: string, kind: AdminResourceKind, id: string, value: AdminResourceWrite) =>
-        updateAdminResource(env.DB, animeId, kind, id, value, principal),
+      update: (animeId: string, id: string, value: AdminResourceWrite) =>
+        updateAdminResource(env.DB, animeId, id, value, principal),
       delete: (animeId: string, kind: Exclude<AdminResourceKind, "source">, id: string) =>
         deleteAdminResource(env.DB, animeId, kind, id, principal),
     },

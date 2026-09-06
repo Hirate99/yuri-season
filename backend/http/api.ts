@@ -30,7 +30,6 @@ const app = new Hono<ApiEnvironment>();
 
 app.use("/api/*", async (context, next) => {
   const startedAt = performance.now();
-  context.set("services", createRequestServices(context.env));
   await next();
   context.res.headers.append("server-timing", `api;dur=${(performance.now() - startedAt).toFixed(1)}`);
   if (!context.res.headers.has("cache-control")) context.res.headers.set("cache-control", "no-store");
@@ -46,8 +45,12 @@ app.use("/api/admin/*", bodyLimit({
 }));
 
 app.use("/api/admin/*", async (context, next) => {
-  const principal = await requireAdmin(context.req.raw, context.env);
-  context.set("services", createRequestServices(context.env, principal));
+  context.set("principal", await requireAdmin(context.req.raw, context.env));
+  await next();
+});
+
+app.use("/api/*", async (context, next) => {
+  context.set("services", createRequestServices(context.env, context.var.principal));
   await next();
 });
 

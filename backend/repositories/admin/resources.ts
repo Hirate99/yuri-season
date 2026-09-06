@@ -82,14 +82,14 @@ export async function readAdminAnimeResources(
   const ownerLabels = new Map<string, string>([[animeId, anime.title]]);
   for (const credit of staff) ownerLabels.set(credit.personId, credit.name);
   for (const credit of cast) ownerLabels.set(credit.personId, credit.personName);
-  const personIds = [...new Set([...staff, ...cast].map((credit) => credit.personId))];
-  const animeOwner = and(eq(accountsTable.ownerType, "anime"), eq(accountsTable.ownerId, animeId));
-  const ownerFilter = personIds.length === 0
-    ? animeOwner
-    : or(
-        animeOwner,
-        and(eq(accountsTable.ownerType, "person"), inArray(accountsTable.ownerId, personIds)),
-      );
+  const personIds = orm.select({ id: workCreditsTable.personId }).from(workCreditsTable)
+    .where(eq(workCreditsTable.animeId, animeId))
+    .unionAll(orm.select({ id: castCreditsTable.personId }).from(castCreditsTable)
+      .where(eq(castCreditsTable.animeId, animeId)));
+  const ownerFilter = or(
+    and(eq(accountsTable.ownerType, "anime"), eq(accountsTable.ownerId, animeId)),
+    and(eq(accountsTable.ownerType, "person"), inArray(accountsTable.ownerId, personIds)),
+  );
   const accountRows = await orm.select().from(accountsTable).where(ownerFilter);
   const accounts = accountRows.map(({ createdAt: _createdAt, ...account }) => ({
     ...account,

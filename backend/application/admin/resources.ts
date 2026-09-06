@@ -6,7 +6,6 @@ import { createCast, deleteCast, updateCast } from "~/repositories/admin/cast";
 import { createDiscussion, unlinkDiscussionFromAnime, updateDiscussion } from "~/repositories/admin/discussion";
 import { createEvent, deleteEvent, updateEvent } from "~/repositories/admin/event";
 import { createMedia, deleteMedia, updateMedia } from "~/repositories/admin/media";
-import { resourceAuditSnapshot } from "~/repositories/admin/resource-audit";
 import { assertAnime } from "~/repositories/admin/resource-context";
 import { createSource, updateSource } from "~/repositories/admin/source";
 import { createStaff, deleteStaff, updateStaff } from "~/repositories/admin/staff";
@@ -33,19 +32,17 @@ export async function createAdminResource(
       animeId,
       after: input.value,
     });
-    let id: string;
     switch (input.kind) {
-      case "broadcast": id = await createBroadcast(db, animeId, input.value, audit); break;
-      case "account": id = await createAccount(db, animeId, input.value, audit); break;
-      case "staff": id = await createStaff(db, animeId, input.value, audit); break;
-      case "cast": id = await createCast(db, animeId, input.value, audit); break;
-      case "source": id = await createSource(db, animeId, input.value, audit); break;
-      case "event": id = await createEvent(db, animeId, input.value, audit); break;
-      case "media": id = await createMedia(db, animeId, input.value, audit); break;
-      case "discussion": id = await createDiscussion(db, animeId, input.value, audit); break;
-      case "theme_song": id = await createThemeSong(db, animeId, input.value, audit); break;
+      case "broadcast": return await createBroadcast(db, animeId, input.value, audit);
+      case "account": return await createAccount(db, animeId, input.value, audit);
+      case "staff": return await createStaff(db, animeId, input.value, audit);
+      case "cast": return await createCast(db, animeId, input.value, audit);
+      case "source": return await createSource(db, animeId, input.value, audit);
+      case "event": return await createEvent(db, animeId, input.value, audit);
+      case "media": return await createMedia(db, animeId, input.value, audit);
+      case "discussion": return await createDiscussion(db, animeId, input.value, audit);
+      case "theme_song": return await createThemeSong(db, animeId, input.value, audit);
     }
-    return id;
   } catch (error) {
     return translateConstraint(error);
   }
@@ -54,16 +51,12 @@ export async function createAdminResource(
 export async function updateAdminResource(
   db: D1Database,
   animeId: string,
-  kind: AdminResourceKind,
   id: string,
   input: AdminResourceWrite,
   principal?: AdminPrincipal,
 ): Promise<void> {
-  if (kind !== input.kind) throw new HttpError(400, "资源类型不一致。");
   try {
-    const before = await resourceAuditSnapshot(db, animeId, kind, id);
-    if (!before) throw new HttpError(404, "没有找到资源。");
-    const audit = () => auditInsert(db, "admin", "update_resource", kind, id, {
+    const audit = (before: unknown) => auditInsert(db, "admin", "update_resource", input.kind, id, {
       principal,
       animeId,
       before,
@@ -92,9 +85,7 @@ export async function deleteAdminResource(
   id: string,
   principal?: AdminPrincipal,
 ): Promise<void> {
-  const before = await resourceAuditSnapshot(db, animeId, kind, id);
-  if (!before) throw new HttpError(404, "没有找到资源。");
-  const audit = () => auditInsert(db, "admin", "delete_resource", kind, id, { principal, animeId, before });
+  const audit = (before: unknown) => auditInsert(db, "admin", "delete_resource", kind, id, { principal, animeId, before });
   let result: D1Result;
   switch (kind) {
     case "broadcast": result = await deleteBroadcast(db, animeId, id, audit); break;

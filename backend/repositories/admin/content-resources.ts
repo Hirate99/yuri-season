@@ -19,7 +19,11 @@ export async function readAdminContentResources(db: D1Database, animeId: string)
   themeSongs: AdminThemeSong[];
 }> {
   const orm = database(db);
-  const [events, media, discussionRows, themeSongRows] = await orm.batch([
+  const trackUsage = orm.$with("track_usage").as(orm.select({
+    trackId: animeThemeSongsTable.trackId,
+    sharedAnimeCount: count().as("shared_anime_count"),
+  }).from(animeThemeSongsTable).groupBy(animeThemeSongsTable.trackId));
+  const [events, media, discussionRows, themeSongs, discussionLinks] = await orm.batch([
     orm.select({
       id: eventsTable.id,
       personId: eventsTable.personId,
@@ -71,13 +75,15 @@ export async function readAdminContentResources(db: D1Database, animeId: string)
         desc(sql`COALESCE(${discussionsTable.lastActivityAt}, ${discussionsTable.lastCheckedAt})`),
         discussionsTable.id,
       ),
-    orm.select({
+    orm.with(trackUsage).select({
       ...themeSongSelection,
       trackId: animeThemeSongsTable.trackId,
       verified: musicTracksTable.verified,
       sortOrder: animeThemeSongsTable.sortOrder,
+      sharedAnimeCount: trackUsage.sharedAnimeCount,
     }).from(animeThemeSongsTable)
       .innerJoin(musicTracksTable, eq(musicTracksTable.id, animeThemeSongsTable.trackId))
+      .innerJoin(trackUsage, eq(trackUsage.trackId, animeThemeSongsTable.trackId))
       .where(eq(animeThemeSongsTable.animeId, animeId))
       .orderBy(
         asc(animeThemeSongsTable.sortOrder),
@@ -85,20 +91,13 @@ export async function readAdminContentResources(db: D1Database, animeId: string)
         animeThemeSongsTable.sequence,
         animeThemeSongsTable.id,
       ),
-  ]);
-
-  const [discussionLinks, themeCounts] = await Promise.all([
-    discussionRows.length === 0 ? Promise.resolve([]) : orm.select({
+    orm.select({
       discussionId: discussionAnimeTable.discussionId,
       animeId: discussionAnimeTable.animeId,
     }).from(discussionAnimeTable)
-      .where(inArray(discussionAnimeTable.discussionId, discussionRows.map(({ id }) => id))),
-    themeSongRows.length === 0 ? Promise.resolve([]) : orm.select({
-      trackId: animeThemeSongsTable.trackId,
-      count: count(),
-    }).from(animeThemeSongsTable)
-      .where(inArray(animeThemeSongsTable.trackId, themeSongRows.map(({ trackId }) => trackId)))
-      .groupBy(animeThemeSongsTable.trackId),
+      .where(inArray(discussionAnimeTable.discussionId,
+        orm.select({ id: discussionAnimeTable.discussionId }).from(discussionAnimeTable)
+          .where(eq(discussionAnimeTable.animeId, animeId)))),
   ]);
   const animeIdsByDiscussion = new Map<string, string[]>();
   for (const link of discussionLinks) {
@@ -106,7 +105,6 @@ export async function readAdminContentResources(db: D1Database, animeId: string)
     animeIds.push(link.animeId);
     animeIdsByDiscussion.set(link.discussionId, animeIds);
   }
-  const themeCountByTrack = new Map(themeCounts.map((row) => [row.trackId, row.count]));
 
   return {
     events: events.map((row) => ({ ...row, eventType: row.eventType as AdminEvent["eventType"] })),
@@ -116,9 +114,6 @@ export async function readAdminContentResources(db: D1Database, animeId: string)
       animeIds: animeIdsByDiscussion.get(row.id) ?? [],
       sharedAnimeCount: animeIdsByDiscussion.get(row.id)?.length ?? 0,
     })),
-    themeSongs: themeSongRows.map((row) => ({
-      ...row,
-      sharedAnimeCount: themeCountByTrack.get(row.trackId) ?? 0,
-    })),
+    themeSongs,
   };
 }

@@ -1,4 +1,4 @@
-import type { CandidateDraft, ReviewDecision } from "@/domain";
+import type { ReviewDecision } from "@/domain";
 import type { BatchItem } from "drizzle-orm/batch";
 import { eq, sql } from "drizzle-orm";
 
@@ -31,20 +31,10 @@ export type ReviewMetadata = {
   principal?: AdminPrincipal;
 };
 
-type CandidateDecisionRow = {
-  id: string;
-  animeId: string | null;
-  contentClass: CandidateDraft["contentClass"];
-  title: string;
-  url: string;
-  sourceName: string;
-  publishedAt: string;
-  feedItemId: string | null;
-  withdrawnAt: string | null;
-};
+type CandidateDecisionRow = NonNullable<Awaited<ReturnType<typeof candidateForDecision>>>;
 
-async function candidateForDecision(db: D1Database, candidateId: string) {
-  const row = await database(db).select({
+function candidateForDecision(db: D1Database, candidateId: string) {
+  return database(db).select({
     id: feedCandidatesTable.id,
     animeId: feedCandidatesTable.animeId,
     contentClass: feedCandidatesTable.contentClass,
@@ -57,7 +47,6 @@ async function candidateForDecision(db: D1Database, candidateId: string) {
   }).from(feedCandidatesTable)
     .leftJoin(feedItemsTable, eq(feedItemsTable.candidateId, feedCandidatesTable.id))
     .where(eq(feedCandidatesTable.id, candidateId)).get();
-  return row;
 }
 
 function validateWithdrawal(candidate: CandidateDecisionRow, metadata: ReviewMetadata): void {

@@ -25,13 +25,12 @@ export async function rememberSearch(db: D1Database, records: SearchMemoryWrite[
   const orm = database(db);
   let hitCount = 0;
   for (const record of records) {
-    const existing = await orm.select({ id: searchMemoryTable.id }).from(searchMemoryTable).where(and(
+    const memoryId = sql<string>`(${orm.select({ id: searchMemoryTable.id }).from(searchMemoryTable).where(and(
       eq(searchMemoryTable.scopeType, record.scopeType),
       eq(searchMemoryTable.scopeId, record.scopeId),
       eq(searchMemoryTable.searchKind, record.searchKind),
       eq(searchMemoryTable.targetKey, record.targetKey),
-    )).get();
-    const id = existing?.id ?? createId("memory");
+    ))})`;
     const values = {
       queryText: record.queryText,
       status: record.status,
@@ -44,52 +43,44 @@ export async function rememberSearch(db: D1Database, records: SearchMemoryWrite[
       notes: record.notes ?? null,
       updatedAt: sql`CURRENT_TIMESTAMP`,
     };
-    if (existing) {
-      await orm.update(searchMemoryTable).set(values).where(eq(searchMemoryTable.id, id));
-    } else {
-      await orm.insert(searchMemoryTable).values({
-        id,
-        scopeType: record.scopeType,
-        scopeId: record.scopeId,
-        searchKind: record.searchKind,
-        targetKey: record.targetKey,
-        ...values,
-      });
-    }
-
-    for (const hit of record.hits) {
-      const prior = await orm.select({ id: searchMemoryHitsTable.id, outcome: searchMemoryHitsTable.outcome })
-        .from(searchMemoryHitsTable).where(and(
-          eq(searchMemoryHitsTable.memoryId, id),
-          eq(searchMemoryHitsTable.canonicalUrl, hit.canonicalUrl),
-        )).get();
-      if (prior) {
-        await orm.update(searchMemoryHitsTable).set({
-          title: hit.title,
-          contentHash: hit.contentHash,
-          outcome: prior.outcome === "seen" ? hit.outcome : prior.outcome,
+    const upsert = orm.insert(searchMemoryTable).values({
+      id: createId("memory"),
+      scopeType: record.scopeType,
+      scopeId: record.scopeId,
+      searchKind: record.searchKind,
+      targetKey: record.targetKey,
+      ...values,
+    }).onConflictDoUpdate({
+      target: [searchMemoryTable.scopeType, searchMemoryTable.scopeId, searchMemoryTable.searchKind, searchMemoryTable.targetKey],
+      set: values,
+    });
+    await orm.batch([upsert, ...record.hits.map(hit => {
+      const content = {
+        title: hit.title,
+        contentHash: hit.contentHash,
+        metadataJson: JSON.stringify(hit.metadata ?? {}),
+        lastSeenAt: record.searchedAt,
+      };
+      return orm.insert(searchMemoryHitsTable).values({
+        ...content,
+        id: createId("hit"),
+        memoryId,
+        canonicalUrl: hit.canonicalUrl,
+        outcome: hit.outcome,
+        observationId: hit.observationId ?? null,
+        candidateId: hit.candidateId ?? null,
+        firstSeenAt: record.searchedAt,
+      }).onConflictDoUpdate({
+        target: [searchMemoryHitsTable.memoryId, searchMemoryHitsTable.canonicalUrl],
+        set: {
+          ...content,
+          outcome: sql`CASE WHEN ${searchMemoryHitsTable.outcome} = 'seen' THEN ${hit.outcome} ELSE ${searchMemoryHitsTable.outcome} END`,
           observationId: hit.observationId ?? sql`${searchMemoryHitsTable.observationId}`,
           candidateId: hit.candidateId ?? sql`${searchMemoryHitsTable.candidateId}`,
-          metadataJson: JSON.stringify(hit.metadata ?? {}),
-          lastSeenAt: record.searchedAt,
-        }).where(eq(searchMemoryHitsTable.id, prior.id));
-      } else {
-        await orm.insert(searchMemoryHitsTable).values({
-          id: createId("hit"),
-          memoryId: id,
-          canonicalUrl: hit.canonicalUrl,
-          title: hit.title,
-          contentHash: hit.contentHash,
-          outcome: hit.outcome,
-          observationId: hit.observationId ?? null,
-          candidateId: hit.candidateId ?? null,
-          metadataJson: JSON.stringify(hit.metadata ?? {}),
-          firstSeenAt: record.searchedAt,
-          lastSeenAt: record.searchedAt,
-        });
-      }
-      hitCount += 1;
-    }
+        },
+      });
+    })]);
+    hitCount += record.hits.length;
   }
   return { records: records.length, hits: hitCount };
 }

@@ -2,8 +2,11 @@
 
 Use this policy for public copy, attached media, storage operations, migrations, deduplication, and publication repair.
 
+The editor performs routine review and publication under the update authorization. Request human input only for an unresolved material decision; operationally unfinished items remain the editor's queue.
+
 ## Natural title consistency
 
+- Before writing, read related anime/person/character resources and use their canonical public names in titles, summaries, translations, and translated hashtags. Keep internal `excerpt`, readable source `publicText`, and faithful Chinese `publicTranslation` distinct.
 - Every public Feed title must carry the work's canonical public name or an explicitly approved display form. Card metadata is not a substitute. Keep sentence order natural: announcements may lead with the work or event; creator/cast items may lead with the person's action; community items may lead with the platform or topic while still identifying the work.
 - Preserve natural verbs and rhythm (`公开`, `宣布`, `上线`, `分享`, `谈到`, `绘制`) while keeping work, person, event, and source identities stable. Do not normalize titles into one mechanical prefix.
 - Avoid silent drift among canonical titles, abbreviations, translations, romanization, and old punctuation. Use an alias only when source-significant or materially clearer; do not let it replace canonical identity throughout a series.

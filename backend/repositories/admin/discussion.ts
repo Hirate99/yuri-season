@@ -15,10 +15,13 @@ import { createId } from "~/shared/id";
 
 import { auditInsert } from "../audit";
 import type { AdminPrincipal } from "~/infrastructure/auth";
-import type { ResourceAudit } from "./resource-write";
+import type { ResourceAudit, ResourceChangeAudit } from "./resource-write";
+import { resourceAuditSnapshot } from "./resource-audit";
 
 function linkedAnimeIds(animeId: string, value: DiscussionWrite): string[] {
-  return [...new Set([animeId, ...(value.animeIds ?? [])])];
+  const ids = [...new Set([animeId, ...value.animeIds])];
+  if (ids.length > 100) throw new HttpError(400, "讨论串最多关联 100 部作品（含当前作品）。");
+  return ids;
 }
 
 async function assertAnimeLinks(db: D1Database, animeIds: string[]): Promise<void> {
@@ -34,7 +37,7 @@ function linkQueries(db: D1Database, discussionId: string, animeIds: string[]) {
     .onConflictDoNothing());
 }
 
-export async function createDiscussion(db: D1Database, animeId: string, value: DiscussionWrite, audit?: ResourceAudit): Promise<string> {
+export async function createDiscussion(db: D1Database, animeId: string, value: DiscussionWrite, audit: ResourceAudit): Promise<string> {
   const animeIds = linkedAnimeIds(animeId, value);
   await assertAnimeLinks(db, animeIds);
   const orm = database(db);
@@ -42,7 +45,7 @@ export async function createDiscussion(db: D1Database, animeId: string, value: D
     .where(eq(discussionsTable.url, value.url)).get();
   if (existing) {
     const links: BatchItem<"sqlite">[] = linkQueries(db, existing.id, animeIds);
-    if (audit) links.push(audit(existing.id));
+    links.push(audit(existing.id));
     await orm.batch(links as unknown as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
     return existing.id;
   }
@@ -62,19 +65,14 @@ export async function createDiscussion(db: D1Database, animeId: string, value: D
     }),
     ...linkQueries(db, id, animeIds),
   ];
-  if (audit) queries.push(audit(id));
+  queries.push(audit(id));
   await orm.batch(queries as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
   return id;
 }
 
-export async function updateDiscussion(db: D1Database, animeId: string, id: string, value: DiscussionWrite, audit?: ResourceAudit): Promise<void> {
+export async function updateDiscussion(db: D1Database, animeId: string, id: string, value: DiscussionWrite, audit: ResourceChangeAudit): Promise<void> {
+  const before = await resourceAuditSnapshot(db, animeId, "discussion", id);
   const orm = database(db);
-  const linked = await orm.select({ discussionId: discussionAnimeTable.discussionId })
-    .from(discussionAnimeTable).where(and(
-      eq(discussionAnimeTable.discussionId, id),
-      eq(discussionAnimeTable.animeId, animeId),
-    )).get();
-  if (!linked) throw new HttpError(404, "没有找到讨论串。");
 
   const animeIds = linkedAnimeIds(animeId, value);
   await assertAnimeLinks(db, animeIds);
@@ -91,11 +89,12 @@ export async function updateDiscussion(db: D1Database, animeId: string, id: stri
     }).where(eq(discussionsTable.id, id)),
     orm.delete(discussionAnimeTable).where(and(
       eq(discussionAnimeTable.discussionId, id),
-      notInArray(discussionAnimeTable.animeId, animeIds),
+      // Preserve existing links while staying below D1's 100-parameter limit.
+      notInArray(discussionAnimeTable.animeId, sql`(SELECT value FROM json_each(${JSON.stringify(animeIds)}))`),
     )),
     ...linkQueries(db, id, animeIds),
   ];
-  if (audit) queries.push(audit(id));
+  queries.push(audit(before));
   await orm.batch(queries as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 }
 
@@ -103,18 +102,10 @@ export async function unlinkDiscussionFromAnime(
   db: D1Database,
   animeId: string,
   id: string,
-  audit?: ResourceAudit,
+  audit: ResourceChangeAudit,
 ): Promise<D1Result> {
+  const before = await resourceAuditSnapshot(db, animeId, "discussion", id);
   const orm = database(db);
-  const linked = await orm.select({ discussionId: discussionAnimeTable.discussionId })
-    .from(discussionAnimeTable).where(and(
-      eq(discussionAnimeTable.discussionId, id),
-      eq(discussionAnimeTable.animeId, animeId),
-    )).get();
-  if (!linked) throw new HttpError(404, "没有找到当前作品的讨论关联。");
-  const linkCount = await orm.select({ count: sql<number>`COUNT(*)` }).from(discussionAnimeTable)
-    .where(eq(discussionAnimeTable.discussionId, id)).get();
-  if ((linkCount?.count ?? 0) <= 1) throw new HttpError(409, "这是讨论串的最后一个作品关联，请使用彻底删除。");
   const remaining = await orm.select({ animeId: discussionAnimeTable.animeId }).from(discussionAnimeTable)
     .where(and(
       eq(discussionAnimeTable.discussionId, id),
@@ -123,7 +114,7 @@ export async function unlinkDiscussionFromAnime(
     .orderBy(discussionAnimeTable.animeId)
     .limit(1)
     .get();
-  if (!remaining) throw new HttpError(409, "讨论串没有可保留的作品关联。");
+  if (!remaining) throw new HttpError(409, "这是讨论串的最后一个作品关联，请使用彻底删除。");
 
   const [result] = await orm.batch([
     orm.delete(discussionAnimeTable).where(and(
@@ -133,7 +124,7 @@ export async function unlinkDiscussionFromAnime(
     orm.update(discussionsTable).set({
       animeId: remaining.animeId,
     }).where(and(eq(discussionsTable.id, id), eq(discussionsTable.animeId, animeId))),
-    ...(audit ? [audit(id)] : []),
+    audit(before),
   ]);
   return result;
 }

@@ -101,15 +101,4 @@ export type RunCounters = {
   rejected: number;
 };
 
-export type UpdateJobRow = {
-  id: string;
-  job_type: string;
-  scope_type: string;
-  scope_id: string | null;
-  priority: number;
-  attempt_count: number;
-  max_attempts: number;
-  input_json: string;
-  research_run_id: string;
-  lease_token_hash: string;
-};
+export type { NativeWorkerJobRow as UpdateJobRow } from "~/infrastructure/db/native/jobs";

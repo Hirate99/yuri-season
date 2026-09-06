@@ -60,6 +60,29 @@ export function eventOccursToday(event: CalendarEvent, viewerTimeZone: string, n
   return startDay <= today && today <= endDay;
 }
 
+export function eventIsOngoing(event: CalendarEvent, now = new Date()): boolean {
+  if (!event.startsAt || event.eventType === "birthday" || event.status !== "scheduled") return false;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(event.startsAt)) {
+    return eventOccursToday(event, event.timezone, now);
+  }
+  return event.endsAt !== null
+    && Date.parse(event.startsAt) <= now.valueOf() && now.valueOf() < Date.parse(event.endsAt);
+}
+
+export function prioritizeCalendarEvents(events: CalendarEvent[], viewerTimeZone: string, now: Date): CalendarEvent[] {
+  return events.map((event, index) => ({
+    event,
+    index,
+    priority: eventOccursToday({ ...event, endsAt: null }, viewerTimeZone, now)
+      ? (event.eventType === "birthday" ? 3 : 2)
+      : eventOccursToday(event, viewerTimeZone, now) ? 1 : 0,
+    duration: event.startsAt && event.endsAt
+      ? Math.max(0, Date.parse(event.endsAt) - Date.parse(event.startsAt)) || 0 : 0,
+  })).sort((left, right) => right.priority - left.priority
+    || (left.priority > 0 ? left.duration - right.duration : 0) || left.index - right.index)
+    .map(({ event }) => event);
+}
+
 function eventComparisonDateKey(event: CalendarEvent, now: Date): string | null {
   const eventDay = eventDateKey(event);
   if (event.eventType !== "birthday" || eventDay === null) return eventDay;

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import type { CatalogAnime, CatalogResponse } from "@/domain";
 import { useViewerTimeZone } from "@/hooks/use-viewer-timezone";
-import { eventOccursToday, partitionCalendarEvents } from "@/lib/calendar-events";
+import { eventOccursToday, partitionCalendarEvents, prioritizeCalendarEvents } from "@/lib/calendar-events";
 import { verifiedBirthdayPortrait } from "@/lib/character-portraits";
 import { eventPresentation, eventTitle } from "@/lib/event-presentation";
 import { weekdayLabel } from "@/lib/format";
@@ -15,7 +15,6 @@ import { CoverImage } from "./cover-image";
 import { EpisodeProgressBadge } from "./episode-progress-badge";
 import { EventTime } from "./event-time";
 
-const JAPAN_TIME_ZONE = "Asia/Tokyo";
 const BROADCAST_PAGE_SIZE = 4;
 const EVENT_PAGE_SIZE = 3;
 const weekdays = [1, 2, 3, 4, 5, 6, 0];
@@ -84,14 +83,7 @@ export function HomeCalendar({ catalog, viewerTimeZone: initialTimeZone, rendere
   const broadcastPageStart = visibleBroadcastPage * BROADCAST_PAGE_SIZE;
   const visibleBroadcasts = selectedEntries.slice(broadcastPageStart, broadcastPageStart + BROADCAST_PAGE_SIZE);
   const allUpcomingEvents = partitionCalendarEvents(catalog.events, now).upcoming;
-  const orderedUpcomingEvents = allUpcomingEvents
-    .map((event, index) => ({
-      event,
-      index,
-      priority: event.eventType === "birthday" && eventOccursToday(event, JAPAN_TIME_ZONE, now) ? 1 : 0,
-    }))
-    .sort((left, right) => right.priority - left.priority || left.index - right.index)
-    .map(({ event }) => event);
+  const orderedUpcomingEvents = prioritizeCalendarEvents(allUpcomingEvents, viewerTimeZone, now);
   const eventPageCount = Math.max(1, Math.ceil(allUpcomingEvents.length / EVENT_PAGE_SIZE));
   const visibleEventPage = Math.min(eventPage, eventPageCount - 1);
   const eventPageStart = visibleEventPage * EVENT_PAGE_SIZE;
@@ -270,7 +262,7 @@ export function HomeCalendar({ catalog, viewerTimeZone: initialTimeZone, rendere
             {upcomingEvents.map((event) => {
               const presentation = eventPresentation(event.eventType);
               const portrait = verifiedBirthdayPortrait(event);
-              const isToday = eventOccursToday(event, JAPAN_TIME_ZONE, now);
+              const isToday = eventOccursToday(event, viewerTimeZone, now);
               const isBirthday = event.eventType === "birthday";
               return (
                 <article

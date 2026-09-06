@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { authClient, authResult } from "@/features/community/auth-client";
 import { CommunityFrame, field, FormError, PostTime } from "@/features/community/shared";
 import { apiClient, rpcData } from "@/lib/rpc";
@@ -17,24 +17,59 @@ export const Route = createFileRoute("/account")({
 function Account() {
   const { data: session, isPending, error } = authClient.useSession();
   const { returnTo } = Route.useSearch();
-  return <CommunityFrame><div className={session ? "" : "mx-auto max-w-sm py-6 md:py-12"}><h1 className="mb-8 text-2xl font-bold">{session ? "我的账号" : "登录"}</h1>{isPending ? <p>正在读取账号…</p> : session ? <Profile user={session.user} /> : <><FormError error={error} /><LoginForm returnTo={returnTo} /></>}</div></CommunityFrame>;
+  return <CommunityFrame><div className={session ? "" : "mx-auto max-w-sm py-6 md:py-12"}><h1 className="mb-8 text-2xl font-bold">{session ? "我的账号" : "登录"}</h1>{session ? <Profile user={session.user} /> : <><FormError error={error} /><LoginForm returnTo={returnTo} checkingSession={isPending} /></>}</div></CommunityFrame>;
 }
-function LoginForm({ returnTo }: { returnTo?: string }) {
-  const [sent, setSent] = useState(false);
-  const { register, handleSubmit, getValues, formState: { errors } } = useForm({ defaultValues: { email: "", otp: "", name: "" } });
+const pendingLoginKey = "yuri:pending-email-login";
+const pendingLoginSchema = z.object({ email: z.email(), sentAt: z.number().finite() });
+type PendingLogin = z.infer<typeof pendingLoginSchema>;
+function readPendingLogin(): PendingLogin | null {
+  try {
+    const value = pendingLoginSchema.parse(JSON.parse(sessionStorage.getItem(pendingLoginKey) || "null"));
+    const age = Date.now() - value.sentAt;
+    if (age >= 0 && age < 300_000) return value;
+  } catch { /* Storage may be unavailable. */ }
+  storePendingLogin(null);
+  return null;
+}
+function storePendingLogin(value: PendingLogin | null) {
+  try {
+    if (value) sessionStorage.setItem(pendingLoginKey, JSON.stringify(value));
+    else sessionStorage.removeItem(pendingLoginKey);
+  } catch { /* Login still works without persistence. */ }
+}
+function LoginForm({ returnTo, checkingSession }: { returnTo?: string; checkingSession: boolean }) {
+  const [pending, setPending] = useState(readPendingLogin);
+  const [now, setNow] = useState(Date.now);
+  const sent = pending !== null;
+  const retryIn = pending ? Math.max(0, Math.ceil((pending.sentAt + 60_000 - now) / 1000)) : 0;
+  useEffect(() => {
+    if (!retryIn) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [retryIn > 0]);
+  const { register, handleSubmit, getValues, resetField, formState: { errors } } = useForm({ defaultValues: { email: pending?.email || "", otp: "", name: "" } });
+  async function sendCode(email: string) {
+    email = email.trim();
+    await authResult(authClient.emailOtp.sendVerificationOtp({ email, type: "sign-in" }));
+    const value = { email, sentAt: Date.now() };
+    storePendingLogin(value);
+    setPending(value);
+    setNow(value.sentAt);
+    resetField("otp");
+  }
   const action = useMutation({
     mutationFn: async (values: { email: string; otp: string; name: string }) => {
-      if (!sent) { await authResult(authClient.emailOtp.sendVerificationOtp({ email: values.email, type: "sign-in" })); setSent(true); }
-      else { await authResult(authClient.signIn.emailOtp({ ...values, name: values.name.trim() || "新来的同好" })); if (returnTo) window.location.assign(returnTo); }
+      if (!sent) await sendCode(values.email);
+      else { await authResult(authClient.signIn.emailOtp({ ...values, email: pending.email, name: values.name.trim() || "新来的同好" })); storePendingLogin(null); if (returnTo) window.location.assign(returnTo); }
     },
   });
-  const resend = useMutation({ mutationFn: () => authResult(authClient.emailOtp.sendVerificationOtp({ email: getValues("email"), type: "sign-in" })) });
+  const resend = useMutation({ mutationFn: () => sendCode(getValues("email")) });
   return <form noValidate onSubmit={handleSubmit((values) => action.mutate(values))} className="space-y-5">
     <label className="block text-sm">邮箱<input className={field} type="email" required autoComplete="email" readOnly={sent} {...register("email", { validate: (value) => z.email().safeParse(value.trim()).success || "请输入有效的邮箱地址。" })} /></label>
     {sent && <><p className="text-sm text-muted">验证码已发送，5 分钟内有效。</p><label className="block text-sm">6 位验证码<input className={field} required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} {...register("otp", { validate: (value) => !sent || /^\d{6}$/.test(value) || "请输入 6 位数字验证码。" })} /></label><label className="block text-sm">昵称 <span className="text-muted">（新账号选填）</span><input className={field} maxLength={32} autoComplete="nickname" {...register("name")} /></label></>}
     <FormError error={Object.values(errors)[0] || action.error || resend.error} />
-    <Button type="submit" className="w-full" disabled={action.isPending}>{action.isPending ? "请稍候…" : sent ? "登录" : "发送验证码"}</Button>
-    {sent && <div className="flex gap-4 text-xs"><button type="button" disabled={resend.isPending} onClick={() => resend.mutate()}>重新发送</button><button type="button" onClick={() => { setSent(false); action.reset(); resend.reset(); }}>更换邮箱</button>{resend.isSuccess && <span role="status">已重新发送</span>}</div>}
+    <Button type="submit" className="w-full" disabled={checkingSession || action.isPending || resend.isPending}>{action.isPending ? "请稍候…" : sent ? "登录" : "发送验证码"}</Button>
+    {sent && <div className="flex gap-4 text-xs"><button type="button" disabled={checkingSession || action.isPending || resend.isPending || retryIn > 0} onClick={() => { action.reset(); resend.mutate(); }}>{retryIn > 0 ? `${retryIn} 秒后重发` : "重新发送"}</button><button type="button" disabled={action.isPending || resend.isPending} onClick={() => { storePendingLogin(null); setPending(null); resetField("otp"); action.reset(); resend.reset(); }}>更换邮箱</button>{resend.isSuccess && <span role="status">已重新发送</span>}</div>}
   </form>;
 }
 function Profile({ user }: { user: { id: string; name: string; email: string; banned?: boolean | null } }) {

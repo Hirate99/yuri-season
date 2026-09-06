@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { ingestResearchBatch } from "~/research/batch";
+import { readPublicationPage } from "~/application/public/service";
 import { applyCandidateDecision } from "~/repositories/candidates/decisions";
 import { createCandidate } from "~/repositories/candidates/write";
 import { rememberSearch } from "~/repositories/search-memory";
@@ -57,6 +58,24 @@ beforeEach(setupDatabase);
 afterEach(() => database.close());
 
 describe("local research batch", () => {
+  test("preserves original and translation separately through batch storage and public detail", async () => {
+    const value = batch();
+    const original = "場面カットを追加しました。\n好きなシーンを #作品感想 で教えてください。\nhttps://example.test/scenes";
+    const translation = "新增了场景图。\n请带上 #作品感想 分享你喜欢的场景。\nhttps://example.test/scenes";
+    Object.assign(value.observations[0], { publicText: original, publicTranslation: translation });
+    database.sqlite.query("UPDATE research_sources SET public_text_mode = 'full_with_translation', max_public_characters = 24000 WHERE id = 'source-kimi-news'").run();
+
+    expect(await ingestResearchBatch(database.binding(), value)).toMatchObject({ published: 1, held: 0 });
+    expect(database.sqlite.query("SELECT public_text, public_translation FROM source_observations WHERE canonical_url = ?")
+      .get(value.observations[0].canonicalUrl)).toEqual({ public_text: original, public_translation: translation });
+    const item = database.sqlite.query("SELECT id FROM feed_items WHERE url = ?")
+      .get(value.observations[0].canonicalUrl) as { id: string };
+    expect((await readPublicationPage(database.binding(), item.id))?.document).toMatchObject({
+      publicText: original,
+      publicTranslation: translation,
+    });
+  });
+
   test("rejects duplicate candidate source URLs at the database boundary", () => {
     const insert = database.sqlite.query(`
       INSERT INTO feed_candidates (

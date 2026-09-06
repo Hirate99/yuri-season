@@ -4,9 +4,10 @@ import { zValidator } from "@hono/zod-validator";
 import type { z } from "zod";
 
 import type { RequestServices } from "~/application/services";
+import type { AdminPrincipal } from "~/infrastructure/auth";
 import { HttpError } from "~/shared/http-error";
 
-export type ApiEnvironment = { Bindings: Env; Variables: { services: RequestServices } };
+export type ApiEnvironment = { Bindings: Env; Variables: { services: RequestServices; principal?: AdminPrincipal } };
 export type ApiContext = Context<ApiEnvironment>;
 
 const PUBLIC_CACHE = "public, max-age=15, stale-while-revalidate=45";

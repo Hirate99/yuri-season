@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
+import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { requireAdmin } from "~/infrastructure/auth";
 import { verifyAccessJwt } from "~/infrastructure/auth/access";
 
@@ -8,22 +9,10 @@ const config = {
   adminEmails: "haonan.su@outlook.com, second@example.com",
 };
 
-function base64Url(value: ArrayBuffer | string): string {
-  const bytes = typeof value === "string" ? new TextEncoder().encode(value) : new Uint8Array(value);
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
 async function fixture(overrides: Record<string, unknown> = {}) {
-  const pair = await crypto.subtle.generateKey(
-    { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
-    true,
-    ["sign", "verify"],
-  );
+  const pair = await generateKeyPair("RS256");
   const now = Math.floor(Date.now() / 1000);
-  const header = base64Url(JSON.stringify({ alg: "RS256", kid: "test-key" }));
-  const payload = base64Url(JSON.stringify({
+  const token = await new SignJWT({
     iss: "https://example.cloudflareaccess.com",
     aud: "admin-audience",
     email: "haonan.su@outlook.com",
@@ -31,21 +20,22 @@ async function fixture(overrides: Record<string, unknown> = {}) {
     nbf: now - 10,
     exp: now + 300,
     ...overrides,
-  }));
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    pair.privateKey,
-    new TextEncoder().encode(`${header}.${payload}`),
-  );
-  const key = await crypto.subtle.exportKey("jwk", pair.publicKey) as JsonWebKey & { kid?: string };
-  key.kid = "test-key";
-  return { token: `${header}.${payload}.${base64Url(signature)}`, keys: [key] };
+  }).setProtectedHeader({ alg: "RS256", kid: "test-key" }).sign(pair.privateKey);
+  return { token, keys: [{ ...await exportJWK(pair.publicKey), kid: "test-key" }] };
 }
 
 describe("Cloudflare Access identity", () => {
-  test("accepts a signed token for an allowlisted email", async () => {
+  test("accepts signed tokens and reuses jose's remote key cache", async () => {
     const { token, keys } = await fixture();
-    await expect(verifyAccessJwt(token, config, keys)).resolves.toEqual({ email: "haonan.su@outlook.com", subject: "user-1" });
+    const fetchKeys = spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ keys }));
+    try {
+      for (let index = 0; index < 2; index += 1) {
+        await expect(verifyAccessJwt(token, config)).resolves.toEqual({ email: "haonan.su@outlook.com", subject: "user-1" });
+      }
+      expect(fetchKeys).toHaveBeenCalledTimes(1);
+    } finally {
+      fetchKeys.mockRestore();
+    }
   });
 
   test("rejects an email outside the Worker allowlist", async () => {

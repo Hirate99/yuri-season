@@ -34,16 +34,16 @@ export async function assertAccountOwner(db: D1Database, animeId: string, value:
   }
 }
 
-export async function accountBelongsToAnime(db: D1Database, animeId: string, accountId: string): Promise<boolean> {
-  const account = await database(db).select({ ownerType: accountsTable.ownerType, ownerId: accountsTable.ownerId })
+export async function readAccountForAnime(db: D1Database, animeId: string, accountId: string) {
+  const account = await database(db).select()
     .from(accountsTable).where(eq(accountsTable.id, accountId)).get();
-  if (!account) return false;
-  if (account.ownerType === "anime") return account.ownerId === animeId;
-  return personBelongsToAnime(db, animeId, account.ownerId);
+  const visible = account && (account.ownerType === "anime" ? account.ownerId === animeId
+    : account.ownerType === "person" && await personBelongsToAnime(db, animeId, account.ownerId));
+  return visible ? account : undefined;
 }
 
 export async function assertSourceAccount(db: D1Database, animeId: string, accountId: string | null): Promise<void> {
-  if (accountId && !await accountBelongsToAnime(db, animeId, accountId)) {
+  if (accountId && !await readAccountForAnime(db, animeId, accountId)) {
     throw new HttpError(400, "来源账号不属于当前作品。");
   }
 }

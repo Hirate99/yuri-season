@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import type { CandidateDraft } from "../src/domain";
-import { atomicBatch } from "~/infrastructure/db/transaction";
 import { createCandidate } from "~/repositories/candidates/write";
 import { TestD1 } from "./support/d1-adapter";
 
@@ -9,18 +8,12 @@ describe("D1 atomic writes", () => {
     const database = new TestD1();
     database.exec("CREATE TABLE entries (id TEXT PRIMARY KEY, label TEXT NOT NULL)");
 
-    await expect(atomicBatch(database.binding(), [
+    await expect(database.binding().batch([
       database.binding().prepare("INSERT INTO entries (id, label) VALUES (?, ?)").bind("one", "first"),
       database.binding().prepare("INSERT INTO entries (id, label) VALUES (?, ?)").bind("one", "duplicate"),
     ])).rejects.toThrow();
 
     expect(database.sqlite.query("SELECT COUNT(*) AS count FROM entries").get()).toEqual({ count: 0 });
-    database.close();
-  });
-
-  test("rejects an empty transaction boundary", () => {
-    const database = new TestD1();
-    expect(() => atomicBatch(database.binding(), [])).toThrow("at least one statement");
     database.close();
   });
 

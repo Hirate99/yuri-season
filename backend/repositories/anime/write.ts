@@ -1,17 +1,14 @@
 import type { AnimeCreate, AnimePatch } from "@/domain";
 import { eq, sql } from "drizzle-orm";
 import { database } from "~/infrastructure/db/client";
-import { animeTable, seasonsTable, type AnimeUpdate } from "~/infrastructure/db/schema";
+import { animeTable, seasonsTable } from "~/infrastructure/db/schema";
 import { HttpError } from "~/shared/http-error";
 import { createId } from "~/shared/id";
 import { auditInsert } from "../audit";
 import type { AdminPrincipal } from "~/infrastructure/auth";
 
 export async function patchAnime(db: D1Database, id: string, patch: AnimePatch, principal?: AdminPrincipal): Promise<void> {
-  const values = Object.fromEntries(
-    Object.entries(patch).filter(([, value]) => value !== undefined),
-  ) as AnimeUpdate;
-  if (Object.keys(values).length === 0) throw new HttpError(400, "没有可更新的字段。");
+  if (!Object.values(patch).some(value => value !== undefined)) throw new HttpError(400, "没有可更新的字段。");
 
   const orm = database(db);
   const before = await orm.select().from(animeTable).where(eq(animeTable.id, id)).get();
@@ -19,7 +16,7 @@ export async function patchAnime(db: D1Database, id: string, patch: AnimePatch, 
 
   await orm.batch([
     orm.update(animeTable)
-      .set({ ...values, updatedAt: sql`CURRENT_TIMESTAMP` })
+      .set({ ...patch, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(eq(animeTable.id, id)),
     auditInsert(db, "admin", "update_anime", "anime", id, { principal, before, patch }),
   ]);
@@ -38,36 +35,8 @@ export async function createAnime(db: D1Database, value: AnimeCreate, principal?
     await orm.batch([
       orm.insert(animeTable).values({
         id,
-        seasonId: value.seasonId,
-        slug: value.slug,
-        titleZh: value.titleZh,
-        titleZhSourceUrl: value.titleZhSourceUrl ?? null,
-        titleJa: value.titleJa,
-        titleEn: value.titleEn ?? null,
-        synopsis: value.synopsis,
-        editorialNote: value.editorialNote ?? null,
-        yuriKind: value.yuriKind,
-        yuriStatus: value.yuriStatus,
-        status: value.status,
-        premiereAt: value.premiereAt,
-        episodeCount: value.episodeCount ?? null,
-        episodeDurationMin: value.episodeDurationMin ?? null,
+        ...value,
         premiereEpisodeCount: value.premiereEpisodeCount ?? 1,
-        latestVerifiedEpisode: value.latestVerifiedEpisode ?? null,
-        latestEpisodeSourceUrl: value.latestEpisodeSourceUrl ?? null,
-        latestEpisodeCheckedAt: value.latestEpisodeCheckedAt ?? null,
-        studio: value.studio ?? null,
-        sourceMaterial: value.sourceMaterial ?? null,
-        officialUrl: value.officialUrl ?? null,
-        bangumiUrl: value.bangumiUrl ?? null,
-        officialXUrl: value.officialXUrl ?? null,
-        coverUrl: value.coverUrl ?? null,
-        coverSourceUrl: value.coverSourceUrl ?? null,
-        mainCharacterSourceUrl: value.mainCharacterSourceUrl ?? null,
-        mainCharacterExpectedCount: value.mainCharacterExpectedCount ?? null,
-        mainCharacterCheckedAt: value.mainCharacterCheckedAt ?? null,
-        visualTheme: value.visualTheme,
-        featured: value.featured,
         createdAt: sql`CURRENT_TIMESTAMP`,
         updatedAt: sql`CURRENT_TIMESTAMP`,
       }),

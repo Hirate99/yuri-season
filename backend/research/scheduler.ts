@@ -55,8 +55,8 @@ export async function runResearch(
     const planned = await planSourceJobs(env.DB, lane, limits[lane].planned);
     const jobs = await leaseJobs(env.DB, runId, limits[lane].leased);
     const outcomes = await Promise.all(jobs.map(async (job) => {
-      await startJob(env.DB, job);
       try {
+        await startJob(env.DB, job);
         if (job.job_type !== "sync_source") throw new Error(`unsupported worker job ${job.job_type}`);
         const outcome = await syncSourceJob(env, job, undefined, () => heartbeatJob(env.DB, job));
         await completeJob(env.DB, job, outcome.partial);

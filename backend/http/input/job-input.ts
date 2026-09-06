@@ -1,16 +1,15 @@
 import { z } from "zod";
 
-import type { CompleteLocalJobInput } from "~/research/types";
-import { integerBetween, jsonObject, nullableText, parseWithSchema, requiredText } from "./schema";
+import { integerBetween, jsonObject, nullableText, requiredText } from "./schema";
 
-const leaseSchema = z.object({
+export const leaseLocalJobsSchema = z.object({
   owner: requiredText(120, "owner").regex(/^[a-zA-Z0-9._:@/-]+$/, "owner 格式不正确。").default("codex-local"),
   limit: integerBetween(1, 3, "limit").default(1),
 });
 
-const heartbeatSchema = z.object({ leaseToken: requiredText(200, "leaseToken") });
+export const heartbeatLocalJobSchema = z.object({ leaseToken: requiredText(200, "leaseToken") });
 
-const completeSchema = z.object({
+export const completeLocalJobSchema = z.object({
   leaseToken: requiredText(200, "leaseToken"),
   idempotencyKey: requiredText(160, "idempotencyKey"),
   outcome: z.enum(["completed", "partial", "failed"], "outcome 格式不正确。"),
@@ -21,21 +20,3 @@ const completeSchema = z.object({
   message: "失败任务需要 message。",
   path: ["message"],
 });
-
-export type LeaseLocalJobsRequest = z.input<typeof leaseSchema>;
-export type LeaseLocalJobsInput = z.output<typeof leaseSchema>;
-export type HeartbeatLocalJobRequest = z.input<typeof heartbeatSchema>;
-export type HeartbeatLocalJobInput = z.output<typeof heartbeatSchema>;
-export type CompleteLocalJobRequest = z.input<typeof completeSchema>;
-
-export function parseLeaseLocalJobs(input: unknown): LeaseLocalJobsInput {
-  return parseWithSchema(leaseSchema, input);
-}
-
-export function parseHeartbeatLocalJob(input: unknown): HeartbeatLocalJobInput {
-  return parseWithSchema(heartbeatSchema, input);
-}
-
-export function parseCompleteLocalJob(input: unknown): CompleteLocalJobInput {
-  return parseWithSchema(completeSchema, input);
-}

@@ -5,17 +5,16 @@ import { database } from "~/infrastructure/db/client";
 import { animeThemeSongsTable, musicTracksTable } from "~/infrastructure/db/schema";
 import { HttpError } from "~/shared/http-error";
 import { createId } from "~/shared/id";
-import type { ResourceAudit } from "./resource-write";
+import type { ResourceAudit, ResourceChangeAudit } from "./resource-write";
 
-async function resolveTrack(db: D1Database, value: ThemeSongWrite): Promise<string> {
-  if (value.trackId) {
-    const existing = await database(db).select({ id: musicTracksTable.id }).from(musicTracksTable)
-      .where(eq(musicTracksTable.id, value.trackId)).get();
-    if (!existing) throw new HttpError(400, "没有找到要复用的曲目。");
-    return existing.id;
-  }
-  const orm = database(db);
-  const [track] = await orm.insert(musicTracksTable).values({
+async function assertTrack(db: D1Database, id: string) {
+  const existing = await database(db).select({ id: musicTracksTable.id }).from(musicTracksTable)
+    .where(eq(musicTracksTable.id, id)).get();
+  if (!existing) throw new HttpError(400, "没有找到要复用的曲目。");
+}
+
+function trackUpsert(db: D1Database, value: ThemeSongWrite) {
+  return database(db).insert(musicTracksTable).values({
     id: createId("track"),
     title: value.title,
     artist: value.artist,
@@ -37,24 +36,25 @@ async function resolveTrack(db: D1Database, value: ThemeSongWrite): Promise<stri
     coverSourceUrl: sql`COALESCE(${musicTracksTable.coverSourceUrl}, ${value.coverSourceUrl})`,
     verified: sql`MAX(${musicTracksTable.verified}, ${value.verified ? 1 : 0})`,
     updatedAt: sql`CURRENT_TIMESTAMP`,
-  } }).returning({ id: musicTracksTable.id });
-  return track.id;
+  } });
 }
 
 export async function createThemeSong(db: D1Database, animeId: string, value: ThemeSongWrite, audit?: ResourceAudit): Promise<string> {
-  const trackId = await resolveTrack(db, value);
+  if (value.trackId) await assertTrack(db, value.trackId);
   const id = createId("theme-song");
   const orm = database(db);
   const insert = orm.insert(animeThemeSongsTable).values({
     id,
     animeId,
-    trackId,
+    trackId: value.trackId ?? sql`(${orm.select({ id: musicTracksTable.id }).from(musicTracksTable)
+      .where(and(eq(musicTracksTable.title, value.title), eq(musicTracksTable.artist, value.artist)))})`,
     songKind: value.songKind,
     sequence: value.sequence,
     episodeRange: value.episodeRange,
     sortOrder: value.sortOrder,
   });
-  if (audit) await orm.batch([insert, audit(id)]); else await insert;
+  const writes = value.trackId ? [insert] as const : [trackUpsert(db, value), insert] as const;
+  await orm.batch([...writes, ...(audit ? [audit(id)] : [])]);
   return id;
 }
 
@@ -101,12 +101,13 @@ export async function upsertVerifiedThemeSongFromBatch(
   return { id: existing.id, created: false };
 }
 
-export async function updateThemeSong(db: D1Database, animeId: string, id: string, value: ThemeSongWrite, audit?: ResourceAudit): Promise<void> {
-  const link = await database(db).select({ track_id: animeThemeSongsTable.trackId }).from(animeThemeSongsTable)
+export async function updateThemeSong(db: D1Database, animeId: string, id: string, value: ThemeSongWrite, audit: ResourceChangeAudit): Promise<void> {
+  const before = await database(db).select().from(animeThemeSongsTable)
+    .innerJoin(musicTracksTable, eq(musicTracksTable.id, animeThemeSongsTable.trackId))
     .where(and(eq(animeThemeSongsTable.id, id), eq(animeThemeSongsTable.animeId, animeId))).get();
-  if (!link) throw new HttpError(404, "没有找到主题曲资料。");
-  const trackId = value.trackId ?? link.track_id;
-  if (trackId !== link.track_id) await resolveTrack(db, { ...value, trackId });
+  if (!before) throw new HttpError(404, "没有找到主题曲资料。");
+  const trackId = value.trackId ?? before.anime_theme_songs.trackId;
+  if (trackId !== before.anime_theme_songs.trackId) await assertTrack(db, trackId);
   const orm = database(db);
   const results = await orm.batch([
     orm.update(animeThemeSongsTable).set({
@@ -130,25 +131,25 @@ export async function updateThemeSong(db: D1Database, animeId: string, id: strin
       verified: value.verified,
       updatedAt: sql`CURRENT_TIMESTAMP`,
     }).where(eq(musicTracksTable.id, trackId)),
-    ...(audit ? [audit(id)] : []),
+    audit(before),
   ]);
   if ((results[0].meta.changes ?? 0) === 0) throw new HttpError(404, "没有找到主题曲资料。");
 }
 
-export async function deleteThemeSong(db: D1Database, animeId: string, id: string, audit?: ResourceAudit): Promise<D1Result> {
+export async function deleteThemeSong(db: D1Database, animeId: string, id: string, audit: ResourceChangeAudit): Promise<D1Result> {
   const orm = database(db);
-  const link = await orm.select({ track_id: animeThemeSongsTable.trackId }).from(animeThemeSongsTable)
+  const before = await orm.select().from(animeThemeSongsTable)
+    .innerJoin(musicTracksTable, eq(musicTracksTable.id, animeThemeSongsTable.trackId))
     .where(and(eq(animeThemeSongsTable.id, id), eq(animeThemeSongsTable.animeId, animeId))).get();
-  if (!link) return orm.delete(animeThemeSongsTable)
-    .where(and(eq(animeThemeSongsTable.id, id), eq(animeThemeSongsTable.animeId, animeId))).run();
+  if (!before) throw new HttpError(404, "没有找到主题曲资料。");
   const [result] = await orm.batch([
     orm.delete(animeThemeSongsTable)
       .where(and(eq(animeThemeSongsTable.id, id), eq(animeThemeSongsTable.animeId, animeId))),
     orm.delete(musicTracksTable).where(and(
-      eq(musicTracksTable.id, link.track_id),
-      sql`NOT EXISTS (SELECT 1 FROM anime_theme_songs WHERE track_id = ${link.track_id})`,
+      eq(musicTracksTable.id, before.anime_theme_songs.trackId),
+      sql`NOT EXISTS (SELECT 1 FROM anime_theme_songs WHERE track_id = ${before.anime_theme_songs.trackId})`,
     )),
-    ...(audit ? [audit(id)] : []),
+    audit(before),
   ]);
   return result;
 }

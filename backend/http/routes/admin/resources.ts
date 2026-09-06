@@ -20,14 +20,13 @@ export const resourceRoutes = new Hono<ApiEnvironment>()
   .patch(
     "/anime/:animeId/resources/:kind/:id",
     validatedJson<AdminResourceWrite["value"], AdminResourceWrite>((input, context) =>
-      parseResourceWrite(parseResourceKind(context.req.param("kind")!), input)),
+      parseResourceWrite(context.req.param("kind")!, input)),
     async (context) => {
-      const kind = parseResourceKind(context.req.param("kind"));
+      const input = context.req.valid("json");
       await context.var.services.admin.resources.update(
         context.req.param("animeId"),
-        kind,
         context.req.param("id"),
-        context.req.valid("json"),
+        input,
       );
       return context.json({ ok: true });
     },

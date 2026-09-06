@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseResearchBatch } from "~/http/input/batch-input";
+import { researchBatchSchema } from "~/http/input/batch-input";
 
 function socialBatch(decision: "publish" | "hold" | "reject", publicText?: string) {
   return {
@@ -40,32 +40,32 @@ function socialBatch(decision: "publish" | "hold" | "reject", publicText?: strin
 
 describe("research batch social-post text invariant", () => {
   test("rejects an auto-published social post without original text", () => {
-    expect(() => parseResearchBatch(socialBatch("publish"))).toThrow(
+    expect(() => researchBatchSchema.parse(socialBatch("publish"))).toThrow(
       "自动发布社交帖子必须保存原帖正文 publicText",
     );
   });
 
   test("accepts an auto-published social post with original text", () => {
-    expect(parseResearchBatch(socialBatch("publish", "Original post text.")))
+    expect(researchBatchSchema.parse(socialBatch("publish", "Original post text.")))
       .toMatchObject({ observations: [{ publicText: "Original post text." }] });
   });
 
   test("rejects an auto-published social post without an explicit media disposition", () => {
     const value = socialBatch("publish", "Original post text.");
     delete (value.observations[0] as { mediaDisposition?: string }).mediaDisposition;
-    expect(() => parseResearchBatch(value)).toThrow("必须声明 mediaDisposition");
+    expect(() => researchBatchSchema.parse(value)).toThrow("必须声明 mediaDisposition");
   });
 
   test("requires uploaded assets when the original has attached media", () => {
     const value = socialBatch("publish", "Original post text.");
     value.observations[0].mediaDisposition = "attached";
-    expect(() => parseResearchBatch(value)).toThrow("必须包含已上传的 media.assets");
+    expect(() => researchBatchSchema.parse(value)).toThrow("必须包含已上传的 media.assets");
   });
 
   test("requires a reason for a media policy exception", () => {
     const value = socialBatch("publish", "Original post text.");
     value.observations[0].mediaDisposition = "link_only_policy";
-    expect(() => parseResearchBatch(value)).toThrow("必须记录 mediaDispositionReason");
+    expect(() => researchBatchSchema.parse(value)).toThrow("必须记录 mediaDispositionReason");
   });
 
   test("requires a reviewed policy URL for link-only publication", () => {
@@ -73,11 +73,11 @@ describe("research batch social-post text invariant", () => {
     value.observations[0].mediaDisposition = "link_only_policy";
     (value.observations[0] as typeof value.observations[0] & { mediaDispositionReason: string })
       .mediaDispositionReason = "平台不允许转载";
-    expect(() => parseResearchBatch(value)).toThrow("必须在理由中提供明确禁止转载");
+    expect(() => researchBatchSchema.parse(value)).toThrow("必须在理由中提供明确禁止转载");
   });
 
   test("allows a text-unavailable social post to remain held", () => {
-    expect(parseResearchBatch(socialBatch("hold")))
+    expect(researchBatchSchema.parse(socialBatch("hold")))
       .toMatchObject({ observations: [{ candidates: [{ review: { decision: "hold" } }] }] });
   });
 
@@ -85,7 +85,7 @@ describe("research batch social-post text invariant", () => {
     const value = socialBatch("publish");
     value.observations[0].canonicalUrl = "https://example.com/news/1";
     value.observations[0].candidates[0].url = "https://example.com/news/1";
-    expect(parseResearchBatch(value)).toMatchObject({ batchId: "batch-social-publish" });
+    expect(researchBatchSchema.parse(value)).toMatchObject({ batchId: "batch-social-publish" });
   });
 
   test("requires an explicit media disposition for published official pages", () => {
@@ -93,7 +93,7 @@ describe("research batch social-post text invariant", () => {
     value.observations[0].canonicalUrl = "https://example.com/news/1";
     value.observations[0].candidates[0].url = "https://example.com/news/1";
     delete (value.observations[0] as { mediaDisposition?: string }).mediaDisposition;
-    expect(() => parseResearchBatch(value)).toThrow("自动发布条目必须声明 mediaDisposition");
+    expect(() => researchBatchSchema.parse(value)).toThrow("自动发布条目必须声明 mediaDisposition");
   });
 
   test("requires uploaded assets when a published official page declares attached media", () => {
@@ -101,6 +101,6 @@ describe("research batch social-post text invariant", () => {
     value.observations[0].canonicalUrl = "https://example.com/news/1";
     value.observations[0].candidates[0].url = "https://example.com/news/1";
     value.observations[0].mediaDisposition = "attached";
-    expect(() => parseResearchBatch(value)).toThrow("必须包含已上传的 media.assets");
+    expect(() => researchBatchSchema.parse(value)).toThrow("必须包含已上传的 media.assets");
   });
 });

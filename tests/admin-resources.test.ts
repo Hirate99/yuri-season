@@ -7,6 +7,7 @@ import {
   updateAdminResource,
 } from "~/application/admin/resources";
 import { readAdminAnimeResources } from "~/repositories/admin/resources";
+import { api } from "~/http/api";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;
@@ -31,13 +32,20 @@ describe("Admin anime resources", () => {
       platformUrl: "https://www.bs11.jp/",
       isPrimary: true,
     });
-    const id = await createAdminResource(database.binding(), animeId, write);
+    const response = await api.request(`https://example.test/api/admin/anime/${animeId}/resources`, {
+      method: "POST", headers: { authorization: "Bearer test-admin", "content-type": "application/json" },
+      body: JSON.stringify(write),
+    }, { DB: database.binding(), ADMIN_TOKEN: "test-admin" } as Env);
+    expect(response.status).toBe(201);
+    const { id } = await response.json() as { id: string };
+    const audit = database.sqlite.query("SELECT detail_json FROM audit_log WHERE entity_id = ?").get(id) as { detail_json: string };
+    expect(JSON.parse(audit.detail_json).principal).toEqual({ kind: "automation", subject: "admin-token" });
     let resources = await readAdminAnimeResources(database.binding(), animeId);
     expect(resources.broadcasts.filter((slot) => slot.isPrimary)).toHaveLength(1);
     expect(resources.broadcasts.find((slot) => slot.id === id)?.localTime).toBe("25:15");
 
     const update = parseResourceWrite("broadcast", { ...write.value, localTime: "25:30" });
-    await updateAdminResource(database.binding(), animeId, "broadcast", id, update);
+    await updateAdminResource(database.binding(), animeId, id, update);
     resources = await readAdminAnimeResources(database.binding(), animeId);
     expect(resources.broadcasts.find((slot) => slot.id === id)?.localTime).toBe("25:30");
 
@@ -119,7 +127,12 @@ describe("Admin anime resources", () => {
       recurrence_rule: "FREQ=YEARLY",
     });
 
-    await updateAdminResource(database.binding(), animeId, "cast", castId, parseResourceWrite("cast", {
+    const birthday = database.sqlite.query(`SELECT id FROM events WHERE character_id =
+      (SELECT character_id FROM cast_credits WHERE id = ?) AND event_type = 'birthday'`).get(castId) as { id: string };
+    await expect(deleteAdminResource(database.binding(), animeId, "event", birthday.id)).rejects.toMatchObject({ status: 404 });
+    expect(database.sqlite.query("SELECT COUNT(*) AS count FROM audit_log WHERE entity_id = ?").get(birthday.id)).toEqual({ count: 0 });
+
+    const castUpdate = parseResourceWrite("cast", {
       personId: null,
       characterName: "测试角色",
       characterNameNative: "テストキャラ",
@@ -133,7 +146,14 @@ describe("Admin anime resources", () => {
       birthdaySourceUrl: null,
       birthdayVerified: false,
       sortOrder: 90,
-    }));
+    });
+    database.exec("CREATE TRIGGER reject_audit BEFORE INSERT ON audit_log BEGIN SELECT RAISE(ABORT, 'audit unavailable'); END;");
+    await expect(updateAdminResource(database.binding(), animeId, castId, castUpdate)).rejects.toThrow("audit unavailable");
+    expect(await readAdminAnimeResources(database.binding(), animeId)).toEqual(resources);
+    database.exec("DROP TRIGGER reject_audit");
+    database.resetMetrics();
+    await updateAdminResource(database.binding(), animeId, castId, castUpdate);
+    expect(database.calls).toBe(2);
     expect(database.sqlite.query(`
       SELECT COUNT(*) AS count FROM events WHERE anime_id = ? AND character_id = (
         SELECT character_id FROM cast_credits WHERE id = ?
@@ -147,7 +167,7 @@ describe("Admin anime resources", () => {
       maxPublicCharacters: 24000,
     });
 
-    await updateAdminResource(database.binding(), animeId, "source", sourceId,
+    await updateAdminResource(database.binding(), animeId, sourceId,
       parseResourceWrite("source", { ...sourceWrite.value, enabled: false }));
     resources = await readAdminAnimeResources(database.binding(), animeId);
     expect(resources.sources.find((source) => source.id === sourceId)?.enabled).toBe(false);

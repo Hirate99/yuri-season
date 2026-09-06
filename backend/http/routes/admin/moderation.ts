@@ -1,10 +1,9 @@
 import { Hono } from "hono";
 import { z } from "zod";
 
-import type { CandidateDraft } from "@/domain";
-import { parseCandidateDraft } from "~/http/input/anime-input";
+import { candidateDraftSchema } from "@/domain/inputs/anime";
 import type { ApiEnvironment } from "~/http/shared";
-import { validate, validatedJson } from "~/http/shared";
+import { validate } from "~/http/shared";
 
 const decisionSchema = z.object({
   decision: z.enum(["publish", "hold", "reject", "withdraw"], "未知的审核决定。"),
@@ -30,7 +29,7 @@ export const moderationRoutes = new Hono<ApiEnvironment>()
       return context.body(null, 204);
     },
   )
-  .post("/candidates", validatedJson<CandidateDraft>(parseCandidateDraft), async (context) => {
+  .post("/candidates", validate("json", candidateDraftSchema), async (context) => {
     const id = await context.var.services.admin.candidates.create(context.req.valid("json"));
     return context.json({ id }, 201);
   })

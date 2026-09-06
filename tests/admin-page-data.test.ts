@@ -16,6 +16,7 @@ const get = async (path: string): Promise<Response> => api.request(`https://exam
 
 test("page endpoints retain dashboard data without unrelated reads or empty fields", async () => {
   const all = await readAdminDashboard(db.binding());
+  expect<unknown>(await (await get("dashboard")).json()).toEqual(all);
   db.resetMetrics();
   const response = await get("works");
   expect(response.status).toBe(200);

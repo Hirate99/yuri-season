@@ -36,5 +36,3 @@ export const animeTable = sqliteTable("anime", {
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
-
-export type AnimeUpdate = Partial<typeof animeTable.$inferInsert>;

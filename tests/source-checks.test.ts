@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { parseSourceChecks } from "~/http/input/source-check-input";
+import { sourceChecksSchema } from "~/http/input/source-check-input";
 import { recordSourceChecks } from "~/repositories/source-checks";
 import { markSourceFailure, markSourceSuccess, readSource } from "~/research/sources";
 import { TestD1 } from "./support/d1-adapter";
@@ -66,7 +66,7 @@ describe("local source health recording", () => {
   });
 
   test("records successful checks and replays the same result idempotently", async () => {
-    const checks = parseSourceChecks({ checks: [{
+    const checks = sourceChecksSchema.parse({ checks: [{
       sourceId: "source-kimi-news", checkedAt: "2026-08-11T20:00:00Z",
       outcome: "success", etag: "v2", lastModified: null,
     }] });
@@ -79,7 +79,7 @@ describe("local source health recording", () => {
   });
 
   test("records a newer failure once without double-counting a replay", async () => {
-    const checks = parseSourceChecks({ checks: [{
+    const checks = sourceChecksSchema.parse({ checks: [{
       sourceId: "source-kimi-news", checkedAt: "2026-08-12T20:00:00Z",
       outcome: "failure", error: "source returned 503",
     }] });
@@ -92,7 +92,7 @@ describe("local source health recording", () => {
 
   test("rejects duplicate sources and failures without an error", () => {
     const base = { sourceId: "source-kimi-news", checkedAt: "2026-08-11T20:00:00Z", outcome: "success" };
-    expect(() => parseSourceChecks({ checks: [base, base] })).toThrow("重复 sourceId");
-    expect(() => parseSourceChecks({ checks: [{ ...base, outcome: "failure" }] })).toThrow("需要 error");
+    expect(() => sourceChecksSchema.parse({ checks: [base, base] })).toThrow("重复 sourceId");
+    expect(() => sourceChecksSchema.parse({ checks: [{ ...base, outcome: "failure" }] })).toThrow("需要 error");
   });
 });

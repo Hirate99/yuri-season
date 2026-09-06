@@ -9,12 +9,6 @@ import { stableFingerprint } from "~/shared/fingerprint";
 import type { JobLane, UpdateJobRow } from "./types";
 import { recoverExpiredJobs } from "./local-jobs";
 
-const laneProfile: Record<JobLane, string> = {
-  rapid: "rapid",
-  standard: "standard",
-  discovery: "local",
-};
-
 const WORKER_LEASE_MINUTES = 10;
 
 function leaseWhere(job: UpdateJobRow) {
@@ -57,7 +51,7 @@ export async function planSourceJobs(db: D1Database, lane: JobLane, limit: numbe
   const orm = database(db);
   const due = await orm.select({ id: researchSourcesTable.id }).from(researchSourcesTable).where(and(
     eq(researchSourcesTable.enabled, true),
-    eq(researchSourcesTable.cadenceProfile, laneProfile[lane] as "rapid" | "standard" | "local"),
+    eq(researchSourcesTable.cadenceProfile, lane),
     or(isNull(researchSourcesTable.nextCheckAt), lte(researchSourcesTable.nextCheckAt, sql`CURRENT_TIMESTAMP`)),
     or(isNull(researchSourcesTable.leaseUntil), lt(researchSourcesTable.leaseUntil, sql`CURRENT_TIMESTAMP`)),
   )).orderBy(

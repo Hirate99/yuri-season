@@ -129,34 +129,23 @@ export async function ingestResearchBatch(db: D1Database, batch: ResearchBatch):
         result[policy.decision === "publish" ? "published" : policy.decision === "reject" ? "rejected" : "held"] += 1;
       }
 
-      for (const song of observation.themeSongs ?? []) {
-        if (source.trustLevel !== "official" || source.animeId !== song.animeId) {
+      for (const { animeId, review, ...song } of observation.themeSongs ?? []) {
+        if (source.trustLevel !== "official" || source.animeId !== animeId) {
           throw new HttpError(400, "Theme-song automation requires a matching first-party work source.");
         }
-        if (song.review.decision !== "publish" || song.review.confidence < 0.92) continue;
+        if (review.decision !== "publish" || review.confidence < 0.92) continue;
         const value: ThemeSongWrite = {
+          ...song,
           trackId: null,
-          songKind: song.songKind,
-          sequence: song.sequence,
-          title: song.title,
-          artist: song.artist,
-          lyricist: song.lyricist,
-          composer: song.composer,
-          arranger: song.arranger,
-          episodeRange: song.episodeRange,
-          officialUrl: song.officialUrl,
-          coverUrl: song.coverUrl,
-          coverSourceUrl: song.coverSourceUrl,
           sourceUrl: observation.canonicalUrl,
           verified: true,
-          sortOrder: song.sortOrder,
         };
-        const stored = await upsertVerifiedThemeSongFromBatch(db, song.animeId, value);
+        const stored = await upsertVerifiedThemeSongFromBatch(db, animeId, value);
         if (stored.created) result.resources += 1;
         await recordAudit(db, "local_skill", stored.created ? "create_resource" : "verify_resource", "theme_song", stored.id, {
-          animeId: song.animeId,
+          animeId,
           sourceUrl: observation.canonicalUrl,
-          review: song.review,
+          review,
         });
         await resolveSearchHit(db, observation.canonicalUrl, "published", { observationId });
       }

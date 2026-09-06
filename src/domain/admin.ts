@@ -301,8 +301,6 @@ export type AdminAnimeResources = {
 
 export type AdminResourceKind = z.output<typeof resourceKindSchema>;
 
-export type AdminDashboardView = "all" | "overview" | "review" | "works" | "coverage" | "automation" | "seasons";
-
 export type AdminResourceWrite = z.output<typeof resourceEnvelopeSchema>;
 
 export type BroadcastWrite = Extract<AdminResourceWrite, { kind: "broadcast" }>["value"];

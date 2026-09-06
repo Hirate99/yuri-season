@@ -6,7 +6,8 @@ The editor performs routine review and publication under the update authorizatio
 
 ## Natural title consistency
 
-- Before writing, read related anime/person/character resources and use their canonical public names in titles, summaries, translations, and translated hashtags. Keep internal `excerpt`, readable source `publicText`, and faithful Chinese `publicTranslation` distinct.
+- Use the database's canonical anime/person/character names in titles, summaries, and translations.
+- Translate all published non-Chinese `publicText` into `publicTranslation`, preserving meaning, tone, links, and posting hashtags. Keep summaries separate; do not abridge the original to avoid translation work.
 - Every public Feed title must carry the work's canonical public name or an explicitly approved display form. Card metadata is not a substitute. Keep sentence order natural: announcements may lead with the work or event; creator/cast items may lead with the person's action; community items may lead with the platform or topic while still identifying the work.
 - Preserve natural verbs and rhythm (`公开`, `宣布`, `上线`, `分享`, `谈到`, `绘制`) while keeping work, person, event, and source identities stable. Do not normalize titles into one mechanical prefix.
 - Avoid silent drift among canonical titles, abbreviations, translations, romanization, and old punctuation. Use an alias only when source-significant or materially clearer; do not let it replace canonical identity throughout a series.
@@ -16,7 +17,7 @@ The editor performs routine review and publication under the update authorizatio
 ## Linked articles and interviews
 
 - Organize coverage around the substantive article or event. Preserve the referring post as discovery evidence and attribute the article to its actual publisher and authors; never put article text under the referring X post's identity. Reuse the existing item when it represents the same content, through the normal correction workflow.
-- Read all relevant article pages before writing. Distinguish original text, faithful translation, and editorial summary; a summary must not be labeled as a full translation. Reading a complete article does not itself authorize mirroring its full text.
+- Read all relevant article pages before writing. Respect republication rights: label excerpts as excerpts and translate the excerpt fully; reading an article does not authorize mirroring its full text.
 - Preserve source publication dates and actual capture times separately. A referring post retains its own date; do not overwrite an article's date with the referral or import time merely to move it up the Feed. Verify actual list placement and detail access, and report a visibility issue separately from a content repair.
 
 ## Publication media invariant
@@ -38,7 +39,7 @@ The editor performs routine review and publication under the update authorizatio
 
 ## Reader-facing completion gate
 
-- Read back every published item and verify title, summary, original text, Chinese translation, source link, related work/event, attribution, timestamps, and every projection supported by the evidence.
+- Read back every published item and verify title, summary, original text, Chinese translation, source link, related work/event, attribution, timestamps, and every projection supported by the evidence. Compare original and translation paragraph by paragraph for omissions or unsupported additions.
 - For publishable media, completion requires the actual source asset: inspect it, preserve provenance and dimensions, upload it remotely, link the media record, then confirm the public URL returns the expected MIME type and the public item points to it. A cover fallback, external hotlink, local object, or populated-but-unprojected `media` input does not pass.
 - After every media write, confirm stored path, MIME, dimensions, byte identity/hash, attribution/provenance, and Feed/Admin projection. Leave the prior asset intact if any check fails.
 - Do not finish while a published item has missing, placeholder, inaccessible, incorrectly attributed, or unprojected media. Repair it or preserve an evidence-backed policy prohibition; operational failure remains incomplete work.

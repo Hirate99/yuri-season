@@ -195,7 +195,7 @@ Before uploading a large original, run `bun run research:media:variants -- <inpu
 }
 ```
 
-Use `excerpt` for internal evidence and close paraphrase. When the source policy permits text redistribution, provide the source's readable original-language body in `publicText` (plain text, at most 24,000 characters). A faithful Chinese translation may be provided separately in `publicTranslation` (also at most 24,000 characters). The translation must preserve meaning, must not replace `publicText`, and must not be copied from `excerpt`, the candidate summary, or a search snippet. For non-social material, omit public fields when source policy prohibits their publication. Social-post requirements follow below; presentationMode alone does not determine text rights. The server still applies the registered source's public-text policy before publishing.
+Use `excerpt` for internal paraphrase, `publicText` for publishable source text, and `publicTranslation` for its complete Chinese translation. Both public fields are plain text, limited to 24,000 characters each; do not silently truncate. Apply the text rights and translation rules in `publication-policy.md`; the server also enforces the registered source's public-text policy.
 
 For a newly published social post, `publicText` is required even when `presentationMode` is `link_only`. If the source is private, deleted, inaccessible, or its text cannot be preserved under policy, set the review decision to `hold` or `reject`; do not publish a title-and-summary-only social card.
 

@@ -4,10 +4,12 @@ import { HTTPException } from "hono/http-exception";
 
 import { createRequestServices } from "~/application/services";
 import { requireAdmin } from "~/infrastructure/auth";
+import { communityAuth } from "~/infrastructure/auth/community";
 import { HttpError } from "~/shared/http-error";
 import { adminRoutes } from "./routes/admin";
 import { publicRoutes } from "./routes/public";
 import { researchRoutes } from "./routes/research";
+import { communityAdminRoutes, communityRoutes } from "./routes/community";
 import type { ApiEnvironment } from "./shared";
 
 function routeMatches(routePath: string, requestPath: string): boolean {
@@ -43,6 +45,9 @@ app.use("/api/admin/*", bodyLimit({
     { "cache-control": "no-store" },
   ),
 }));
+
+app.use("/api/auth/*", bodyLimit({ maxSize: 16 * 1024 }));
+app.on(["GET", "POST"], "/api/auth/*", (context) => communityAuth(context.env).handler(context.req.raw));
 
 app.use("/api/admin/*", async (context, next) => {
   context.set("principal", await requireAdmin(context.req.raw, context.env));
@@ -81,6 +86,8 @@ app.notFound((context) => {
 });
 
 export const api = app
+  .route("/", communityRoutes)
+  .route("/", communityAdminRoutes)
   .route("/", publicRoutes)
   .route("/", adminRoutes)
   .route("/", researchRoutes);

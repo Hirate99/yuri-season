@@ -42,6 +42,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@base-ui/react": "^1.8.0",
+    "@better-auth/drizzle-adapter": "^1.7.3",
     "@hono/zod-validator": "0.9.1",
     "@hookform/resolvers": "^5.9.1",
     "@tanstack/react-query": "^5.102.8",
@@ -49,6 +51,7 @@
     "@tanstack/react-router-ssr-query": "1.167.2",
     "@tanstack/react-start": "^1.168.42",
     "@tanstack/react-virtual": "^3.14.9",
+    "better-auth": "^1.7.3",
     "downshift": "^9.4.0",
     "drizzle-orm": "^0.45.2",
     "embla-carousel-auto-height": "8.6.0",
@@ -61,6 +64,9 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.87.0",
+    "react-markdown": "^10.1.0",
+    "react-textarea-autosize": "^8.5.9",
+    "remark-gfm": "^4.0.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

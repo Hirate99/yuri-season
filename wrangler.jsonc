@@ -6,7 +6,8 @@
   "compatibility_flags": ["nodejs_compat"],
   "secrets": {
     "required": [
-      "ADMIN_TOKEN"
+      "ADMIN_TOKEN",
+      "BETTER_AUTH_SECRET"
     ]
   },
   "d1_databases": [
@@ -21,10 +22,13 @@
     "binding": "AI",
     "remote": true
   },
+  "send_email": [{ "name": "EMAIL" }],
   "assets": {
     "run_worker_first": ["/api/*", "/robots.txt", "/sitemap.xml"]
   },
   "vars": {
+    "BETTER_AUTH_URL": "https://i-yuri.com",
+    "AUTH_EMAIL_FROM": "noreply@i-yuri.com",
     "UPDATE_MODE": "local-first",
     "DEPLOYMENT_ROLE": "public",
     "ADMIN_ORIGIN": "https://i-yuri.com",
@@ -38,6 +42,27 @@
   },
   "upload_source_maps": true,
   "env": {
+    "test": {
+      "name": "yuri-season-radar-test",
+      "secrets": { "required": ["ADMIN_TOKEN", "BETTER_AUTH_SECRET"] },
+      "d1_databases": [{
+        "binding": "DB",
+        "database_name": "yuri-season-radar-test",
+        "database_id": "00000000-0000-4000-8000-000000000001",
+        "migrations_dir": "migrations"
+      }],
+      "send_email": [{ "name": "EMAIL", "remote": false }],
+      "vars": {
+        "UPDATE_MODE": "local-first",
+        "DEPLOYMENT_ROLE": "test",
+        "ADMIN_ORIGIN": "http://127.0.0.1:4317",
+        "BETTER_AUTH_URL": "http://127.0.0.1:4317",
+        "AUTH_EMAIL_FROM": "noreply@example.test",
+        "ACCESS_TEAM_DOMAIN": "",
+        "ACCESS_AUD": "",
+        "ADMIN_EMAILS": ""
+      }
+    },
     "admin": {
       "name": "yuri-season-radar-admin",
       "secrets": {

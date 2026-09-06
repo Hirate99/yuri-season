@@ -10,24 +10,33 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAutomationRouteImport } from './routes/admin.automation'
+import { Route as AdminCommunityRouteImport } from './routes/admin.community'
 import { Route as AdminCoverageRouteImport } from './routes/admin.coverage'
 import { Route as AdminReviewRouteImport } from './routes/admin.review'
 import { Route as AdminSeasonsRouteImport } from './routes/admin.seasons'
 import { Route as AdminWorksRouteImport } from './routes/admin.works'
 import { Route as AnimeSlugRouteImport } from './routes/anime.$slug'
+import { Route as DiscussionsIdRouteImport } from './routes/discussions.$id'
 import { Route as FeedIdRouteImport } from './routes/feed.$id'
 import { Route as SeasonSlugRouteImport } from './routes/season.$slug'
 import { Route as UpdatesIdRouteImport } from './routes/updates.$id'
+import { Route as AnimeSlugDiscussionsRouteImport } from './routes/anime.$slug_.discussions'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -60,6 +69,11 @@ const AdminAutomationRoute = AdminAutomationRouteImport.update({
   path: '/automation',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCommunityRoute = AdminCommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCoverageRoute = AdminCoverageRouteImport.update({
   id: '/coverage',
   path: '/coverage',
@@ -85,6 +99,11 @@ const AnimeSlugRoute = AnimeSlugRouteImport.update({
   path: '/anime/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DiscussionsIdRoute = DiscussionsIdRouteImport.update({
+  id: '/discussions/$id',
+  path: '/discussions/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FeedIdRoute = FeedIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -100,120 +119,152 @@ const UpdatesIdRoute = UpdatesIdRouteImport.update({
   path: '/updates/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnimeSlugDiscussionsRoute = AnimeSlugDiscussionsRouteImport.update({
+  id: '/anime/$slug_/discussions',
+  path: '/anime/$slug/discussions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
   '/calendar': typeof CalendarRoute
   '/feed': typeof FeedRouteWithChildren
   '/seasons': typeof SeasonsRoute
   '/admin/automation': typeof AdminAutomationRoute
+  '/admin/community': typeof AdminCommunityRoute
   '/admin/coverage': typeof AdminCoverageRoute
   '/admin/review': typeof AdminReviewRoute
   '/admin/seasons': typeof AdminSeasonsRoute
   '/admin/works': typeof AdminWorksRoute
   '/anime/$slug': typeof AnimeSlugRoute
+  '/discussions/$id': typeof DiscussionsIdRoute
   '/feed/$id': typeof FeedIdRoute
   '/season/$slug': typeof SeasonSlugRoute
   '/updates/$id': typeof UpdatesIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/anime/$slug/discussions': typeof AnimeSlugDiscussionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/calendar': typeof CalendarRoute
   '/feed': typeof FeedRouteWithChildren
   '/seasons': typeof SeasonsRoute
   '/admin/automation': typeof AdminAutomationRoute
+  '/admin/community': typeof AdminCommunityRoute
   '/admin/coverage': typeof AdminCoverageRoute
   '/admin/review': typeof AdminReviewRoute
   '/admin/seasons': typeof AdminSeasonsRoute
   '/admin/works': typeof AdminWorksRoute
   '/anime/$slug': typeof AnimeSlugRoute
+  '/discussions/$id': typeof DiscussionsIdRoute
   '/feed/$id': typeof FeedIdRoute
   '/season/$slug': typeof SeasonSlugRoute
   '/updates/$id': typeof UpdatesIdRoute
   '/admin': typeof AdminIndexRoute
+  '/anime/$slug/discussions': typeof AnimeSlugDiscussionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
   '/calendar': typeof CalendarRoute
   '/feed': typeof FeedRouteWithChildren
   '/seasons': typeof SeasonsRoute
   '/admin/automation': typeof AdminAutomationRoute
+  '/admin/community': typeof AdminCommunityRoute
   '/admin/coverage': typeof AdminCoverageRoute
   '/admin/review': typeof AdminReviewRoute
   '/admin/seasons': typeof AdminSeasonsRoute
   '/admin/works': typeof AdminWorksRoute
   '/anime/$slug': typeof AnimeSlugRoute
+  '/discussions/$id': typeof DiscussionsIdRoute
   '/feed/$id': typeof FeedIdRoute
   '/season/$slug': typeof SeasonSlugRoute
   '/updates/$id': typeof UpdatesIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/anime/$slug_/discussions': typeof AnimeSlugDiscussionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
     | '/admin'
     | '/calendar'
     | '/feed'
     | '/seasons'
     | '/admin/automation'
+    | '/admin/community'
     | '/admin/coverage'
     | '/admin/review'
     | '/admin/seasons'
     | '/admin/works'
     | '/anime/$slug'
+    | '/discussions/$id'
     | '/feed/$id'
     | '/season/$slug'
     | '/updates/$id'
     | '/admin/'
+    | '/anime/$slug/discussions'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account'
     | '/calendar'
     | '/feed'
     | '/seasons'
     | '/admin/automation'
+    | '/admin/community'
     | '/admin/coverage'
     | '/admin/review'
     | '/admin/seasons'
     | '/admin/works'
     | '/anime/$slug'
+    | '/discussions/$id'
     | '/feed/$id'
     | '/season/$slug'
     | '/updates/$id'
     | '/admin'
+    | '/anime/$slug/discussions'
   id:
     | '__root__'
     | '/'
+    | '/account'
     | '/admin'
     | '/calendar'
     | '/feed'
     | '/seasons'
     | '/admin/automation'
+    | '/admin/community'
     | '/admin/coverage'
     | '/admin/review'
     | '/admin/seasons'
     | '/admin/works'
     | '/anime/$slug'
+    | '/discussions/$id'
     | '/feed/$id'
     | '/season/$slug'
     | '/updates/$id'
     | '/admin/'
+    | '/anime/$slug_/discussions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRouteWithChildren
   CalendarRoute: typeof CalendarRoute
   FeedRoute: typeof FeedRouteWithChildren
   SeasonsRoute: typeof SeasonsRoute
   AnimeSlugRoute: typeof AnimeSlugRoute
+  DiscussionsIdRoute: typeof DiscussionsIdRoute
   SeasonSlugRoute: typeof SeasonSlugRoute
   UpdatesIdRoute: typeof UpdatesIdRoute
+  AnimeSlugDiscussionsRoute: typeof AnimeSlugDiscussionsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -223,6 +274,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -267,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAutomationRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/community': {
+      id: '/admin/community'
+      path: '/community'
+      fullPath: '/admin/community'
+      preLoaderRoute: typeof AdminCommunityRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/coverage': {
       id: '/admin/coverage'
       path: '/coverage'
@@ -302,6 +367,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnimeSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/discussions/$id': {
+      id: '/discussions/$id'
+      path: '/discussions/$id'
+      fullPath: '/discussions/$id'
+      preLoaderRoute: typeof DiscussionsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/feed/$id': {
       id: '/feed/$id'
       path: '/$id'
@@ -323,11 +395,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UpdatesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/anime/$slug_/discussions': {
+      id: '/anime/$slug_/discussions'
+      path: '/anime/$slug/discussions'
+      fullPath: '/anime/$slug/discussions'
+      preLoaderRoute: typeof AnimeSlugDiscussionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AdminRouteChildren {
   AdminAutomationRoute: typeof AdminAutomationRoute
+  AdminCommunityRoute: typeof AdminCommunityRoute
   AdminCoverageRoute: typeof AdminCoverageRoute
   AdminReviewRoute: typeof AdminReviewRoute
   AdminSeasonsRoute: typeof AdminSeasonsRoute
@@ -337,6 +417,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAutomationRoute: AdminAutomationRoute,
+  AdminCommunityRoute: AdminCommunityRoute,
   AdminCoverageRoute: AdminCoverageRoute,
   AdminReviewRoute: AdminReviewRoute,
   AdminSeasonsRoute: AdminSeasonsRoute,
@@ -358,13 +439,16 @@ const FeedRouteWithChildren = FeedRoute._addFileChildren(FeedRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
   AdminRoute: AdminRouteWithChildren,
   CalendarRoute: CalendarRoute,
   FeedRoute: FeedRouteWithChildren,
   SeasonsRoute: SeasonsRoute,
   AnimeSlugRoute: AnimeSlugRoute,
+  DiscussionsIdRoute: DiscussionsIdRoute,
   SeasonSlugRoute: SeasonSlugRoute,
   UpdatesIdRoute: UpdatesIdRoute,
+  AnimeSlugDiscussionsRoute: AnimeSlugDiscussionsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

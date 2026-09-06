@@ -27,7 +27,7 @@
   }
   body { @apply m-0 min-w-0 bg-paper font-sans; }
   button, select { @apply cursor-pointer; }
-  button:disabled { @apply cursor-wait opacity-55; }
+  button:disabled { @apply cursor-default opacity-55; }
   :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
   ::selection { @apply bg-charcoal text-white; }
 }

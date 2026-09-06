@@ -1,10 +1,11 @@
 import { cn } from "@/lib/ui";
 import { Link } from "@tanstack/react-router";
-import { Activity, BookOpen, ClipboardCheck, Database, Gauge, Layers3 } from "lucide-react";
+import { Activity, BookOpen, ClipboardCheck, Database, Gauge, Layers3, MessagesSquare } from "lucide-react";
 
 export const adminAreas = [
   { id: "overview", to: "/admin", label: "概览", Icon: Gauge },
   { id: "review", to: "/admin/review", label: "审核", Icon: ClipboardCheck },
+  { id: "community", to: "/admin/community", label: "社区", Icon: MessagesSquare },
   { id: "works", to: "/admin/works", label: "作品", Icon: BookOpen },
   { id: "coverage", to: "/admin/coverage", label: "覆盖", Icon: Database },
   { id: "automation", to: "/admin/automation", label: "自动化", Icon: Activity },

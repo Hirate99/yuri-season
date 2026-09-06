@@ -6,12 +6,17 @@ export function weekdayLabel(day: number): string {
 
 export function shortDate(value: string | null, timeZone?: string): string {
   if (!value) return "时间待定";
+
   const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (dateOnly) return `${Number(dateOnly[2])}月${Number(dateOnly[3])}日`;
+
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return value;
+
   try {
-    return new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric", timeZone }).format(date);
+    return new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric", timeZone }).format(
+      date,
+    );
   } catch {
     return new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric" }).format(date);
   }
@@ -20,8 +25,10 @@ export function shortDate(value: string | null, timeZone?: string): string {
 export function dateTime(value: string | null, timeZone?: string): string {
   if (!value) return "时间待定";
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return shortDate(value);
+
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return value;
+
   return new Intl.DateTimeFormat("zh-CN", {
     month: "short",
     day: "numeric",
@@ -34,13 +41,16 @@ export function dateTime(value: string | null, timeZone?: string): string {
 
 export function relativeTime(value: string | null): string {
   if (!value) return "尚未检查";
+
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return value;
+
   const delta = date.valueOf() - Date.now();
   const formatter = new Intl.RelativeTimeFormat("zh-CN", { numeric: "auto" });
   const abs = Math.abs(delta);
   if (abs < 3_600_000) return formatter.format(Math.round(delta / 60_000), "minute");
   if (abs < 86_400_000) return formatter.format(Math.round(delta / 3_600_000), "hour");
+
   return formatter.format(Math.round(delta / 86_400_000), "day");
 }
 
@@ -68,5 +78,6 @@ export function contentLabel(value: string): string {
     community_thread: "集中讨论",
     editorial: "编辑观察",
   };
+
   return labels[value] ?? value;
 }

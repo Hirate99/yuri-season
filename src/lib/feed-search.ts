@@ -14,14 +14,19 @@ export type FeedSearch = { q?: string; anime?: string; category?: string };
 export function parseFeedSearch(input: Record<string, unknown>): FeedSearch {
   return {
     q: typeof input.q === "string" ? input.q.trim().slice(0, 120) || undefined : undefined,
-    anime: typeof input.anime === "string" ? input.anime.trim().slice(0, 100) || undefined : undefined,
-    category: feedFilters.some((filter) => filter.value === input.category && filter.value !== "all")
-      ? input.category as string : undefined,
+    anime:
+      typeof input.anime === "string" ? input.anime.trim().slice(0, 100) || undefined : undefined,
+    category: feedFilters.some(
+      (filter) => filter.value === input.category && filter.value !== "all",
+    )
+      ? (input.category as string)
+      : undefined,
   };
 }
 
 export function feedClasses(search: FeedSearch) {
   const classes = feedFilters.find((filter) => filter.value === search.category)?.classes;
+
   return classes?.length ? classes : undefined;
 }
 

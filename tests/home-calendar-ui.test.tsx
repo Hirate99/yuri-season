@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
 import type { CatalogResponse } from "@/domain";
 import { HomeCalendar } from "@/components/home-calendar";
 
@@ -52,29 +57,34 @@ const catalog: CatalogResponse = {
       },
     },
   ],
-  events: [{
-    id: "event",
-    animeId: "friday",
-    animeSlug: "friday",
-    animeTitle: "周五的作品",
-    characterId: null,
-    characterName: null,
-    characterPortraitUrl: null,
-    characterPortraitSourceUrl: null,
-    eventType: "event",
-    title: "周末特别活动",
-    startsAt: "2026-09-06T19:00:00+09:00",
-    endsAt: null,
-    timezone: "Asia/Tokyo",
-    recurrenceRule: null,
-    sourceUrl: "https://example.com/event",
-    verified: true,
-    status: "scheduled",
-  }],
+  events: [
+    {
+      id: "event",
+      animeId: "friday",
+      animeSlug: "friday",
+      animeTitle: "周五的作品",
+      characterId: null,
+      characterName: null,
+      characterPortraitUrl: null,
+      characterPortraitSourceUrl: null,
+      eventType: "event",
+      title: "周末特别活动",
+      startsAt: "2026-09-06T19:00:00+09:00",
+      endsAt: null,
+      timezone: "Asia/Tokyo",
+      recurrenceRule: null,
+      sourceUrl: "https://example.com/event",
+      verified: true,
+      status: "scheduled",
+    },
+  ],
   generatedAt: "2026-09-04T08:00:00Z",
 };
 
-async function renderCalendar(data: CatalogResponse = catalog, viewerTimeZone = "America/Los_Angeles") {
+async function renderCalendar(
+  data: CatalogResponse = catalog,
+  viewerTimeZone = "America/Los_Angeles",
+) {
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: ["/"] }),
     routeTree: createRootRoute({
@@ -111,8 +121,20 @@ test("home calendar groups and sorts extended hours within the viewer's day and 
     ...catalog,
     generatedAt: "2026-09-06T17:00:00Z",
     anime: [
-      { ...source, id: "late", slug: "late", titleZh: "深夜节目", primarySlot: { ...source.primarySlot!, weekday: 0, localTime: "25:00" } },
-      { ...source, id: "early", slug: "early", titleZh: "凌晨节目", primarySlot: { ...source.primarySlot!, weekday: 1, localTime: "00:00" } },
+      {
+        ...source,
+        id: "late",
+        slug: "late",
+        titleZh: "深夜节目",
+        primarySlot: { ...source.primarySlot!, weekday: 0, localTime: "25:00" },
+      },
+      {
+        ...source,
+        id: "early",
+        slug: "early",
+        titleZh: "凌晨节目",
+        primarySlot: { ...source.primarySlot!, weekday: 1, localTime: "00:00" },
+      },
     ],
   };
   const pacific = await renderCalendar(data);
@@ -208,7 +230,13 @@ test("home calendar prioritizes local-day starts and short events over long ongo
       ["两日活动", "2026-09-04", "2026-09-05"],
       ["当地今天开始", "2026-09-05T01:00:00+09:00", "2026-09-30T18:00:00+09:00"],
       ["未来单日活动", "2026-09-06", null],
-    ].map(([title, startsAt, endsAt]) => ({ ...catalog.events[0]!, id: title!, title: title!, startsAt: startsAt!, endsAt: endsAt! })),
+    ].map(([title, startsAt, endsAt]) => ({
+      ...catalog.events[0]!,
+      id: title!,
+      title: title!,
+      startsAt: startsAt!,
+      endsAt: endsAt!,
+    })),
   });
   expect(html.indexOf("当地今天开始")).toBeLessThan(html.indexOf("两日活动"));
   expect(html.indexOf("两日活动")).toBeLessThan(html.indexOf("三日活动"));

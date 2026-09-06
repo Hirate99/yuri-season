@@ -2,48 +2,89 @@ import type { AccountWrite, StaffWrite } from "@/domain";
 import { and, eq, sql } from "drizzle-orm";
 
 import { database } from "~/infrastructure/db/client";
-import { accountsTable, animeTable, castCreditsTable, peopleTable, workCreditsTable } from "~/infrastructure/db/schema";
+import {
+  accountsTable,
+  animeTable,
+  castCreditsTable,
+  peopleTable,
+  workCreditsTable,
+} from "~/infrastructure/db/schema";
 import { HttpError } from "~/shared/http-error";
 import { createId } from "~/shared/id";
 
 export async function assertAnime(db: D1Database, animeId: string): Promise<void> {
-  const anime = await database(db).select({ id: animeTable.id }).from(animeTable)
-    .where(eq(animeTable.id, animeId)).get();
+  const anime = await database(db)
+    .select({ id: animeTable.id })
+    .from(animeTable)
+    .where(eq(animeTable.id, animeId))
+    .get();
+
   if (!anime) {
     throw new HttpError(404, "没有找到这部动画。");
   }
 }
 
-export async function personBelongsToAnime(db: D1Database, animeId: string, personId: string): Promise<boolean> {
+export async function personBelongsToAnime(
+  db: D1Database,
+  animeId: string,
+  personId: string,
+): Promise<boolean> {
   const orm = database(db);
-  const [credit] = await orm.select({ id: workCreditsTable.id }).from(workCreditsTable)
+
+  const [credit] = await orm
+    .select({ id: workCreditsTable.id })
+    .from(workCreditsTable)
     .where(and(eq(workCreditsTable.animeId, animeId), eq(workCreditsTable.personId, personId)))
-    .unionAll(orm.select({ id: castCreditsTable.id }).from(castCreditsTable)
-      .where(and(eq(castCreditsTable.animeId, animeId), eq(castCreditsTable.personId, personId))))
+    .unionAll(
+      orm
+        .select({ id: castCreditsTable.id })
+        .from(castCreditsTable)
+        .where(and(eq(castCreditsTable.animeId, animeId), eq(castCreditsTable.personId, personId))),
+    )
     .limit(1);
+
   return Boolean(credit);
 }
 
-export async function assertAccountOwner(db: D1Database, animeId: string, value: AccountWrite): Promise<void> {
+export async function assertAccountOwner(
+  db: D1Database,
+  animeId: string,
+  value: AccountWrite,
+): Promise<void> {
   if (value.ownerType === "anime") {
     if (value.ownerId !== animeId) throw new HttpError(400, "作品账号必须属于当前作品。");
+
     return;
   }
-  if (!await personBelongsToAnime(db, animeId, value.ownerId)) {
+
+  if (!(await personBelongsToAnime(db, animeId, value.ownerId))) {
     throw new HttpError(400, "账号主体不属于当前作品的 Staff 或 Cast。");
   }
 }
 
 export async function readAccountForAnime(db: D1Database, animeId: string, accountId: string) {
-  const account = await database(db).select()
-    .from(accountsTable).where(eq(accountsTable.id, accountId)).get();
-  const visible = account && (account.ownerType === "anime" ? account.ownerId === animeId
-    : account.ownerType === "person" && await personBelongsToAnime(db, animeId, account.ownerId));
+  const account = await database(db)
+    .select()
+    .from(accountsTable)
+    .where(eq(accountsTable.id, accountId))
+    .get();
+
+  const visible =
+    account &&
+    (account.ownerType === "anime"
+      ? account.ownerId === animeId
+      : account.ownerType === "person" &&
+        (await personBelongsToAnime(db, animeId, account.ownerId)));
+
   return visible ? account : undefined;
 }
 
-export async function assertSourceAccount(db: D1Database, animeId: string, accountId: string | null): Promise<void> {
-  if (accountId && !await readAccountForAnime(db, animeId, accountId)) {
+export async function assertSourceAccount(
+  db: D1Database,
+  animeId: string,
+  accountId: string | null,
+): Promise<void> {
+  if (accountId && !(await readAccountForAnime(db, animeId, accountId))) {
     throw new HttpError(400, "来源账号不属于当前作品。");
   }
 }
@@ -53,15 +94,27 @@ export async function personForWrite(
   value: Pick<StaffWrite, "personId" | "name" | "nameNative" | "primaryKind">,
 ): Promise<{ id: string; create: boolean }> {
   if (value.personId) {
-    const existing = await database(db).select({ id: peopleTable.id }).from(peopleTable)
-      .where(eq(peopleTable.id, value.personId)).get();
+    const existing = await database(db)
+      .select({ id: peopleTable.id })
+      .from(peopleTable)
+      .where(eq(peopleTable.id, value.personId))
+      .get();
     if (!existing) throw new HttpError(400, "指定人员不存在。");
+
     return { id: existing.id, create: false };
   }
-  const existing = await database(db).select({ id: peopleTable.id }).from(peopleTable).where(and(
-    eq(peopleTable.name, value.name),
-    sql`COALESCE(${peopleTable.nameNative}, '') = COALESCE(${value.nameNative}, '')`,
-  )).get();
+
+  const existing = await database(db)
+    .select({ id: peopleTable.id })
+    .from(peopleTable)
+    .where(
+      and(
+        eq(peopleTable.name, value.name),
+        sql`COALESCE(${peopleTable.nameNative}, '') = COALESCE(${value.nameNative}, '')`,
+      ),
+    )
+    .get();
+
   return existing ? { id: existing.id, create: false } : { id: createId("person"), create: true };
 }
 

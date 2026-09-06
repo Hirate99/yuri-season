@@ -22,6 +22,19 @@ bun run dev
 
 然后在 Whistle 的 Rules 面板新建规则，直接粘贴 [`whistle.rules`](./whistle.rules) 的内容并启用，再访问 `https://i-yuri.com`。页面、前端资源和 Vite HMR 会转到本机的 `[::1]:3000`，`/api/**` 与 `r2.i-yuri.com` 保持生产链路；本地 SSR 也会只读生产公开 API，而不会连接生产 D1。这里明确使用 IPv6，是为了避免 Windows 上其他系统进程占用 `127.0.0.1:3000`。这个切换标记仅在 Vite 开发环境生效。首次使用 HTTPS 抓包时仍需按 Whistle 提示安装并信任其根证书。
 
+## 代码风格
+
+手写源码统一使用 Prettier：两空格缩进、双引号、分号，目标行宽 100 字符。生成的路由和 Worker 类型由生成器维护。
+
+```powershell
+bun run format
+bun run format:check
+```
+
+`bun install` 会通过 `prepare` 安装 Husky 提交钩子。每次提交前，lint-staged 会用 Prettier 整理暂存的代码和配置文件，并把格式化结果写回暂存区；格式化失败会阻止提交。部分暂存文件的未暂存修改由 lint-staged 临时保存并恢复。已有依赖时可运行 `bun run prepare` 启用钩子。
+
+按逻辑阶段留空行：参数检查、数据准备、查询或副作用、结果返回之间分段；独立的 Hook 和函数之间也留空行。连续的简单赋值、同组校验保持紧凑。Prettier 会保留这些空行，逻辑分组需要在写代码时维护。注释重点说明业务约束、边界条件和实现原因，避免重复代码本身。修改后运行 `bun run typecheck` 和 `bun test`。
+
 ## Local-first 更新
 
 第一阶段不注册 Cloudflare Cron，也不让 Worker 常驻调用模型。配置本地环境变量后运行确定性增量检查：

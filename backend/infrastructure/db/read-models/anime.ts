@@ -1,11 +1,17 @@
-import { and, asc, count, desc, eq, getTableColumns, isNull, max, sql, type SQL } from "drizzle-orm";
-import { database } from "../client";
 import {
-  animeTable,
-  broadcastSlotsTable,
-  feedItemsTable,
-  seasonsTable,
-} from "../schema";
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  isNull,
+  max,
+  sql,
+  type SQL,
+} from "drizzle-orm";
+import { database } from "../client";
+import { animeTable, broadcastSlotsTable, feedItemsTable, seasonsTable } from "../schema";
 
 const {
   parentAnimeId: _parentAnimeId,
@@ -29,14 +35,18 @@ const animeSummarySelection = {
 };
 
 function animeSummaryQuery(db: D1Database, where?: SQL) {
-  return database(db).select(animeSummarySelection)
+  return database(db)
+    .select(animeSummarySelection)
     .from(animeTable)
     .innerJoin(seasonsTable, eq(seasonsTable.id, animeTable.seasonId))
-    .leftJoin(broadcastSlotsTable, and(
-      eq(broadcastSlotsTable.animeId, animeTable.id),
-      eq(broadcastSlotsTable.isPrimary, true),
-    ))
-    .leftJoin(feedItemsTable, and(eq(feedItemsTable.animeId, animeTable.id), isNull(feedItemsTable.withdrawnAt)))
+    .leftJoin(
+      broadcastSlotsTable,
+      and(eq(broadcastSlotsTable.animeId, animeTable.id), eq(broadcastSlotsTable.isPrimary, true)),
+    )
+    .leftJoin(
+      feedItemsTable,
+      and(eq(feedItemsTable.animeId, animeTable.id), isNull(feedItemsTable.withdrawnAt)),
+    )
     .groupBy(animeTable.id, broadcastSlotsTable.id)
     .where(where);
 }
@@ -65,12 +75,13 @@ const catalogAnimeSelection = {
 };
 
 export function readCatalogAnimeForSeason(db: D1Database, seasonId: string) {
-  return database(db).select(catalogAnimeSelection)
+  return database(db)
+    .select(catalogAnimeSelection)
     .from(animeTable)
-    .leftJoin(broadcastSlotsTable, and(
-      eq(broadcastSlotsTable.animeId, animeTable.id),
-      eq(broadcastSlotsTable.isPrimary, true),
-    ))
+    .leftJoin(
+      broadcastSlotsTable,
+      and(eq(broadcastSlotsTable.animeId, animeTable.id), eq(broadcastSlotsTable.isPrimary, true)),
+    )
     .where(eq(animeTable.seasonId, seasonId))
     .orderBy(
       desc(animeTable.featured),
@@ -84,6 +95,7 @@ export type CatalogAnimeRecord = Awaited<ReturnType<typeof readCatalogAnimeForSe
 
 export async function readAnimeSummaryBySlug(db: D1Database, slug: string) {
   const [row] = await animeSummaryQuery(db, eq(animeTable.slug, slug)).limit(1);
+
   return row ?? null;
 }
 

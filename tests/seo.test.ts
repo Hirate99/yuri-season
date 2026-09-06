@@ -7,9 +7,17 @@ import { TestD1 } from "./support/d1-adapter";
 
 describe("search metadata", () => {
   test("uses absolute canonical and share URLs without cutting descriptions mid-sentence", () => {
-    const head = seoHead({ title: "作品", path: "/anime/example", description: `简介\n  ${"文".repeat(180)}`, image: "/cover.webp" });
+    const head = seoHead({
+      title: "作品",
+      path: "/anime/example",
+      description: `简介\n  ${"文".repeat(180)}`,
+      image: "/cover.webp",
+    });
     expect(head.links).toEqual([{ rel: "canonical", href: "https://i-yuri.com/anime/example" }]);
-    expect(head.meta).toContainEqual({ property: "og:image", content: "https://i-yuri.com/cover.webp" });
+    expect(head.meta).toContainEqual({
+      property: "og:image",
+      content: "https://i-yuri.com/cover.webp",
+    });
     expect(head.meta).toContainEqual({ name: "twitter:card", content: "summary_large_image" });
     const description = head.meta.find((meta) => meta.name === "description")?.content;
     expect(description).toStartWith("简介 文");
@@ -39,24 +47,40 @@ describe("public sitemap", () => {
     expect(paths).toContain("/season/2026-summer");
     expect(paths).toContain("/anime/kimishinu");
     expect(new Set(paths).size).toBe(paths.length);
-    expect(paths.some((path) => path.startsWith("/feed/") || path.startsWith("/admin"))).toBe(false);
+    expect(paths.some((path) => path.startsWith("/feed/") || path.startsWith("/admin"))).toBe(
+      false,
+    );
     const publications = paths.filter((path) => path.startsWith("/updates/"));
     expect(publications.length).toBeGreaterThan(0);
     for (const path of publications) {
-      const page = await readPublicationPage(db.binding(), decodeURIComponent(path.slice("/updates/".length)));
+      const page = await readPublicationPage(
+        db.binding(),
+        decodeURIComponent(path.slice("/updates/".length)),
+      );
       expect(page).not.toBeNull();
       expect(publicationHead(page!, page!.item.id).links[0].href).toBe(`https://i-yuri.com${path}`);
     }
   });
 
   test("removes withdrawn, adult, and editorial items immediately", async () => {
-    const visible = db.sqlite.query("SELECT id FROM feed_items WHERE withdrawn_at IS NULL AND safety_rating != 'adult' AND content_class != 'editorial' LIMIT 3").all() as { id: string }[];
+    const visible = db.sqlite
+      .query(
+        "SELECT id FROM feed_items WHERE withdrawn_at IS NULL AND safety_rating != 'adult' AND content_class != 'editorial' LIMIT 3",
+      )
+      .all() as { id: string }[];
     expect(visible).toHaveLength(3);
-    db.sqlite.query("UPDATE feed_items SET withdrawn_at = '2026-09-04T00:00:00Z' WHERE id = ?").run(visible[0].id);
-    db.sqlite.query("UPDATE feed_items SET safety_rating = 'adult' WHERE id = ?").run(visible[1].id);
-    db.sqlite.query("UPDATE feed_items SET content_class = 'editorial' WHERE id = ?").run(visible[2].id);
+    db.sqlite
+      .query("UPDATE feed_items SET withdrawn_at = '2026-09-04T00:00:00Z' WHERE id = ?")
+      .run(visible[0].id);
+    db.sqlite
+      .query("UPDATE feed_items SET safety_rating = 'adult' WHERE id = ?")
+      .run(visible[1].id);
+    db.sqlite
+      .query("UPDATE feed_items SET content_class = 'editorial' WHERE id = ?")
+      .run(visible[2].id);
     const paths = await readSitemapPaths(db.binding());
-    for (const row of visible) expect(paths).not.toContain(`/updates/${encodeURIComponent(row.id)}`);
+    for (const row of visible)
+      expect(paths).not.toContain(`/updates/${encodeURIComponent(row.id)}`);
   });
 
   test("serves XML and robots for GET/HEAD, with correct URL escaping", async () => {

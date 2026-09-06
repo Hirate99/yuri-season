@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { readCatalog, readCatalogForSeason, readCurrentAnimeOptions, readSeasons } from "~/repositories/catalog";
+import {
+  readCatalog,
+  readCatalogForSeason,
+  readCurrentAnimeOptions,
+  readSeasons,
+} from "~/repositories/catalog";
 import { readAnimePage, readAnimeRelated, readHomePage } from "~/application/public/service";
 import { eventOccursToday } from "@/lib/calendar-events";
 import { readAnimeDetail } from "~/repositories/detail";
@@ -25,7 +30,9 @@ describe("current-season catalog", () => {
     for (const timeZone of ["Asia/Tokyo", "America/Los_Angeles"]) {
       const home = await readCatalog(database.binding(), { events: "today", timeZone, now });
       expect(home.anime).toEqual(full.anime);
-      expect(home.events).toEqual(full.events.filter((event) => eventOccursToday(event, timeZone, now)));
+      expect(home.events).toEqual(
+        full.events.filter((event) => eventOccursToday(event, timeZone, now)),
+      );
       expect(home.generatedAt).toBe(now.toISOString());
     }
   });
@@ -73,12 +80,20 @@ describe("current-season catalog", () => {
     const catalog = await readCatalog(database.binding());
     expect(catalog.anime).toHaveLength(11);
     expect(catalog.anime.some((anime) => anime.slug === "plannosaurus")).toBe(false);
-    expect(catalog.anime.filter((anime) => anime.yuriStatus === "pending").map((anime) => anime.slug).sort())
-      .toEqual(["bang-dream-yumemita", "futsutsuka-akujo", "goodbye-lara", "grow-up-show"]);
+    expect(
+      catalog.anime
+        .filter((anime) => anime.yuriStatus === "pending")
+        .map((anime) => anime.slug)
+        .sort(),
+    ).toEqual(["bang-dream-yumemita", "futsutsuka-akujo", "goodbye-lara", "grow-up-show"]);
 
     const yumemita = catalog.anime.find((anime) => anime.slug === "bang-dream-yumemita");
     const korekaite = catalog.anime.find((anime) => anime.slug === "kore-kaite-shine");
-    expect(yumemita).toMatchObject({ yuriKind: "strong", yuriStatus: "pending", coverUrl: expect.any(String) });
+    expect(yumemita).toMatchObject({
+      yuriKind: "strong",
+      yuriStatus: "pending",
+      coverUrl: expect.any(String),
+    });
     expect(korekaite).toMatchObject({
       yuriKind: "adjacent",
       yuriStatus: "confirmed",
@@ -123,8 +138,13 @@ describe("current-season catalog", () => {
     });
     expect(yumemita?.staff).toHaveLength(6);
     expect(yumemita?.cast).toHaveLength(5);
-    expect(yumemita?.cast.map((credit) => credit.characterNameNative))
-      .toEqual(["仲町あられ", "宮永ののか", "峰月律", "藤都子", "千石ユノ"]);
+    expect(yumemita?.cast.map((credit) => credit.characterNameNative)).toEqual([
+      "仲町あられ",
+      "宮永ののか",
+      "峰月律",
+      "藤都子",
+      "千石ユノ",
+    ]);
 
     expect(korekaite).toMatchObject({
       broadcasts: [expect.objectContaining({ localTime: "23:30" })],
@@ -136,12 +156,14 @@ describe("current-season catalog", () => {
 
   test("stores the five verified YUME∞MITA birthdays with corrected display names", async () => {
     const detail = await readAnimeDetail(database.binding(), "bang-dream-yumemita");
-    expect(detail?.cast.map((credit) => [
-      credit.characterName,
-      credit.birthdayMonth,
-      credit.birthdayDay,
-      credit.birthdayVerified,
-    ])).toEqual([
+    expect(
+      detail?.cast.map((credit) => [
+        credit.characterName,
+        credit.birthdayMonth,
+        credit.birthdayDay,
+        credit.birthdayVerified,
+      ]),
+    ).toEqual([
       ["仲町阿拉蕾", 8, 16, true],
       ["宫永野乃花", 4, 17, true],
       ["峰月律", 2, 7, true],
@@ -149,9 +171,11 @@ describe("current-season catalog", () => {
       ["千石由乃", 11, 4, true],
     ]);
     expect(detail?.events.filter((event) => event.eventType === "birthday")).toHaveLength(5);
-    expect(detail?.events.filter((event) => event.eventType === "birthday")
-      .every((event) => Boolean(event.characterPortraitUrl && event.characterPortraitSourceUrl)))
-      .toBe(true);
+    expect(
+      detail?.events
+        .filter((event) => event.eventType === "birthday")
+        .every((event) => Boolean(event.characterPortraitUrl && event.characterPortraitSourceUrl)),
+    ).toBe(true);
   });
 
   test("exposes registered source provenance without duplicating source URLs", async () => {
@@ -215,8 +239,11 @@ describe("current-season catalog", () => {
     });
     expect(futsutsuka?.staff).toHaveLength(6);
     expect(futsutsuka?.cast).toHaveLength(2);
-    expect(futsutsuka?.cast.filter((credit) => credit.birthdayVerified).map((credit) => credit.characterName))
-      .toEqual(["黄玲琳", "朱慧月"]);
+    expect(
+      futsutsuka?.cast
+        .filter((credit) => credit.birthdayVerified)
+        .map((credit) => credit.characterName),
+    ).toEqual(["黄玲琳", "朱慧月"]);
 
     expect(magilumiere).toMatchObject({
       yuriKind: "adjacent",
@@ -230,16 +257,22 @@ describe("current-season catalog", () => {
 
     expect(dodge?.staff).toHaveLength(6);
     expect(dodge?.cast).toHaveLength(7);
-    expect(dodge?.cast.slice(-2).map((credit) => credit.characterNameNative))
-      .toEqual(["三笠はこ", "火浦颯美"]);
+    expect(dodge?.cast.slice(-2).map((credit) => credit.characterNameNative)).toEqual([
+      "三笠はこ",
+      "火浦颯美",
+    ]);
     expect(dodge?.cast.every((credit) => !credit.birthdayVerified)).toBe(true);
 
-    const adminCharacterRows = database.sqlite.query(`
+    const adminCharacterRows = database.sqlite
+      .query(
+        `
       SELECT c.name_native, c.is_main_group
       FROM characters c
       WHERE c.anime_id = 'anime-futsutsuka'
       ORDER BY c.sort_order
-    `).all() as Array<{ name_native: string; is_main_group: number }>;
+    `,
+      )
+      .all() as Array<{ name_native: string; is_main_group: number }>;
     expect(adminCharacterRows).toHaveLength(5);
     expect(adminCharacterRows.filter((row) => row.is_main_group === 0)).toHaveLength(3);
 
@@ -250,14 +283,19 @@ describe("current-season catalog", () => {
     const growUp = await readAnimeDetail(database.binding(), "grow-up-show");
     const korekaite = await readAnimeDetail(database.binding(), "kore-kaite-shine");
 
-    expect(growUp?.cast.find((credit) => credit.personId === "person-kusunoki-tomori")?.accounts)
-      .toContainEqual(expect.objectContaining({ handle: "@tomori_kusunoki", verified: true }));
-    expect(growUp?.cast.find((credit) => credit.personId === "person-natsuyoshi-yuko")?.accounts)
-      .toContainEqual(expect.objectContaining({ handle: "@__yuuuumr__", verified: true }));
-    expect(korekaite?.cast.find((credit) => credit.personId === "person-minase-inori")?.accounts)
-      .toContainEqual(expect.objectContaining({ handle: "@inoriminase", verified: true }));
+    expect(
+      growUp?.cast.find((credit) => credit.personId === "person-kusunoki-tomori")?.accounts,
+    ).toContainEqual(expect.objectContaining({ handle: "@tomori_kusunoki", verified: true }));
+    expect(
+      growUp?.cast.find((credit) => credit.personId === "person-natsuyoshi-yuko")?.accounts,
+    ).toContainEqual(expect.objectContaining({ handle: "@__yuuuumr__", verified: true }));
+    expect(
+      korekaite?.cast.find((credit) => credit.personId === "person-minase-inori")?.accounts,
+    ).toContainEqual(expect.objectContaining({ handle: "@inoriminase", verified: true }));
 
-    const evidence = database.sqlite.query(`
+    const evidence = database.sqlite
+      .query(
+        `
       SELECT id, verification_source_url FROM accounts
       WHERE id IN (
         'account-kusunoki-tomori-x',
@@ -265,11 +303,22 @@ describe("current-season catalog", () => {
         'account-minase-inori-x'
       )
       ORDER BY id
-    `).all();
+    `,
+      )
+      .all();
     expect(evidence).toEqual([
-      { id: "account-kusunoki-tomori-x", verification_source_url: "https://cocotame.jp/series/014675/" },
-      { id: "account-minase-inori-x", verification_source_url: "https://www.inoriminase.com/news/?id=1739" },
-      { id: "account-natsuyoshi-yuko-x", verification_source_url: "https://bushiroad.com/media/8497" },
+      {
+        id: "account-kusunoki-tomori-x",
+        verification_source_url: "https://cocotame.jp/series/014675/",
+      },
+      {
+        id: "account-minase-inori-x",
+        verification_source_url: "https://www.inoriminase.com/news/?id=1739",
+      },
+      {
+        id: "account-natsuyoshi-yuko-x",
+        verification_source_url: "https://bushiroad.com/media/8497",
+      },
     ]);
   });
 });

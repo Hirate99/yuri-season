@@ -41,13 +41,16 @@ describe("Worker job fencing", () => {
     expect(job.lease_token_hash).toBeString();
 
     await startJob(database.binding(), job);
-    await expect(heartbeatJob(database.binding(), { ...job, lease_token_hash: "stale-token" }))
-      .rejects.toThrow("lease was lost");
+    await expect(
+      heartbeatJob(database.binding(), { ...job, lease_token_hash: "stale-token" }),
+    ).rejects.toThrow("lease was lost");
     await heartbeatJob(database.binding(), job);
     await completeJob(database.binding(), job);
 
-    expect(database.sqlite.query(
-      "SELECT status, lease_token_hash AS leaseTokenHash FROM update_jobs WHERE id = ?",
-    ).get(job.id)).toEqual({ status: "completed", leaseTokenHash: null });
+    expect(
+      database.sqlite
+        .query("SELECT status, lease_token_hash AS leaseTokenHash FROM update_jobs WHERE id = ?")
+        .get(job.id),
+    ).toEqual({ status: "completed", leaseTokenHash: null });
   });
 });

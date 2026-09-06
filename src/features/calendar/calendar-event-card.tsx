@@ -15,13 +15,20 @@ export function CalendarEventCard({ event, now }: { event: CalendarEvent; now?: 
   const isOngoing = eventIsOngoing(event, now);
 
   return (
-    <article className={cn(
-      "grid grid-cols-[minmax(0,1fr)_32px] items-start gap-x-3 gap-y-2 rounded-xl border p-4",
-      isBirthday
-        ? "border-[#f2dce3] bg-[linear-gradient(110deg,#fff8fa_0%,#ffffff_52%)]"
-        : "border-line bg-white",
-    )}>
-      <div className={cn("flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 [&_time>span]:whitespace-normal [&_time>small]:whitespace-normal", isBirthday && "text-[#a84863]")}>
+    <article
+      className={cn(
+        "grid grid-cols-[minmax(0,1fr)_32px] items-start gap-x-3 gap-y-2 rounded-xl border p-4",
+        isBirthday
+          ? "border-[#f2dce3] bg-[linear-gradient(110deg,#fff8fa_0%,#ffffff_52%)]"
+          : "border-line bg-white",
+      )}
+    >
+      <div
+        className={cn(
+          "flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 [&_time>span]:whitespace-normal [&_time>small]:whitespace-normal",
+          isBirthday && "text-[#a84863]",
+        )}
+      >
         <EventTime event={event} showTime />
         <Badge tone={presentation.tone}>{presentation.label}</Badge>
         {isOngoing && <Badge tone="lime">进行中</Badge>}
@@ -44,11 +51,11 @@ export function CalendarEventCard({ event, now }: { event: CalendarEvent; now?: 
           </a>
         )}
         <div className="min-w-0">
-          <h3 className="text-sm leading-5 font-semibold">
-            {eventTitle(event)}
-          </h3>
+          <h3 className="text-sm leading-5 font-semibold">{eventTitle(event)}</h3>
           {(event.animeTitle || event.characterName) && (
-            <p className="mt-1 text-xs leading-4 text-muted">{event.animeTitle ?? event.characterName}</p>
+            <p className="mt-1 text-xs leading-4 text-muted">
+              {event.animeTitle ?? event.characterName}
+            </p>
           )}
         </div>
       </div>

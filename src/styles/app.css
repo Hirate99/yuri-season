@@ -19,25 +19,49 @@
 }
 
 @layer base {
-  * { box-sizing: border-box; }
+  * {
+    box-sizing: border-box;
+  }
   html {
     @apply bg-paper text-ink antialiased;
     scroll-padding-top: 8rem;
     scrollbar-gutter: stable;
   }
-  body { @apply m-0 min-w-0 bg-paper font-sans; }
-  button, select { @apply cursor-pointer; }
-  button:disabled { @apply cursor-default opacity-55; }
-  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
-  ::selection { @apply bg-charcoal text-white; }
+  body {
+    @apply m-0 min-w-0 bg-paper font-sans;
+  }
+  button,
+  select {
+    @apply cursor-pointer;
+  }
+  button:disabled {
+    @apply cursor-default opacity-55;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+  ::selection {
+    @apply bg-charcoal text-white;
+  }
 }
 
 @layer components {
-  .page-header { @apply mb-6 grid min-h-12 grid-cols-[auto_minmax(0,1fr)] items-center gap-6 md:min-h-14; }
-  .page-header > .page-title { @apply mt-0; }
-  .page-title { @apply mt-2 text-[30px] leading-tight font-bold tracking-tight md:text-[40px]; }
-  .eyebrow { @apply text-xs font-semibold tracking-wide text-accent; }
-  .surface { @apply rounded-xl border border-line bg-white; }
+  .page-header {
+    @apply mb-6 grid min-h-12 grid-cols-[auto_minmax(0,1fr)] items-center gap-6 md:min-h-14;
+  }
+  .page-header > .page-title {
+    @apply mt-0;
+  }
+  .page-title {
+    @apply mt-2 text-[30px] leading-tight font-bold tracking-tight md:text-[40px];
+  }
+  .eyebrow {
+    @apply text-xs font-semibold tracking-wide text-accent;
+  }
+  .surface {
+    @apply rounded-xl border border-line bg-white;
+  }
 
   .season-card-stage {
     perspective: 1100px;
@@ -49,7 +73,7 @@
     transform-origin: 50% 78%;
     transform-style: preserve-3d;
     transition:
-      transform 760ms cubic-bezier(.2, .78, .2, 1),
+      transform 760ms cubic-bezier(0.2, 0.78, 0.2, 1),
       opacity 420ms ease,
       filter 620ms ease,
       box-shadow 620ms ease;
@@ -67,8 +91,8 @@
 
   .season-card[data-card-position="next"] {
     z-index: 2;
-    opacity: .28;
-    filter: saturate(.72);
+    opacity: 0.28;
+    filter: saturate(0.72);
     pointer-events: none;
     transform: translate3d(18px, 12px, -20px) rotateX(1.5deg) rotateY(7deg) rotateZ(3deg);
     box-shadow: 0 12px 28px -16px rgb(37 35 43 / 20%);
@@ -76,8 +100,8 @@
 
   .season-card[data-card-position="previous"] {
     z-index: 1;
-    opacity: .22;
-    filter: saturate(.65);
+    opacity: 0.22;
+    filter: saturate(0.65);
     pointer-events: none;
     transform: translate3d(-20px, 18px, -38px) rotateX(-1deg) rotateY(-8deg) rotateZ(-4deg);
     box-shadow: 0 10px 24px -16px rgb(37 35 43 / 16%);
@@ -85,7 +109,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .season-card { transition: none; }
+  .season-card {
+    transition: none;
+  }
 }
 
 @utility scrollbar-hidden {
@@ -98,7 +124,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;

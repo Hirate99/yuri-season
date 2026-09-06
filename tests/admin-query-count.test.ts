@@ -54,17 +54,40 @@ describe("Admin dashboard query budget", () => {
 
     for (let index = 0; index < 101; index += 1) {
       const id = `budget-${index}`;
-      database.sqlite.query("INSERT INTO people (id, name, primary_kind) VALUES (?, ?, 'staff')").run(id, id);
-      database.sqlite.query("INSERT INTO work_credits (id, anime_id, person_id, role) VALUES (?, 'anime-query-budget', ?, 'Staff')").run(id, id);
-      database.sqlite.query("INSERT INTO discussions (id, anime_id, platform, title, url) VALUES (?, 'anime-query-budget', 'Forum', ?, ?)").run(id, id, `https://example.test/${id}`);
-      database.sqlite.query("INSERT INTO discussion_anime (discussion_id, anime_id) VALUES (?, 'anime-query-budget')").run(id);
-      database.sqlite.query("INSERT INTO music_tracks (id, title, artist) VALUES (?, ?, 'Artist')").run(id, id);
-      database.sqlite.query("INSERT INTO anime_theme_songs (id, anime_id, track_id, song_kind, sequence) VALUES (?, 'anime-query-budget', ?, ?, ?)")
-        .run(id, id, index < 99 ? "opening" : "ending", index % 99 + 1);
+      database.sqlite
+        .query("INSERT INTO people (id, name, primary_kind) VALUES (?, ?, 'staff')")
+        .run(id, id);
+      database.sqlite
+        .query(
+          "INSERT INTO work_credits (id, anime_id, person_id, role) VALUES (?, 'anime-query-budget', ?, 'Staff')",
+        )
+        .run(id, id);
+      database.sqlite
+        .query(
+          "INSERT INTO discussions (id, anime_id, platform, title, url) VALUES (?, 'anime-query-budget', 'Forum', ?, ?)",
+        )
+        .run(id, id, `https://example.test/${id}`);
+      database.sqlite
+        .query(
+          "INSERT INTO discussion_anime (discussion_id, anime_id) VALUES (?, 'anime-query-budget')",
+        )
+        .run(id);
+      database.sqlite
+        .query("INSERT INTO music_tracks (id, title, artist) VALUES (?, ?, 'Artist')")
+        .run(id, id);
+      database.sqlite
+        .query(
+          "INSERT INTO anime_theme_songs (id, anime_id, track_id, song_kind, sequence) VALUES (?, 'anime-query-budget', ?, ?, ?)",
+        )
+        .run(id, id, index < 99 ? "opening" : "ending", (index % 99) + 1);
     }
     database.resetMetrics();
     const resources = await readAdminAnimeResources(database.binding(), "anime-query-budget");
-    expect([resources.staff.length, resources.discussions.length, resources.themeSongs.length]).toEqual([101, 101, 101]);
+    expect([
+      resources.staff.length,
+      resources.discussions.length,
+      resources.themeSongs.length,
+    ]).toEqual([101, 101, 101]);
     expect(database.calls).toBe(3);
   });
 });

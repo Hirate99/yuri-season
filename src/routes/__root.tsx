@@ -26,7 +26,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       <h1 className="mt-3 text-3xl font-bold">没有找到这个页面</h1>
       <p className="mt-4 text-sm leading-7 text-muted">链接可能已失效，或这条内容已撤回。</p>
       <div className="mt-8 flex justify-center gap-6 text-sm font-semibold text-accent">
-        <Link to="/">返回片单</Link><Link to="/feed">查看情报</Link>
+        <Link to="/">返回片单</Link>
+        <Link to="/feed">查看情报</Link>
       </div>
     </div>
   ),
@@ -36,8 +37,13 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 function RootDocument({ children }: { children: ReactNode }) {
   return (
     <html lang="zh-CN">
-      <head><HeadContent /></head>
-      <body>{children}<Scripts /></body>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
     </html>
   );
 }

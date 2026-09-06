@@ -18,9 +18,12 @@ describe("backend architecture boundaries", () => {
   });
 
   test("keeps new migration prefixes unique after the historical 0027 collision", () => {
-    const prefixes = [...new Bun.Glob("migrations/*.sql").scanSync()]
-      .map((path) => path.replaceAll("\\", "/").split("/").at(-1)!.split("_")[0]);
-    const duplicates = [...new Set(prefixes.filter((prefix, index) => prefixes.indexOf(prefix) !== index))];
+    const prefixes = [...new Bun.Glob("migrations/*.sql").scanSync()].map(
+      (path) => path.replaceAll("\\", "/").split("/").at(-1)!.split("_")[0],
+    );
+    const duplicates = [
+      ...new Set(prefixes.filter((prefix, index) => prefixes.indexOf(prefix) !== index)),
+    ];
     expect(duplicates).toEqual(["0027"]);
   });
 
@@ -36,8 +39,10 @@ describe("backend architecture boundaries", () => {
       if (source.includes("nativeStatement(") && !path.replaceAll("\\", "/").includes("/native/")) {
         nativeStatementFiles.push(path.replaceAll("\\", "/"));
       }
-      if (/infrastructure\/db\/native\/statement|native\/statement/.test(source)
-        && !path.replaceAll("\\", "/").includes("/native/")) {
+      if (
+        /infrastructure\/db\/native\/statement|native\/statement/.test(source) &&
+        !path.replaceAll("\\", "/").includes("/native/")
+      ) {
         nativeHelperImports.push(path.replaceAll("\\", "/"));
       }
     }
@@ -57,7 +62,7 @@ describe("backend architecture boundaries", () => {
     const schemaTables = new Set<string>();
     for (const path of new Bun.Glob("backend/infrastructure/db/schema/*.ts").scanSync()) {
       const source = await Bun.file(path).text();
-      for (const match of source.matchAll(/sqliteTable\("([^"]+)"/g)) schemaTables.add(match[1]);
+      for (const match of source.matchAll(/sqliteTable\(\s*"([^"]+)"/g)) schemaTables.add(match[1]);
     }
     expect([...schemaTables].sort()).toEqual([...migrationTables].sort());
   });
@@ -69,7 +74,12 @@ describe("backend architecture boundaries", () => {
   });
 
   test("keeps HTTP parsing dependencies out of business and persistence layers", async () => {
-    for (const root of ["backend/application", "backend/repositories", "backend/research", "backend/infrastructure"]) {
+    for (const root of [
+      "backend/application",
+      "backend/repositories",
+      "backend/research",
+      "backend/infrastructure",
+    ]) {
       for (const path of new Bun.Glob(`${root}/**/*.ts`).scanSync()) {
         expect(await Bun.file(path).text()).not.toContain("~/http/");
       }

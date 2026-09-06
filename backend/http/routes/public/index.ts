@@ -6,7 +6,8 @@ import { catalogRoutes } from "./catalog";
 import { feedRoutes } from "./feed";
 import { publicationRoutes } from "./publications";
 
-export const publicRoutes = new Hono<ApiEnvironment>().basePath("/api")
+export const publicRoutes = new Hono<ApiEnvironment>()
+  .basePath("/api")
   .route("/", catalogRoutes)
   .route("/", feedRoutes)
   .route("/", publicationRoutes)

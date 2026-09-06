@@ -7,12 +7,137 @@ import { FormError, PostTime } from "@/features/community/shared";
 import { textButton } from "@/lib/ui";
 
 export const Route = createFileRoute("/admin/community")({ component: CommunityAdmin });
+
 function CommunityAdmin() {
   const queryClient = useQueryClient();
   const endpoint = apiClient.api.admin.community;
-  const queue = useQuery({ queryKey: ["admin", "community"], queryFn: () => rpcData(endpoint.$get()) });
-  const action = useMutation({ mutationFn: ({ id, json }: { id: string; json: z.infer<typeof moderationInput> }) => rpcData(endpoint[":id"].$patch({ param: { id }, json })), onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ["admin", "community"] }); void queryClient.invalidateQueries({ queryKey: ["community"] }); } });
-  const button = (label: string, id: string, json: z.infer<typeof moderationInput>) => <button key={label} className={textButton} disabled={action.isPending} onClick={() => action.mutate({ id, json })}>{label}</button>;
-  return <div className="space-y-8"><FormError error={queue.error || action.error} /><details className="surface p-5"><summary className="cursor-pointer font-semibold">已隐藏内容与禁言账号</summary><p className="my-3 text-xs text-muted">各显示最多 100 条；处理举报后仍可在这里恢复。</p><div className="space-y-3">{queue.data?.bannedUsers.map((user) => <div key={user.id} className="flex items-center justify-between gap-3 text-sm"><span>{user.name}</span>{button("解除禁言", user.id, { kind: "user", banned: false })}</div>)}{queue.data?.hiddenPosts.map((post) => <div key={post.id} className="border-t border-line pt-3"><p className="text-sm font-semibold">{post.title}</p><p className="my-2 max-h-24 overflow-auto whitespace-pre-wrap text-sm break-words">{post.body}</p>{button("恢复内容", post.id, { kind: "post", hidden: false })}</div>)}</div></details><section><h2 className="mb-4 text-lg font-semibold">待处理举报</h2>{queue.data?.reports.length === 0 && <p className="text-sm text-muted">目前没有待处理举报。</p>}<div className="space-y-4">{queue.data?.reports.map((report) => <article key={report.id} className="surface space-y-3 p-5"><Link to="/discussions/$id" params={{ id: report.threadId }} className="font-semibold">{report.title}</Link><p className="text-xs text-muted">{report.name} · <PostTime value={report.createdAt} /></p><p className="max-h-48 overflow-auto whitespace-pre-wrap text-sm break-words">{report.body}</p><p className="text-sm text-rose-700">举报原因：{report.reason}</p><div className="flex flex-wrap gap-2">{button(report.hidden ? "恢复内容" : "隐藏内容", report.postId, { kind: "post", hidden: !report.hidden })}{button(report.banned ? "解除禁言" : "禁言作者", report.userId, { kind: "user", banned: !report.banned })}{button("标记已处理", report.id, { kind: "report", resolved: true })}</div></article>)}</div></section>
-    <section><h2 className="mb-4 text-lg font-semibold">最近讨论</h2><p className="mb-4 text-xs text-muted">最近 100 个讨论；待处理举报每次显示最早的 100 条。</p><div className="divide-y divide-line">{queue.data?.threads.map((thread) => <article className="py-5" key={thread.id}><Link to="/discussions/$id" params={{ id: thread.id }} className="font-semibold break-words">{thread.title}</Link><p className="my-3 text-xs text-muted">{thread.name} · <PostTime value={thread.createdAt} /></p><div className="flex flex-wrap gap-2">{button(thread.pinned ? "取消置顶" : "置顶", thread.id, { kind: "thread", pinned: !thread.pinned })}{button(thread.locked ? "解锁" : "锁定", thread.id, { kind: "thread", locked: !thread.locked })}{button(thread.hidden ? "恢复讨论" : "隐藏讨论", thread.id, { kind: "thread", hidden: !thread.hidden })}{button(thread.banned ? "解除禁言" : "禁言作者", thread.authorId, { kind: "user", banned: !thread.banned })}</div></article>)}</div></section></div>;
+
+  const queue = useQuery({
+    queryKey: ["admin", "community"],
+    queryFn: () => rpcData(endpoint.$get()),
+  });
+
+  const action = useMutation({
+    mutationFn: ({ id, json }: { id: string; json: z.infer<typeof moderationInput> }) =>
+      rpcData(endpoint[":id"].$patch({ param: { id }, json })),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin", "community"] });
+      void queryClient.invalidateQueries({ queryKey: ["community"] });
+    },
+  });
+
+  const button = (label: string, id: string, json: z.infer<typeof moderationInput>) => (
+    <button
+      key={label}
+      className={textButton}
+      disabled={action.isPending}
+      onClick={() => action.mutate({ id, json })}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="space-y-8">
+      <FormError error={queue.error || action.error} />
+      <details className="surface p-5">
+        <summary className="cursor-pointer font-semibold">已隐藏内容与禁言账号</summary>
+        <p className="my-3 text-xs text-muted">各显示最多 100 条；处理举报后仍可在这里恢复。</p>
+        <div className="space-y-3">
+          {queue.data?.bannedUsers.map((user) => (
+            <div key={user.id} className="flex items-center justify-between gap-3 text-sm">
+              <span>{user.name}</span>
+              {button("解除禁言", user.id, { kind: "user", banned: false })}
+            </div>
+          ))}
+          {queue.data?.hiddenPosts.map((post) => (
+            <div key={post.id} className="border-t border-line pt-3">
+              <p className="text-sm font-semibold">{post.title}</p>
+              <p className="my-2 max-h-24 overflow-auto whitespace-pre-wrap text-sm break-words">
+                {post.body}
+              </p>
+              {button("恢复内容", post.id, { kind: "post", hidden: false })}
+            </div>
+          ))}
+        </div>
+      </details>
+      <section>
+        <h2 className="mb-4 text-lg font-semibold">待处理举报</h2>
+        {queue.data?.reports.length === 0 && (
+          <p className="text-sm text-muted">目前没有待处理举报。</p>
+        )}
+        <div className="space-y-4">
+          {queue.data?.reports.map((report) => (
+            <article key={report.id} className="surface space-y-3 p-5">
+              <Link
+                to="/discussions/$id"
+                params={{ id: report.threadId }}
+                className="font-semibold"
+              >
+                {report.title}
+              </Link>
+              <p className="text-xs text-muted">
+                {report.name} · <PostTime value={report.createdAt} />
+              </p>
+              <p className="max-h-48 overflow-auto whitespace-pre-wrap text-sm break-words">
+                {report.body}
+              </p>
+              <p className="text-sm text-rose-700">举报原因：{report.reason}</p>
+              <div className="flex flex-wrap gap-2">
+                {button(report.hidden ? "恢复内容" : "隐藏内容", report.postId, {
+                  kind: "post",
+                  hidden: !report.hidden,
+                })}
+                {button(report.banned ? "解除禁言" : "禁言作者", report.userId, {
+                  kind: "user",
+                  banned: !report.banned,
+                })}
+                {button("标记已处理", report.id, { kind: "report", resolved: true })}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section>
+        <h2 className="mb-4 text-lg font-semibold">最近讨论</h2>
+        <p className="mb-4 text-xs text-muted">
+          最近 100 个讨论；待处理举报每次显示最早的 100 条。
+        </p>
+        <div className="divide-y divide-line">
+          {queue.data?.threads.map((thread) => (
+            <article className="py-5" key={thread.id}>
+              <Link
+                to="/discussions/$id"
+                params={{ id: thread.id }}
+                className="font-semibold break-words"
+              >
+                {thread.title}
+              </Link>
+              <p className="my-3 text-xs text-muted">
+                {thread.name} · <PostTime value={thread.createdAt} />
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {button(thread.pinned ? "取消置顶" : "置顶", thread.id, {
+                  kind: "thread",
+                  pinned: !thread.pinned,
+                })}
+                {button(thread.locked ? "解锁" : "锁定", thread.id, {
+                  kind: "thread",
+                  locked: !thread.locked,
+                })}
+                {button(thread.hidden ? "恢复讨论" : "隐藏讨论", thread.id, {
+                  kind: "thread",
+                  hidden: !thread.hidden,
+                })}
+                {button(thread.banned ? "解除禁言" : "禁言作者", thread.authorId, {
+                  kind: "user",
+                  banned: !thread.banned,
+                })}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
 }

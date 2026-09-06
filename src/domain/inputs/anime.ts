@@ -26,13 +26,20 @@ const animeFields = {
   coverUrl: optionalNullableHttpUrl("coverUrl"),
   coverSourceUrl: optionalNullableHttpUrl("coverSourceUrl"),
   mainCharacterSourceUrl: optionalNullableHttpUrl("mainCharacterSourceUrl"),
-  mainCharacterExpectedCount: nullableIntegerBetween(1, 200, "mainCharacterExpectedCount").optional(),
+  mainCharacterExpectedCount: nullableIntegerBetween(
+    1,
+    200,
+    "mainCharacterExpectedCount",
+  ).optional(),
   mainCharacterCheckedAt: optionalNullableText(60, "mainCharacterCheckedAt").refine(
     (value) => value === null || value === undefined || Number.isFinite(Date.parse(value)),
     "mainCharacterCheckedAt 不是有效日期时间。",
   ),
   premiereAt: offsetDateTime("premiereAt"),
-  visualTheme: requiredText(40, "visualTheme").regex(/^[a-z][a-z0-9-]*$/, "visualTheme 格式不正确。"),
+  visualTheme: requiredText(40, "visualTheme").regex(
+    /^[a-z][a-z0-9-]*$/,
+    "visualTheme 格式不正确。",
+  ),
   episodeCount: nullableIntegerBetween(1, 1_000, "episodeCount").optional(),
   episodeDurationMin: nullableIntegerBetween(1, 300, "episodeDurationMin").optional(),
   premiereEpisodeCount: integerBetween(1, 1_000, "premiereEpisodeCount").optional(),
@@ -49,6 +56,7 @@ const animeFields = {
 };
 
 export const animePatchSchema = z.object(animeFields).partial();
+
 export const animeCreateSchema = z.object({
   seasonId: requiredText(120, "seasonId"),
   slug: requiredText(120, "slug").regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug 格式不正确。"),
@@ -57,14 +65,18 @@ export const animeCreateSchema = z.object({
 
 const candidateMediaAssetSchema = z.object({
   r2Key: requiredText(500, "media.asset.r2Key").refine(
-    (value) => !value.startsWith("/")
-      && !value.includes("\\")
-      && !value.includes("//")
-      && value.split("/").every((part) => part !== "." && part !== ".."),
+    (value) =>
+      !value.startsWith("/") &&
+      !value.includes("\\") &&
+      !value.includes("//") &&
+      value.split("/").every((part) => part !== "." && part !== ".."),
     "media.asset.r2Key 不是安全的对象路径。",
   ),
   sourceUrl: httpUrl("media.asset.sourceUrl"),
-  contentHash: requiredText(64, "media.asset.contentHash").regex(/^[a-f0-9]{64}$/i, "media.asset.contentHash 必须是 SHA-256。"),
+  contentHash: requiredText(64, "media.asset.contentHash").regex(
+    /^[a-f0-9]{64}$/i,
+    "media.asset.contentHash 必须是 SHA-256。",
+  ),
   mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"]),
   width: nullableIntegerBetween(1, 100_000, "media.asset.width").optional(),
   height: nullableIntegerBetween(1, 100_000, "media.asset.height").optional(),
@@ -76,25 +88,35 @@ const candidateMediaAssetSchema = z.object({
   rightsBasis: requiredText(1_000, "media.asset.rightsBasis"),
 });
 
-const candidateMediaSchema = z.object({
-  contentClass: z.enum(["official_art", "creator_art", "fanart", "fan_video", "cosplay"]),
-  title: requiredText(240, "media.title"),
-  creatorName: requiredText(200, "media.creatorName"),
-  creatorUrl: optionalNullableHttpUrl("media.creatorUrl"),
-  originalUrl: httpUrl("media.originalUrl"),
-  previewUrl: optionalNullableHttpUrl("media.previewUrl"),
-  presentationMode: z.enum(["link_only", "platform_embed", "remote_preview", "mirrored_with_permission"]).optional(),
-  safetyRating: z.enum(["safe", "suggestive", "adult", "unknown"]).optional(),
-  spoilerLevel: z.enum(["none", "mild", "major"]).optional(),
-  rightsNote: optionalNullableText(1_000, "media.rightsNote"),
-  assets: z.array(candidateMediaAssetSchema).max(20, "media.assets 最多包含 20 个资产变体。").optional(),
-}).refine(
-  (value) => !value.assets?.length || value.presentationMode === "mirrored_with_permission",
-  { message: "带站内资产的媒体必须使用 mirrored_with_permission。", path: ["presentationMode"] },
-).refine(
-  (value) => !value.assets?.length || new Set(value.assets.map((asset) => asset.r2Key)).size === value.assets.length,
-  { message: "media.assets 的 r2Key 不能重复。", path: ["assets"] },
-);
+const candidateMediaSchema = z
+  .object({
+    contentClass: z.enum(["official_art", "creator_art", "fanart", "fan_video", "cosplay"]),
+    title: requiredText(240, "media.title"),
+    creatorName: requiredText(200, "media.creatorName"),
+    creatorUrl: optionalNullableHttpUrl("media.creatorUrl"),
+    originalUrl: httpUrl("media.originalUrl"),
+    previewUrl: optionalNullableHttpUrl("media.previewUrl"),
+    presentationMode: z
+      .enum(["link_only", "platform_embed", "remote_preview", "mirrored_with_permission"])
+      .optional(),
+    safetyRating: z.enum(["safe", "suggestive", "adult", "unknown"]).optional(),
+    spoilerLevel: z.enum(["none", "mild", "major"]).optional(),
+    rightsNote: optionalNullableText(1_000, "media.rightsNote"),
+    assets: z
+      .array(candidateMediaAssetSchema)
+      .max(20, "media.assets 最多包含 20 个资产变体。")
+      .optional(),
+  })
+  .refine(
+    (value) => !value.assets?.length || value.presentationMode === "mirrored_with_permission",
+    { message: "带站内资产的媒体必须使用 mirrored_with_permission。", path: ["presentationMode"] },
+  )
+  .refine(
+    (value) =>
+      !value.assets?.length ||
+      new Set(value.assets.map((asset) => asset.r2Key)).size === value.assets.length,
+    { message: "media.assets 的 r2Key 不能重复。", path: ["assets"] },
+  );
 
 export const candidateDraftSchema = z.object({
   observationId: optionalNullableText(160, "observationId"),
@@ -106,11 +128,25 @@ export const candidateDraftSchema = z.object({
   accountId: optionalNullableText(100, "accountId"),
   platformObjectId: optionalNullableText(240, "platformObjectId"),
   originKey: optionalNullableText(500, "originKey"),
-  contentClass: z.enum([
-    "schedule", "official_news", "official_art", "creator_art", "birthday",
-    "cast_post", "staff_post", "fanwork", "community_thread", "editorial",
-  ], "未知的内容分类。"),
-  sourceIdentity: z.enum(["official", "creator", "cast", "community", "editorial"], "未知的来源身份。"),
+  contentClass: z.enum(
+    [
+      "schedule",
+      "official_news",
+      "official_art",
+      "creator_art",
+      "birthday",
+      "cast_post",
+      "staff_post",
+      "fanwork",
+      "community_thread",
+      "editorial",
+    ],
+    "未知的内容分类。",
+  ),
+  sourceIdentity: z.enum(
+    ["official", "creator", "cast", "community", "editorial"],
+    "未知的来源身份。",
+  ),
   title: requiredText(120, "title"),
   summary: requiredText(1_000, "summary"),
   url: httpUrl("url"),
@@ -119,7 +155,9 @@ export const candidateDraftSchema = z.object({
   importance: numberBetween(1, 5, "importance").default(2),
   publishedAt: offsetDateTime("publishedAt"),
   presentationMode: z.literal("link_only").default("link_only"),
-  safetyRating: z.enum(["safe", "suggestive", "adult", "unknown"], "未知的安全分级。").default("unknown"),
+  safetyRating: z
+    .enum(["safe", "suggestive", "adult", "unknown"], "未知的安全分级。")
+    .default("unknown"),
   spoilerLevel: z.enum(["none", "mild", "major"], "未知的剧透分级。").default("none"),
   confidence: numberBetween(0, 1, "confidence").default(0.5),
   discoveredBy: requiredText(60, "discoveredBy").default("admin"),

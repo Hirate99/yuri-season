@@ -6,8 +6,15 @@ import type { ServerRequestContext } from "@/server-context";
 
 const originalFetch = globalThis.fetch;
 const clients: ReturnType<typeof createQueryClient>[] = [];
-const client = () => { const value = createQueryClient(); clients.push(value); return value; };
-afterEach(() => { globalThis.fetch = originalFetch; clients.splice(0).forEach(value => value.clear()); });
+const client = () => {
+  const value = createQueryClient();
+  clients.push(value);
+  return value;
+};
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+  clients.splice(0).forEach((value) => value.clear());
+});
 
 test("Feed hydration avoids a duplicate fetch and caches subsequent cursor pages", async () => {
   const cursors: Array<string | null> = [];
@@ -16,9 +23,12 @@ test("Feed hydration avoids a duplicate fetch and caches subsequent cursor pages
     cursors.push(cursor);
     return Response.json({ items: [], nextCursor: cursor ? null : "page-two" });
   }) as unknown as typeof fetch;
-  const options = feedOptions({ category: "official", q: "夏季" }, {
-    serverContext: { publicApiOrigin: "https://query.test" } as ServerRequestContext,
-  });
+  const options = feedOptions(
+    { category: "official", q: "夏季" },
+    {
+      serverContext: { publicApiOrigin: "https://query.test" } as ServerRequestContext,
+    },
+  );
   const server = client();
   await server.ensureInfiniteQueryData(options);
   const browser = client();
@@ -35,7 +45,9 @@ test("Feed hydration avoids a duplicate fetch and caches subsequent cursor pages
     expect(observer.getCurrentResult().hasNextPage).toBe(false);
     expect(client().getQueryData(options.queryKey)).toBeUndefined();
     expect(feedOptions({ category: "cast" }).queryKey).not.toEqual(options.queryKey);
-  } finally { unsubscribe(); }
+  } finally {
+    unsubscribe();
+  }
 });
 
 test("Admin invalidation retains data after refresh failure and permits an explicit refetch", async () => {
@@ -43,7 +55,9 @@ test("Admin invalidation retains data after refresh failure and permits an expli
   let requests = 0;
   globalThis.fetch = (async () => {
     requests++;
-    return fail ? Response.json({ message: "暂时不可用" }, { status: 503 }) : Response.json({ cast: [] });
+    return fail
+      ? Response.json({ message: "暂时不可用" }, { status: 503 })
+      : Response.json({ cast: [] });
   }) as unknown as typeof fetch;
   const cache = client();
   const options = resourcesQuery("anime-taiari");
@@ -65,7 +79,9 @@ test("canceling an Admin query aborts its RPC request", async () => {
   let signal: AbortSignal | null | undefined;
   globalThis.fetch = ((_url: unknown, init?: RequestInit) => {
     signal = init?.signal;
-    return new Promise<Response>((_resolve, reject) => signal?.addEventListener("abort", () => reject(signal?.reason)));
+    return new Promise<Response>((_resolve, reject) =>
+      signal?.addEventListener("abort", () => reject(signal?.reason)),
+    );
   }) as unknown as typeof fetch;
   const cache = client();
   const options = worksQuery;

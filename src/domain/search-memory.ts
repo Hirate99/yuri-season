@@ -1,4 +1,5 @@
-export type SearchMemoryOutcome = "seen" | "candidate" | "published" | "held" | "rejected" | "ignored";
+export type SearchMemoryOutcome =
+  "seen" | "candidate" | "published" | "held" | "rejected" | "ignored";
 
 export type SearchMemoryHitWrite = {
   canonicalUrl: string;
@@ -13,7 +14,14 @@ export type SearchMemoryHitWrite = {
 export type SearchMemoryWrite = {
   scopeType: "season" | "anime" | "person" | "character" | "source" | "global";
   scopeId: string;
-  searchKind: "registered_source" | "official_news" | "social" | "birthday" | "media" | "community" | "catalog";
+  searchKind:
+    | "registered_source"
+    | "official_news"
+    | "social"
+    | "birthday"
+    | "media"
+    | "community"
+    | "catalog";
   targetKey: string;
   queryText: string;
   status: "active" | "exhausted" | "blocked";

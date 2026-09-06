@@ -1,29 +1,24 @@
-import type {
-  AnimeSummary,
-  FeedItem,
-  MediaItem,
-} from "@/domain";
+import type { AnimeSummary, FeedItem, MediaItem } from "@/domain";
 import { resolveCurrentEpisode } from "@/lib/episode-progress";
 import { publicMediaUrl } from "@/lib/media-url";
 import { canonicalInstant } from "~/shared/time";
 import type { AnimeSummaryRecord } from "./read-models/anime";
-import type {
-  FeedRow,
-  MediaRow,
-} from "./rows";
+import type { FeedRow, MediaRow } from "./rows";
 
 export function mapAnime(row: AnimeSummaryRecord): AnimeSummary {
-  const primarySlot = row.slotId && row.slotLabel && row.slotWeekday !== null && row.slotLocalTime && row.slotTimezone
-    ? {
-        id: row.slotId,
-        label: row.slotLabel,
-        weekday: row.slotWeekday,
-        localTime: row.slotLocalTime,
-        timezone: row.slotTimezone,
-        platformUrl: row.slotPlatformUrl,
-        isPrimary: true,
-      }
-    : null;
+  const primarySlot =
+    row.slotId && row.slotLabel && row.slotWeekday !== null && row.slotLocalTime && row.slotTimezone
+      ? {
+          id: row.slotId,
+          label: row.slotLabel,
+          weekday: row.slotWeekday,
+          localTime: row.slotLocalTime,
+          timezone: row.slotTimezone,
+          platformUrl: row.slotPlatformUrl,
+          isPrimary: true,
+        }
+      : null;
+
   return {
     id: row.id,
     slug: row.slug,
@@ -86,22 +81,28 @@ export function mapMedia(row: MediaRow): MediaItem {
 }
 
 export function mapFeed(row: FeedRow): FeedItem {
-  const media = row.media_id && row.media_content_class && row.media_title && row.creator_name && row.original_url
-    ? mapMedia({
-        id: row.media_id,
-        content_class: row.media_content_class,
-        title: row.media_title,
-        creator_name: row.creator_name,
-        creator_url: row.creator_url,
-        original_url: row.original_url,
-        preview_url: row.media_r2_key ? publicMediaUrl(row.media_r2_key) : row.preview_url,
-        presentation_mode: row.presentation_mode ?? "link_only",
-        safety_rating: row.media_safety_rating ?? "unknown",
-        spoiler_level: row.media_spoiler_level ?? "none",
-        rights_note: row.rights_note,
-        published_at: row.media_published_at ?? row.published_at,
-      })
-    : null;
+  const media =
+    row.media_id &&
+    row.media_content_class &&
+    row.media_title &&
+    row.creator_name &&
+    row.original_url
+      ? mapMedia({
+          id: row.media_id,
+          content_class: row.media_content_class,
+          title: row.media_title,
+          creator_name: row.creator_name,
+          creator_url: row.creator_url,
+          original_url: row.original_url,
+          preview_url: row.media_r2_key ? publicMediaUrl(row.media_r2_key) : row.preview_url,
+          presentation_mode: row.presentation_mode ?? "link_only",
+          safety_rating: row.media_safety_rating ?? "unknown",
+          spoiler_level: row.media_spoiler_level ?? "none",
+          rights_note: row.rights_note,
+          published_at: row.media_published_at ?? row.published_at,
+        })
+      : null;
+
   return {
     id: row.id,
     animeId: row.anime_id,

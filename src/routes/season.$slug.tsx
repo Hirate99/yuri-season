@@ -7,19 +7,22 @@ import { catalogDescription, seasonName } from "@/lib/seo-descriptions";
 
 export const Route = createFileRoute("/season/$slug")({
   staleTime: 300_000,
-  loader: (loaderContext) => loadHomeData({
-    serverContext: serverContextFromLoader(loaderContext),
-    seasonSlug: loaderContext.params.slug,
-  }),
-  head: ({ loaderData, params }) => seoHead({
-    title: seasonName(loaderData?.catalog.season.label ?? "季度"),
-    description: loaderData ? catalogDescription(loaderData.catalog) : undefined,
-    path: `/season/${encodeURIComponent(params.slug)}`,
-  }),
+  loader: (loaderContext) =>
+    loadHomeData({
+      serverContext: serverContextFromLoader(loaderContext),
+      seasonSlug: loaderContext.params.slug,
+    }),
+  head: ({ loaderData, params }) =>
+    seoHead({
+      title: seasonName(loaderData?.catalog.season.label ?? "季度"),
+      description: loaderData ? catalogDescription(loaderData.catalog) : undefined,
+      path: `/season/${encodeURIComponent(params.slug)}`,
+    }),
   component: SeasonRoute,
 });
 
 function SeasonRoute() {
   const data = Route.useLoaderData();
+
   return <SeasonPage catalog={data.catalog} slug={Route.useParams().slug} />;
 }

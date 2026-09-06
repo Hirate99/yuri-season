@@ -15,16 +15,31 @@ describe("episode progress", () => {
   });
 
   test("supports multi-episode premieres", () => {
-    expect(resolveCurrentEpisode({
-      ...weekly,
-      premiereAt: "2026-07-02T23:00:00+09:00",
-      premiereEpisodeCount: 3,
-    }, new Date("2026-08-06T23:30:00+09:00"))).toBe(8);
+    expect(
+      resolveCurrentEpisode(
+        {
+          ...weekly,
+          premiereAt: "2026-07-02T23:00:00+09:00",
+          premiereEpisodeCount: 3,
+        },
+        new Date("2026-08-06T23:30:00+09:00"),
+      ),
+    ).toBe(8);
   });
 
   test("lets verified progress override the estimate and caps at the total", () => {
-    expect(resolveCurrentEpisode({ ...weekly, latestVerifiedEpisode: 7 }, new Date("2026-08-01T00:00:00+09:00"))).toBe(7);
-    expect(resolveCurrentEpisode({ ...weekly, latestVerifiedEpisode: 99 }, new Date("2026-08-01T00:00:00+09:00"))).toBe(12);
+    expect(
+      resolveCurrentEpisode(
+        { ...weekly, latestVerifiedEpisode: 7 },
+        new Date("2026-08-01T00:00:00+09:00"),
+      ),
+    ).toBe(7);
+    expect(
+      resolveCurrentEpisode(
+        { ...weekly, latestVerifiedEpisode: 99 },
+        new Date("2026-08-01T00:00:00+09:00"),
+      ),
+    ).toBe(12);
   });
 
   test("does not show an episode before premiere", () => {

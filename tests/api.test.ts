@@ -26,36 +26,52 @@ describe("Hono API boundary", () => {
   });
 
   test("protects all Admin endpoints with one middleware", async () => {
-    const response = await api.request("https://example.test/api/admin/dashboard", undefined, {} as Env);
+    const response = await api.request(
+      "https://example.test/api/admin/dashboard",
+      undefined,
+      {} as Env,
+    );
     expect(response.status).toBe(401);
   });
 
   test("validates JSON content type before repository work", async () => {
-    const response = await api.request("https://example.test/api/admin/anime", {
-      method: "POST",
-      headers: { authorization: "Bearer test-secret", "content-type": "text/plain" },
-      body: "{}",
-    }, { ADMIN_TOKEN: "test-secret" } as Env);
+    const response = await api.request(
+      "https://example.test/api/admin/anime",
+      {
+        method: "POST",
+        headers: { authorization: "Bearer test-secret", "content-type": "text/plain" },
+        body: "{}",
+      },
+      { ADMIN_TOKEN: "test-secret" } as Env,
+    );
     expect(response.status).toBe(415);
     expect(await response.json()).toMatchObject({ error: "request_failed" });
   });
 
   test("maps Zod failures to the shared request error shape", async () => {
-    const response = await api.request("https://example.test/api/admin/anime", {
-      method: "POST",
-      headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
-      body: "{}",
-    }, { ADMIN_TOKEN: "test-secret" } as Env);
+    const response = await api.request(
+      "https://example.test/api/admin/anime",
+      {
+        method: "POST",
+        headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+        body: "{}",
+      },
+      { ADMIN_TOKEN: "test-secret" } as Env,
+    );
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ error: "request_failed" });
   });
 
   test("maps malformed JSON to the existing request error boundary", async () => {
-    const response = await api.request("https://example.test/api/admin/anime", {
-      method: "POST",
-      headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
-      body: "{",
-    }, { ADMIN_TOKEN: "test-secret" } as Env);
+    const response = await api.request(
+      "https://example.test/api/admin/anime",
+      {
+        method: "POST",
+        headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+        body: "{",
+      },
+      { ADMIN_TOKEN: "test-secret" } as Env,
+    );
     expect(response.status).toBe(400);
     const body: unknown = await response.json();
     expect(body).toEqual({
@@ -65,17 +81,25 @@ describe("Hono API boundary", () => {
   });
 
   test("rejects unknown feed content classes instead of silently dropping them", async () => {
-    const response = await api.request("https://example.test/api/feed?classes=official_news,unknown", undefined, {} as Env);
+    const response = await api.request(
+      "https://example.test/api/feed?classes=official_news,unknown",
+      undefined,
+      {} as Env,
+    );
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ error: "request_failed" });
   });
 
   test("does not run Worker research from a local-first deployment", async () => {
-    const response = await api.request("https://example.test/api/admin/research/run", {
-      method: "POST",
-      headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
-      body: JSON.stringify({ lane: "standard" }),
-    }, { ADMIN_TOKEN: "test-secret", UPDATE_MODE: "local-first" } as Env);
+    const response = await api.request(
+      "https://example.test/api/admin/research/run",
+      {
+        method: "POST",
+        headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+        body: JSON.stringify({ lane: "standard" }),
+      },
+      { ADMIN_TOKEN: "test-secret", UPDATE_MODE: "local-first" } as Env,
+    );
     expect(response.status).toBe(409);
   });
 

@@ -41,7 +41,14 @@ describe("theme-song artwork", () => {
   });
 
   test("uses a compact OP or ED mark instead of a blank image placeholder", () => {
-    const ending = { ...baseSong, id: "theme-song-ending", songKind: "ending", sequence: 2, coverUrl: null, coverSourceUrl: null } satisfies ThemeSong;
+    const ending = {
+      ...baseSong,
+      id: "theme-song-ending",
+      songKind: "ending",
+      sequence: 2,
+      coverUrl: null,
+      coverSourceUrl: null,
+    } satisfies ThemeSong;
     const html = renderToStaticMarkup(<ThemeSongsSection songs={[ending]} />);
 
     expect(html).not.toContain("<img");
@@ -50,7 +57,13 @@ describe("theme-song artwork", () => {
   });
 
   test("keeps an official generic theme-song designation without inferring OP or ED", () => {
-    const theme = { ...baseSong, id: "theme-song-generic", songKind: "theme", coverUrl: null, coverSourceUrl: null } satisfies ThemeSong;
+    const theme = {
+      ...baseSong,
+      id: "theme-song-generic",
+      songKind: "theme",
+      coverUrl: null,
+      coverSourceUrl: null,
+    } satisfies ThemeSong;
     const html = renderToStaticMarkup(<ThemeSongsSection songs={[theme]} />);
 
     expect(html).toContain("主题曲");

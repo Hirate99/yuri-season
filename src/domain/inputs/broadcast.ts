@@ -1,11 +1,6 @@
 import { z } from "zod";
 
-import {
-  ianaTimezone,
-  integerBetween,
-  nullableHttpUrl,
-  requiredText
-} from "./schema";
+import { ianaTimezone, integerBetween, nullableHttpUrl, requiredText } from "./schema";
 
 export const broadcastSchema = z.object({
   label: requiredText(200, "label"),

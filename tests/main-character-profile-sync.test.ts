@@ -4,7 +4,9 @@ import { mainCharacterRepairs } from "../scripts/sync-main-character-profiles";
 describe("main character profile repair batch", () => {
   test("covers every audited portrait gap exactly once", () => {
     expect(mainCharacterRepairs).toHaveLength(41);
-    expect(new Set(mainCharacterRepairs.map((item) => `${item.animeId}/${item.characterId}`)).size).toBe(41);
+    expect(
+      new Set(mainCharacterRepairs.map((item) => `${item.animeId}/${item.characterId}`)).size,
+    ).toBe(41);
     expect(new Set(mainCharacterRepairs.map((item) => item.portraitUrl)).size).toBe(41);
   });
 

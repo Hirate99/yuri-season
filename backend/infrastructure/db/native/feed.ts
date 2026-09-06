@@ -73,7 +73,12 @@ const FEED_SELECT = `
 `;
 
 function buildWhere(filter: NativeFeedFilter) {
-  const clauses = [PUBLIC_FEED_ITEM, "fi.safety_rating != 'adult'", "fi.content_class != 'editorial'"];
+  const clauses = [
+    PUBLIC_FEED_ITEM,
+    "fi.safety_rating != 'adult'",
+    "fi.content_class != 'editorial'",
+  ];
+
   const bindings: Array<string | number> = [];
 
   if (filter.id) {
@@ -87,6 +92,7 @@ function buildWhere(filter: NativeFeedFilter) {
     )))`);
     bindings.push(filter.animeId, filter.animeId);
   }
+
   if (filter.animeSlug) {
     clauses.push(`(a.slug = ? OR (fi.content_class = 'community_thread' AND EXISTS (
       SELECT 1 FROM discussion_anime da JOIN anime related ON related.id = da.anime_id
@@ -94,33 +100,45 @@ function buildWhere(filter: NativeFeedFilter) {
     )))`);
     bindings.push(filter.animeSlug, filter.animeSlug);
   }
+
   if (filter.contentClasses?.length) {
     clauses.push(`fi.content_class IN (${placeholders(filter.contentClasses.length)})`);
     bindings.push(...filter.contentClasses);
   }
+
   for (const token of filter.query?.trim().split(/\s+/u).filter(Boolean).slice(0, 5) ?? []) {
     clauses.push(`INSTR(${SEARCH_TEXT}, LOWER(?)) > 0`);
     bindings.push(token.slice(0, 48));
   }
+
   if (filter.cursor) {
     clauses.push(`(fi.is_pinned < ? OR
       (fi.is_pinned = ? AND fi.published_at < ?) OR
       (fi.is_pinned = ? AND fi.published_at = ? AND fi.id < ?))`);
     bindings.push(
       filter.cursor.pinned,
-      filter.cursor.pinned, filter.cursor.publishedAt,
-      filter.cursor.pinned, filter.cursor.publishedAt, filter.cursor.id,
+      filter.cursor.pinned,
+      filter.cursor.publishedAt,
+      filter.cursor.pinned,
+      filter.cursor.publishedAt,
+      filter.cursor.id,
     );
   }
+
   return { text: clauses.join(" AND "), bindings };
 }
 
 export function readNativeFeedPage(db: D1Database, filter: NativeFeedFilter): Promise<FeedRow[]> {
   const where = buildWhere(filter);
-  return allRows<FeedRow>(db, `
+
+  return allRows<FeedRow>(
+    db,
+    `
     ${FEED_SELECT}
     WHERE ${where.text}
     ORDER BY fi.is_pinned DESC, fi.published_at DESC, fi.id DESC
     LIMIT ?
-  `, [...where.bindings, filter.limit]);
+  `,
+    [...where.bindings, filter.limit],
+  );
 }

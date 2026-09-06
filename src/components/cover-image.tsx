@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/ui";
 
-export function CoverImage({ src, alt, className, eager = false, fallback, objectPosition, topAlignTall = false }: {
+export function CoverImage({
+  src,
+  alt,
+  className,
+  eager = false,
+  fallback,
+  objectPosition,
+  topAlignTall = false,
+}: {
   src: string | null;
   alt: string;
   className?: string;
@@ -13,14 +21,18 @@ export function CoverImage({ src, alt, className, eager = false, fallback, objec
   const [failed, setFailed] = useState(false);
   const [isTall, setIsTall] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
-  const resolvedObjectPosition = topAlignTall && isTall && (!objectPosition || objectPosition === "center")
-    ? "center top"
-    : objectPosition;
+
+  const resolvedObjectPosition =
+    topAlignTall && isTall && (!objectPosition || objectPosition === "center")
+      ? "center top"
+      : objectPosition;
 
   useEffect(() => {
     setFailed(false);
     setIsTall(false);
+
     const image = imageRef.current;
+
     if (topAlignTall && image?.complete) {
       setIsTall(image.naturalHeight > image.naturalWidth);
     }
@@ -47,7 +59,11 @@ export function CoverImage({ src, alt, className, eager = false, fallback, objec
           onError={() => setFailed(true)}
         />
       ) : (
-        fallback ?? <span className="grid h-full place-items-center px-3 text-center text-xs font-semibold text-muted">{alt}</span>
+        (fallback ?? (
+          <span className="grid h-full place-items-center px-3 text-center text-xs font-semibold text-muted">
+            {alt}
+          </span>
+        ))
       )}
     </span>
   );

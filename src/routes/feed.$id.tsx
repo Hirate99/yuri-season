@@ -8,10 +8,11 @@ import { publicationHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/feed/$id")({
   staleTime: 180_000,
-  loader: (loaderContext) => loadPublicationData({
-    serverContext: serverContextFromLoader(loaderContext),
-    id: loaderContext.params.id,
-  }),
+  loader: (loaderContext) =>
+    loadPublicationData({
+      serverContext: serverContextFromLoader(loaderContext),
+      id: loaderContext.params.id,
+    }),
   head: ({ loaderData, params }) => publicationHead(loaderData, params.id),
   component: FeedPublicationRoute,
 });
@@ -23,10 +24,13 @@ function FeedPublicationRoute() {
 
   useEffect(() => {
     layerRef.current?.focus({ preventScroll: true });
+
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") router.history.back();
     };
+
     document.addEventListener("keydown", closeOnEscape);
+
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [router]);
 

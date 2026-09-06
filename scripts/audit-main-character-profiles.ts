@@ -2,12 +2,17 @@ import type { AdminAnimeResources } from "@/domain";
 import { fetchAdminDashboard, fetchAdminResources } from "./lib/admin-dashboard";
 
 const dashboard = await fetchAdminDashboard();
-const currentSeasonIds = new Set(dashboard.seasons.filter((season) => season.isCurrent).map((season) => season.id));
+
+const currentSeasonIds = new Set(
+  dashboard.seasons.filter((season) => season.isCurrent).map((season) => season.id),
+);
+
 const anime = dashboard.anime.filter((item) => currentSeasonIds.has(item.seasonId));
 const rows = [];
 
 for (const item of anime) {
   const resources = await fetchAdminResources(item.id);
+
   for (const cast of resources.cast.filter((credit) => credit.isMainGroup)) {
     rows.push({
       animeId: item.id,
@@ -29,7 +34,10 @@ for (const item of anime) {
   }
 }
 
-const complete = rows.filter((row) => row.hasNameSource && row.hasProfile && row.hasPortrait).length;
+const complete = rows.filter(
+  (row) => row.hasNameSource && row.hasProfile && row.hasPortrait,
+).length;
+
 const report = {
   anime: anime.length,
   mainCharacters: rows.length,
@@ -39,8 +47,11 @@ const report = {
   withPortrait: rows.filter((row) => row.hasPortrait).length,
   rows,
 };
-process.stdout.write(JSON.stringify(
-  process.argv.includes("--summary") ? { ...report, rows: undefined } : report,
-  null,
-  2,
-));
+
+process.stdout.write(
+  JSON.stringify(
+    process.argv.includes("--summary") ? { ...report, rows: undefined } : report,
+    null,
+    2,
+  ),
+);

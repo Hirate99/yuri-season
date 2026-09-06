@@ -13,8 +13,12 @@ export async function assertContentLinks(
 ): Promise<void> {
   const [person, character] = await Promise.all([
     personId ? personBelongsToAnime(db, animeId, personId) : Promise.resolve(true),
-    characterId ? database(db).select({ id: charactersTable.id }).from(charactersTable)
-      .where(and(eq(charactersTable.id, characterId), eq(charactersTable.animeId, animeId))).get()
+    characterId
+      ? database(db)
+          .select({ id: charactersTable.id })
+          .from(charactersTable)
+          .where(and(eq(charactersTable.id, characterId), eq(charactersTable.animeId, animeId)))
+          .get()
       : Promise.resolve(true),
   ]);
   if (!person) throw new HttpError(400, "关联人物不属于当前作品。");

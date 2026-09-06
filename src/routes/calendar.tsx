@@ -7,12 +7,14 @@ import { calendarDescription } from "@/lib/seo-descriptions";
 
 export const Route = createFileRoute("/calendar")({
   staleTime: 120_000,
-  loader: (loaderContext) => loadCalendarData({ serverContext: serverContextFromLoader(loaderContext) }),
-  head: ({ loaderData }) => seoHead({
-    title: "放送日历",
-    description: loaderData ? calendarDescription(loaderData) : undefined,
-    path: "/calendar",
-  }),
+  loader: (loaderContext) =>
+    loadCalendarData({ serverContext: serverContextFromLoader(loaderContext) }),
+  head: ({ loaderData }) =>
+    seoHead({
+      title: "放送日历",
+      description: loaderData ? calendarDescription(loaderData) : undefined,
+      path: "/calendar",
+    }),
   component: CalendarRoute,
 });
 

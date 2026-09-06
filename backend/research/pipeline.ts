@@ -40,44 +40,59 @@ export async function syncSourceJob(
   const counters = emptyCounters();
   const sourceId = job.scope_id;
   if (!sourceId) throw new Error("sync_source job has no source scope");
+
   const source = await readSource(env.DB, sourceId);
   if (!source) throw new Error(`source ${sourceId} is missing or disabled`);
+
   counters.sources = 1;
 
   try {
     const hadBaseline = await sourceHasBaseline(env.DB, source.id);
     const fetched = await fetchSource(source, transport);
+
     await heartbeat?.();
+
     let partial = false;
+
     for (const item of fetched.items) {
       await heartbeat?.();
+
       const observation = await storeObservation(env.DB, source, item, fetched.status);
       if (!observation.inserted) continue;
+
       counters.observations += 1;
       if (!hadBaseline) continue;
       if (source.changeKind === "catalog_metadata") continue;
 
       let candidateId: string | null = null;
+
       try {
         if (!env.AI) throw new Error("当前环境未配置 AI，无法自动提取和审核候选内容。");
+
         const draft = await extractCandidate(env.AI, source, item, observation.id);
         if (!draft) continue;
+
         const claimId = await storeClaim(env.DB, observation.id, draft);
         const createdCandidateId = await createCandidate(env.DB, { ...draft, claimId });
+
         candidateId = createdCandidateId;
         counters.candidates += 1;
 
         const outcome = await reviewCandidate(env.AI, createdCandidateId, draft, source, item);
-        await database(env.DB).update(feedCandidatesTable).set({
-          contentClass: outcome.review.contentClass,
-          title: outcome.review.title,
-          summary: outcome.review.summary,
-          importance: outcome.review.importance,
-          safetyRating: outcome.review.safetyRating,
-          spoilerLevel: outcome.review.spoilerLevel,
-          confidence: outcome.review.confidence,
-          policyVersion: outcome.policyVersion,
-        }).where(eq(feedCandidatesTable.id, createdCandidateId));
+
+        await database(env.DB)
+          .update(feedCandidatesTable)
+          .set({
+            contentClass: outcome.review.contentClass,
+            title: outcome.review.title,
+            summary: outcome.review.summary,
+            importance: outcome.review.importance,
+            safetyRating: outcome.review.safetyRating,
+            spoilerLevel: outcome.review.spoilerLevel,
+            confidence: outcome.review.confidence,
+            policyVersion: outcome.policyVersion,
+          })
+          .where(eq(feedCandidatesTable.id, createdCandidateId));
         await applyCandidateDecision(env.DB, createdCandidateId, outcome.policy.decision, {
           reviewerType: "llm",
           confidence: outcome.review.confidence,
@@ -89,26 +104,40 @@ export async function syncSourceJob(
         if (outcome.policy.decision === "publish") counters.published += 1;
         if (outcome.policy.decision === "hold") counters.held += 1;
         if (outcome.policy.decision === "reject") counters.rejected += 1;
-        await database(env.DB).update(claimsTable).set({
-          status: outcome.policy.decision === "publish" ? "accepted"
-            : outcome.policy.decision === "reject" ? "rejected" : "proposed",
-          resolvedAt: sql`CURRENT_TIMESTAMP`,
-        }).where(eq(claimsTable.id, claimId));
+
+        await database(env.DB)
+          .update(claimsTable)
+          .set({
+            status:
+              outcome.policy.decision === "publish"
+                ? "accepted"
+                : outcome.policy.decision === "reject"
+                  ? "rejected"
+                  : "proposed",
+            resolvedAt: sql`CURRENT_TIMESTAMP`,
+          })
+          .where(eq(claimsTable.id, claimId));
       } catch (error) {
         partial = true;
+
         if (candidateId) {
           await holdAfterReviewFailure(env.DB, candidateId, error);
           counters.held += 1;
         }
-        console.warn(JSON.stringify({
-          message: "candidate processing failed",
-          sourceId,
-          error: error instanceof Error ? error.message : String(error),
-        }));
+
+        console.warn(
+          JSON.stringify({
+            message: "candidate processing failed",
+            sourceId,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
       }
     }
+
     await heartbeat?.();
     await markSourceSuccess(env.DB, source, fetched.etag, fetched.lastModified);
+
     return { counters, partial };
   } catch (error) {
     await markSourceFailure(env.DB, source.id, error);

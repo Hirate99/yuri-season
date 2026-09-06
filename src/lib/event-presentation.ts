@@ -18,5 +18,6 @@ export function eventPresentation(eventType: CalendarEvent["eventType"]) {
 
 export function eventTitle(event: Pick<CalendarEvent, "eventType" | "title">): string {
   if (event.eventType !== "birthday") return event.title;
+
   return event.title.replace(/[\s·・]*生日\s*$/u, "").trim();
 }

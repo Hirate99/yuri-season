@@ -1,24 +1,50 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
 import type { AdminAnimeSummary, FeedItem } from "@/domain";
 import { FeedCard } from "@/components/feed-card";
 import { DiscussionsEditor } from "@/features/admin/discussions-editor";
 
 const anime = [
-  { id: "anime-a", titleZh: "作品 A", titleJa: "作品 A", slug: "a", seasonId: "summer", seasonLabel: "2026 夏" },
-  { id: "anime-b", titleZh: "作品 B", titleJa: "作品 B", slug: "b", seasonId: "summer", seasonLabel: "2026 夏" },
-  { id: "anime-c", titleZh: "作品 C", titleJa: "作品 C", slug: "c", seasonId: "autumn", seasonLabel: "2026 秋" },
+  {
+    id: "anime-a",
+    titleZh: "作品 A",
+    titleJa: "作品 A",
+    slug: "a",
+    seasonId: "summer",
+    seasonLabel: "2026 夏",
+  },
+  {
+    id: "anime-b",
+    titleZh: "作品 B",
+    titleJa: "作品 B",
+    slug: "b",
+    seasonId: "summer",
+    seasonLabel: "2026 夏",
+  },
+  {
+    id: "anime-c",
+    titleZh: "作品 C",
+    titleJa: "作品 C",
+    slug: "c",
+    seasonId: "autumn",
+    seasonLabel: "2026 秋",
+  },
 ] as AdminAnimeSummary[];
 
 describe("cross-work discussion UI", () => {
   test("offers season-wide selection with explicit exclusions", () => {
-    const html = renderToStaticMarkup(<QueryClientProvider client={new QueryClient()}><DiscussionsEditor
-      items={[]}
-      anime={anime}
-      animeId="anime-a"
-    /></QueryClientProvider>);
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={new QueryClient()}>
+        <DiscussionsEditor items={[]} anime={anime} animeId="anime-a" />
+      </QueryClientProvider>,
+    );
 
     expect(html).toContain("全选当前季度");
     expect(html).toContain("全选全部作品");
@@ -26,16 +52,28 @@ describe("cross-work discussion UI", () => {
   });
 
   test("separates unlinking from destructive global deletion", () => {
-    const html = renderToStaticMarkup(<QueryClientProvider client={new QueryClient()}><DiscussionsEditor
-      items={[{
-        id: "discussion-shared", platform: "百合会", title: "集中讨论",
-        url: "https://bbs.example.test/shared", note: null, isActive: true,
-        lastActivityAt: null, lastCheckedAt: null, sharedAnimeCount: 3,
-        animeIds: ["anime-a", "anime-b", "anime-c"],
-      }]}
-      anime={anime}
-      animeId="anime-a"
-    /></QueryClientProvider>);
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={new QueryClient()}>
+        <DiscussionsEditor
+          items={[
+            {
+              id: "discussion-shared",
+              platform: "百合会",
+              title: "集中讨论",
+              url: "https://bbs.example.test/shared",
+              note: null,
+              isActive: true,
+              lastActivityAt: null,
+              lastCheckedAt: null,
+              sharedAnimeCount: 3,
+              animeIds: ["anime-a", "anime-b", "anime-c"],
+            },
+          ]}
+          anime={anime}
+          animeId="anime-a"
+        />
+      </QueryClientProvider>,
+    );
 
     expect(html).toContain("从本作移除");
     expect(html).toContain("彻底删除");
@@ -49,7 +87,12 @@ describe("cross-work discussion UI", () => {
       animeSlug: "a",
       animeTitle: "作品 A",
       animeCoverUrl: "https://example.test/a.jpg",
-      relatedAnime: anime.map((work) => ({ id: work.id, slug: work.slug, title: work.titleZh, coverUrl: null })),
+      relatedAnime: anime.map((work) => ({
+        id: work.id,
+        slug: work.slug,
+        title: work.titleZh,
+        coverUrl: null,
+      })),
       personId: null,
       personName: null,
       characterId: null,
@@ -84,7 +127,7 @@ describe("cross-work discussion UI", () => {
     expect(html).not.toContain("/updates/feed-shared");
     expect(html).not.toContain("/feed/feed-shared");
     expect(html.match(/href="https:\/\/bbs\.example\.test\/shared"/g)).toHaveLength(2);
-    expect(html).toContain("aria-label=\"打开讨论：");
+    expect(html).toContain('aria-label="打开讨论：');
     expect(html).toContain("讨论串");
   });
 });

@@ -7,7 +7,8 @@ import { moderationRoutes } from "./moderation";
 import { resourceRoutes } from "./resources";
 import { seasonRoutes } from "./seasons";
 
-export const adminRoutes = new Hono<ApiEnvironment>().basePath("/api/admin")
+export const adminRoutes = new Hono<ApiEnvironment>()
+  .basePath("/api/admin")
   .route("/", dashboardRoutes)
   .route("/", animeRoutes)
   .route("/", resourceRoutes)

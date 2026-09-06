@@ -11,8 +11,9 @@ function requestWithTimeZone(timeZone?: unknown): Request {
 
 describe("SSR viewer timezone", () => {
   test("uses the Cloudflare visitor timezone", () => {
-    expect(viewerTimeZoneFromRequest(requestWithTimeZone("America/Los_Angeles")))
-      .toBe("America/Los_Angeles");
+    expect(viewerTimeZoneFromRequest(requestWithTimeZone("America/Los_Angeles"))).toBe(
+      "America/Los_Angeles",
+    );
   });
 
   test("falls back when geolocation is unavailable", () => {

@@ -1,7 +1,13 @@
 import type { z } from "zod";
 import type { resourceEnvelopeSchema, resourceKindSchema } from "./inputs/resources";
 import type { seasonSchema } from "./inputs/season";
-import type { AnimePatch, AnimeSummary, BroadcastSlot, SeasonSummary, ThemeSongKind } from "./catalog";
+import type {
+  AnimePatch,
+  AnimeSummary,
+  BroadcastSlot,
+  SeasonSummary,
+  ThemeSongKind,
+} from "./catalog";
 import type {
   ContentClass,
   PresentationMode,
@@ -209,7 +215,16 @@ export type AdminCastCredit = {
 export type AdminSource = {
   id: string;
   accountId: string | null;
-  sourceType: "official_page" | "official_json" | "rss" | "bangumi" | "youtube" | "bluesky" | "mastodon" | "community" | "social";
+  sourceType:
+    | "official_page"
+    | "official_json"
+    | "rss"
+    | "bangumi"
+    | "youtube"
+    | "bluesky"
+    | "mastodon"
+    | "community"
+    | "social";
   changeKind: "catalog_metadata" | "feed_candidate";
   label: string;
   url: string;

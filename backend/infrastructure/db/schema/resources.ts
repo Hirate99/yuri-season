@@ -6,9 +6,15 @@ export const peopleTable = sqliteTable("people", {
   name: text("name").notNull(),
   nameNative: text("name_native"),
   bio: text("bio"),
-  primaryKind: text("primary_kind", { enum: ["author", "staff", "cast", "artist", "organization"] }).notNull(),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  primaryKind: text("primary_kind", {
+    enum: ["author", "staff", "cast", "artist", "organization"],
+  }).notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const charactersTable = sqliteTable("characters", {
@@ -31,22 +37,30 @@ export const charactersTable = sqliteTable("characters", {
   sortOrder: integer("sort_order").notNull(),
 });
 
-export const workCreditsTable = sqliteTable("work_credits", {
-  id: text("id").primaryKey(),
-  animeId: text("anime_id").notNull(),
-  personId: text("person_id").notNull(),
-  role: text("role").notNull(),
-  profileUrl: text("profile_url"),
-  sortOrder: integer("sort_order").notNull(),
-}, (table) => [unique().on(table.animeId, table.personId, table.role)]);
+export const workCreditsTable = sqliteTable(
+  "work_credits",
+  {
+    id: text("id").primaryKey(),
+    animeId: text("anime_id").notNull(),
+    personId: text("person_id").notNull(),
+    role: text("role").notNull(),
+    profileUrl: text("profile_url"),
+    sortOrder: integer("sort_order").notNull(),
+  },
+  (table) => [unique().on(table.animeId, table.personId, table.role)],
+);
 
-export const castCreditsTable = sqliteTable("cast_credits", {
-  id: text("id").primaryKey(),
-  animeId: text("anime_id").notNull(),
-  characterId: text("character_id").notNull(),
-  personId: text("person_id").notNull(),
-  sortOrder: integer("sort_order").notNull(),
-}, (table) => [unique().on(table.animeId, table.characterId, table.personId)]);
+export const castCreditsTable = sqliteTable(
+  "cast_credits",
+  {
+    id: text("id").primaryKey(),
+    animeId: text("anime_id").notNull(),
+    characterId: text("character_id").notNull(),
+    personId: text("person_id").notNull(),
+    sortOrder: integer("sort_order").notNull(),
+  },
+  (table) => [unique().on(table.animeId, table.characterId, table.personId)],
+);
 
 export const broadcastSlotsTable = sqliteTable("broadcast_slots", {
   id: text("id").primaryKey(),
@@ -63,13 +77,31 @@ export const researchSourcesTable = sqliteTable("research_sources", {
   id: text("id").primaryKey(),
   animeId: text("anime_id"),
   accountId: text("account_id"),
-  sourceType: text("source_type", { enum: ["official_page", "official_json", "rss", "bangumi", "youtube", "bluesky", "mastodon", "community", "social"] }).notNull(),
+  sourceType: text("source_type", {
+    enum: [
+      "official_page",
+      "official_json",
+      "rss",
+      "bangumi",
+      "youtube",
+      "bluesky",
+      "mastodon",
+      "community",
+      "social",
+    ],
+  }).notNull(),
   changeKind: text("change_kind", { enum: ["catalog_metadata", "feed_candidate"] }).notNull(),
   label: text("label").notNull(),
   url: text("url").notNull().unique(),
   itemUrlTemplate: text("item_url_template"),
-  trustLevel: text("trust_level", { enum: ["official", "verified_creator", "community", "unverified"] }).notNull(),
-  publicTextMode: text("public_text_mode", { enum: ["full", "full_with_translation", "excerpt", "summary_only", "link_only"] }).notNull().default("summary_only"),
+  trustLevel: text("trust_level", {
+    enum: ["official", "verified_creator", "community", "unverified"],
+  }).notNull(),
+  publicTextMode: text("public_text_mode", {
+    enum: ["full", "full_with_translation", "excerpt", "summary_only", "link_only"],
+  })
+    .notNull()
+    .default("summary_only"),
   maxPublicCharacters: integer("max_public_characters").notNull().default(1200),
   pollIntervalMin: integer("poll_interval_min").notNull(),
   cadenceProfile: text("cadence_profile", { enum: ["rapid", "standard", "local"] }).notNull(),
@@ -92,5 +124,7 @@ export const seasonsTable = sqliteTable("seasons", {
   startsOn: text("starts_on").notNull(),
   endsOn: text("ends_on").notNull(),
   isCurrent: integer("is_current", { mode: "boolean" }).notNull(),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });

@@ -29,12 +29,17 @@ const kindLabels: Record<SearchMemorySummary["searchKind"], string> = {
 function statusPresentation(status: SearchMemorySummary["status"]) {
   if (status === "blocked") return { label: "受阻", tone: "rose" as const };
   if (status === "exhausted") return { label: "暂无线索", tone: "neutral" as const };
+
   return { label: "继续监控", tone: "blue" as const };
 }
 
 function hasUsefulResult(record: SearchMemorySummary) {
-  return record.usefulResultCount > 0 || record.publishedCount > 0
-    || record.heldCount > 0 || record.candidateCount > 0;
+  return (
+    record.usefulResultCount > 0 ||
+    record.publishedCount > 0 ||
+    record.heldCount > 0 ||
+    record.candidateCount > 0
+  );
 }
 
 export function SearchMemoryMonitor() {
@@ -43,13 +48,21 @@ export function SearchMemoryMonitor() {
   const records = memory.data?.records ?? [];
   const usefulCount = records.filter(hasUsefulResult).length;
   const attentionCount = records.filter((record) => record.status === "blocked").length;
-  const dueCount = records.filter((record) => record.nextSearchAt
-    && Date.parse(record.nextSearchAt) <= Date.now()).length;
-  const filtered = useMemo(() => records.filter((record) => {
-    if (view === "useful") return hasUsefulResult(record);
-    if (view === "attention") return record.status === "blocked";
-    return true;
-  }), [records, view]);
+
+  const dueCount = records.filter(
+    (record) => record.nextSearchAt && Date.parse(record.nextSearchAt) <= Date.now(),
+  ).length;
+
+  const filtered = useMemo(
+    () =>
+      records.filter((record) => {
+        if (view === "useful") return hasUsefulResult(record);
+        if (view === "attention") return record.status === "blocked";
+
+        return true;
+      }),
+    [records, view],
+  );
 
   if (memory.isPending) return <LoadingRows count={6} />;
   if (memory.error) return <EmptyState title="检索记录加载失败" detail={memory.error.message} />;
@@ -57,7 +70,11 @@ export function SearchMemoryMonitor() {
   return (
     <div className="grid gap-6">
       <section className="grid grid-cols-3 gap-2">
-        {[["记录", records.length], ["有产出", usefulCount], ["已到期", dueCount]].map(([label, value]) => (
+        {[
+          ["记录", records.length],
+          ["有产出", usefulCount],
+          ["已到期", dueCount],
+        ].map(([label, value]) => (
           <article className="rounded-2xl bg-raised p-4" key={label}>
             <p className="text-[9px] text-muted">{label}</p>
             <strong className="mt-2 block text-xl tracking-tight">{value}</strong>
@@ -70,27 +87,38 @@ export function SearchMemoryMonitor() {
           {views.map((item) => (
             <button
               key={item.id}
-              className={cn("rounded-lg px-3 py-2 text-[10px] font-semibold text-muted", view === item.id && "bg-white text-ink shadow-sm")}
+              className={cn(
+                "rounded-lg px-3 py-2 text-[10px] font-semibold text-muted",
+                view === item.id && "bg-white text-ink shadow-sm",
+              )}
               onClick={() => setView(item.id)}
-            >{item.label}{item.id === "attention" && attentionCount > 0 ? ` ${attentionCount}` : ""}</button>
+            >
+              {item.label}
+              {item.id === "attention" && attentionCount > 0 ? ` ${attentionCount}` : ""}
+            </button>
           ))}
         </div>
         <span className="text-[9px] text-muted">{filtered.length} 条</span>
       </div>
 
-      {filtered.length === 0 ? <EmptyState title={view === "attention" ? "没有受阻的检索" : "暂无检索记录"} /> : (
+      {filtered.length === 0 ? (
+        <EmptyState title={view === "attention" ? "没有受阻的检索" : "暂无检索记录"} />
+      ) : (
         <VirtualWindowGrid
           items={filtered}
           getKey={(record) => record.id}
           estimateRowSize={225}
           renderItem={(record) => {
             const status = statusPresentation(record.status);
+
             return (
               <article className="rounded-2xl bg-raised p-4" key={record.id}>
                 <header className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <Badge>{kindLabels[record.searchKind]}</Badge>
-                    <strong className="mt-2 block break-words text-xs leading-5">{record.queryText}</strong>
+                    <strong className="mt-2 block break-words text-xs leading-5">
+                      {record.queryText}
+                    </strong>
                   </div>
                   <Badge tone={status.tone}>{status.label}</Badge>
                 </header>
@@ -104,7 +132,11 @@ export function SearchMemoryMonitor() {
                   <time>检查 {dateTime(record.searchedAt)}</time>
                   {record.nextSearchAt && <time>下次 {dateTime(record.nextSearchAt)}</time>}
                 </div>
-                {record.notes && <p className="mt-3 line-clamp-2 text-[9px] leading-5 text-muted">{record.notes}</p>}
+                {record.notes && (
+                  <p className="mt-3 line-clamp-2 text-[9px] leading-5 text-muted">
+                    {record.notes}
+                  </p>
+                )}
               </article>
             );
           }}

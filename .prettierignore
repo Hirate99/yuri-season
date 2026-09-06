@@ -1,0 +1,16 @@
+# Generated code is owned by its generator.
+src/routeTree.gen.ts
+worker-configuration.d.ts
+
+# Build output, local state, and research artifacts.
+node_modules/
+dist/
+.wrangler/
+.tanstack/
+.tmp/
+.research-cache/
+.preview/
+research-batches/
+artifacts/
+coverage/
+bun.lock

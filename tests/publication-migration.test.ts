@@ -6,7 +6,9 @@ describe("discussion publication migration", () => {
     const database = new TestD1();
     try {
       const paths = [...new Bun.Glob("migrations/*.sql").scanSync()].sort();
-      for (const path of paths.filter((path) => !path.endsWith("0031_discussion_publication_links.sql"))) {
+      for (const path of paths.filter(
+        (path) => !path.endsWith("0031_discussion_publication_links.sql"),
+      )) {
         database.exec(await Bun.file(path).text());
       }
 
@@ -39,14 +41,26 @@ describe("discussion publication migration", () => {
 
       database.exec(await Bun.file("migrations/0031_discussion_publication_links.sql").text());
 
-      expect(database.sqlite.query(`
+      expect(
+        database.sqlite
+          .query(
+            `
         SELECT discussion_id, withdrawn_at IS NOT NULL AS withdrawn
         FROM feed_items WHERE id = 'feed-legacy-rejected'
-      `).get()).toEqual({ discussion_id: "discussion-legacy-rejected", withdrawn: 1 });
-      expect(database.sqlite.query(`
+      `,
+          )
+          .get(),
+      ).toEqual({ discussion_id: "discussion-legacy-rejected", withdrawn: 1 });
+      expect(
+        database.sqlite
+          .query(
+            `
         SELECT correction_type, actor_type FROM corrections
         WHERE feed_item_id = 'feed-legacy-rejected'
-      `).get()).toEqual({ correction_type: "withdraw", actor_type: "system" });
+      `,
+          )
+          .get(),
+      ).toEqual({ correction_type: "withdraw", actor_type: "system" });
     } finally {
       database.close();
     }

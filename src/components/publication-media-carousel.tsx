@@ -19,7 +19,14 @@ function MediaCaption({ image }: { image: CarouselImage }) {
   return (
     <figcaption className="flex flex-wrap items-center justify-between gap-2 bg-[#f7f7f9] px-4 py-3 text-xs text-muted">
       <span>{image.rightsStatus === "press_kit" ? "官方图片" : "图片来自原帖"}</span>
-      <a className="transition hover:text-ink" href={image.sourceUrl} target="_blank" rel="noreferrer">图片来源 ↗</a>
+      <a
+        className="transition hover:text-ink"
+        href={image.sourceUrl}
+        target="_blank"
+        rel="noreferrer"
+      >
+        图片来源 ↗
+      </a>
     </figcaption>
   );
 }
@@ -48,16 +55,15 @@ export function publicationCarouselImages(
   fallbackAlt: string,
 ): CarouselImage[] {
   // The public read model supplies one preferred variant per source, in order.
-  const images: CarouselImage[] = assets
-    .map((asset) => ({
-      id: asset.id,
-      url: asset.url,
-      sourceUrl: asset.sourceUrl,
-      altText: asset.altText ?? media?.title ?? fallbackAlt,
-      rightsStatus: asset.rightsStatus,
-      width: asset.width,
-      height: asset.height,
-    }));
+  const images: CarouselImage[] = assets.map((asset) => ({
+    id: asset.id,
+    url: asset.url,
+    sourceUrl: asset.sourceUrl,
+    altText: asset.altText ?? media?.title ?? fallbackAlt,
+    rightsStatus: asset.rightsStatus,
+    width: asset.width,
+    height: asset.height,
+  }));
 
   if (images.length === 0 && media?.previewUrl && media.presentationMode !== "link_only") {
     images.push({
@@ -70,14 +76,12 @@ export function publicationCarouselImages(
       height: null,
     });
   }
+
   return images;
 }
 
 function MultiplePublicationImages({ images }: { images: CarouselImage[] }) {
-  const [viewportRef, api] = useEmblaCarousel(
-    { loop: true, align: "start" },
-    [AutoHeight()],
-  );
+  const [viewportRef, api] = useEmblaCarousel({ loop: true, align: "start" }, [AutoHeight()]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [measuredAspectRatios, setMeasuredAspectRatios] = useState<Record<string, string>>({});
   const active = images[selectedIndex] ?? images[0];
@@ -88,8 +92,10 @@ function MultiplePublicationImages({ images }: { images: CarouselImage[] }) {
 
   useEffect(() => {
     if (!api) return;
+
     updateSelection();
     api.on("select", updateSelection).on("reInit", updateSelection);
+
     return () => {
       api.off("select", updateSelection).off("reInit", updateSelection);
     };
@@ -102,7 +108,12 @@ function MultiplePublicationImages({ images }: { images: CarouselImage[] }) {
   return (
     <figure className="mb-10 overflow-hidden rounded-xl bg-white border border-line">
       <div className="relative isolate">
-        <div className="overflow-hidden" ref={viewportRef} aria-roledescription="carousel" aria-label={`图片轮播，共 ${images.length} 张`}>
+        <div
+          className="overflow-hidden"
+          ref={viewportRef}
+          aria-roledescription="carousel"
+          aria-label={`图片轮播，共 ${images.length} 张`}
+        >
           <div className="flex touch-pan-y items-start transition-[height] duration-300 ease-out">
             {images.map((image, index) => (
               <div
@@ -112,9 +123,10 @@ function MultiplePublicationImages({ images }: { images: CarouselImage[] }) {
                 aria-roledescription="slide"
                 aria-label={`${index + 1} / ${images.length}`}
                 style={{
-                  aspectRatio: image.width && image.height
-                    ? `${image.width} / ${image.height}`
-                    : measuredAspectRatios[image.id] ?? "1 / 1",
+                  aspectRatio:
+                    image.width && image.height
+                      ? `${image.width} / ${image.height}`
+                      : (measuredAspectRatios[image.id] ?? "1 / 1"),
                 }}
               >
                 <img
@@ -129,12 +141,15 @@ function MultiplePublicationImages({ images }: { images: CarouselImage[] }) {
                   referrerPolicy="no-referrer"
                   onLoad={(event) => {
                     if (image.width && image.height) return;
+
                     const { naturalWidth, naturalHeight } = event.currentTarget;
                     if (!naturalWidth || !naturalHeight) return;
+
                     const ratio = `${naturalWidth} / ${naturalHeight}`;
-                    setMeasuredAspectRatios((current) => current[image.id] === ratio
-                      ? current
-                      : { ...current, [image.id]: ratio });
+
+                    setMeasuredAspectRatios((current) =>
+                      current[image.id] === ratio ? current : { ...current, [image.id]: ratio },
+                    );
                   }}
                 />
               </div>
@@ -142,18 +157,41 @@ function MultiplePublicationImages({ images }: { images: CarouselImage[] }) {
           </div>
         </div>
 
-        <span className="absolute top-3 right-3 rounded-full bg-black/65 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm" aria-live="polite">
+        <span
+          className="absolute top-3 right-3 rounded-full bg-black/65 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm"
+          aria-live="polite"
+        >
           {selectedIndex + 1}/{images.length}
         </span>
-        <button className="absolute top-1/2 left-3 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#202126] shadow-md transition hover:scale-105 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70" type="button" aria-label="上一张图片" onClick={() => api?.scrollPrev()}>
+        <button
+          className="absolute top-1/2 left-3 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#202126] shadow-md transition hover:scale-105 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          type="button"
+          aria-label="上一张图片"
+          onClick={() => api?.scrollPrev()}
+        >
           <ChevronLeft size={19} strokeWidth={2.4} />
         </button>
-        <button className="absolute top-1/2 right-3 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#202126] shadow-md transition hover:scale-105 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70" type="button" aria-label="下一张图片" onClick={() => api?.scrollNext()}>
+        <button
+          className="absolute top-1/2 right-3 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#202126] shadow-md transition hover:scale-105 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          type="button"
+          aria-label="下一张图片"
+          onClick={() => api?.scrollNext()}
+        >
           <ChevronRight size={19} strokeWidth={2.4} />
         </button>
-        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-2 backdrop-blur-sm" aria-label="选择图片">
+        <div
+          className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-2 backdrop-blur-sm"
+          aria-label="选择图片"
+        >
           {images.map((image, index) => (
-            <button className={`size-1.5 rounded-full transition ${index === selectedIndex ? "scale-125 bg-white" : "bg-white/45 hover:bg-white/75"}`} key={image.id} type="button" aria-label={`查看第 ${index + 1} 张图片`} aria-current={index === selectedIndex ? "true" : undefined} onClick={() => api?.scrollTo(index)} />
+            <button
+              className={`size-1.5 rounded-full transition ${index === selectedIndex ? "scale-125 bg-white" : "bg-white/45 hover:bg-white/75"}`}
+              key={image.id}
+              type="button"
+              aria-label={`查看第 ${index + 1} 张图片`}
+              aria-current={index === selectedIndex ? "true" : undefined}
+              onClick={() => api?.scrollTo(index)}
+            />
           ))}
         </div>
       </div>
@@ -178,5 +216,6 @@ export function PublicationMediaCarousel({
   );
   if (images.length === 0) return null;
   if (images.length === 1) return <SinglePublicationImage image={images[0]} />;
+
   return <MultiplePublicationImages images={images} />;
 }

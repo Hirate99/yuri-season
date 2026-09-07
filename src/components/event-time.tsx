@@ -29,10 +29,12 @@ export function EventTime({
   event,
   viewerTimeZone,
   showTime = false,
+  wrap = false,
 }: {
   event: CalendarEvent;
   viewerTimeZone?: string;
   showTime?: boolean;
+  wrap?: boolean;
 }) {
   const detectedTimeZone = useViewerTimeZone();
   const effectiveTimeZone = viewerTimeZone ?? detectedTimeZone;
@@ -59,8 +61,11 @@ export function EventTime({
   const localEnd = showLocal && endsAt ? localDateTime(endsAt, effectiveTimeZone) : null;
 
   return (
-    <time className="text-xs font-semibold tabular-nums" dateTime={event.startsAt ?? undefined}>
-      <span className="block whitespace-nowrap">
+    <time
+      className={`text-xs font-semibold tabular-nums ${wrap ? "whitespace-normal wrap-anywhere" : "whitespace-nowrap"}`}
+      dateTime={event.startsAt ?? undefined}
+    >
+      <span className="block">
         {sourceStart}
         {sourceEnd && sourceEnd !== sourceStart ? ` — ${sourceEnd}` : ""}
         {!isBirthday && startsAt && (
@@ -70,7 +75,7 @@ export function EventTime({
         )}
       </span>
       {local && effectiveTimeZone && startsAt && (
-        <small className="mt-0.5 block whitespace-nowrap text-[11px] font-normal text-muted">
+        <small className="mt-0.5 block text-[11px] font-normal text-muted">
           {local}
           {localEnd && localEnd !== local ? ` — ${localEnd}` : ""}{" "}
           {timeZoneLabel(effectiveTimeZone, new Date(startsAt))}

@@ -42,18 +42,22 @@ export function AnimeSidebar({ anime }: { anime: AnimeDetail }) {
 
               return (
                 <a
-                  className="grid grid-cols-[76px_1fr_auto] items-center gap-2 py-3 hover:text-accent"
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-3 hover:text-accent"
                   key={event.id}
                   href={event.sourceUrl ?? "#"}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <EventTime event={event} />
-                  <span>
-                    <Badge tone={presentation.tone}>{presentation.label}</Badge>
-                    <span className="mt-1.5 block">{eventTitle(event)}</span>
+                  <span className="min-w-0">
+                    <EventTime event={event} wrap />
+                    <span className="mt-2 flex flex-wrap items-start gap-x-2 gap-y-1.5">
+                      <Badge tone={presentation.tone}>{presentation.label}</Badge>
+                      <span className="min-w-0 flex-1 basis-24 wrap-anywhere">
+                        {eventTitle(event)}
+                      </span>
+                    </span>
                   </span>
-                  <ArrowUpRight size={12} />
+                  <ArrowUpRight size={12} className="mt-0.5" />
                 </a>
               );
             })}

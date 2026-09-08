@@ -681,7 +681,7 @@ describe("local research batch", () => {
     );
   });
 
-  test("always holds original fanwork and stores only link-only media", async () => {
+  test("publishes reviewed original fanwork and preserves community attribution", async () => {
     const value = {
       schemaVersion: "1",
       batchId: "batch-fanwork-1",
@@ -735,7 +735,7 @@ describe("local research batch", () => {
       ],
     };
     const result = await ingestResearchBatch(database.binding(), value as never);
-    expect(result).toMatchObject({ published: 0, held: 1 });
+    expect(result).toMatchObject({ published: 1, held: 0 });
     expect(
       database.sqlite
         .query(
@@ -747,7 +747,7 @@ describe("local research batch", () => {
         )
         .get(),
     ).toMatchObject({
-      status: "held",
+      status: "published",
       source_identity: "community",
       presentation_mode: "link_only",
       original_url: "https://x.com/example_artist/status/1955000000000000003",

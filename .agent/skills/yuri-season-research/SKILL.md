@@ -17,7 +17,7 @@ Choose stories, organize sources, translate, attribute, and resolve duplicates y
 - Publishing: [publication-policy.md](references/publication-policy.md) owns copy, media, and public verification requirements.
 - Recording leased coverage: [discovery-results.md](references/discovery-results.md); constructing imports: relevant sections of [batch-schema.md](references/batch-schema.md). These describe data formats, not additional approval stages.
 - Sources with attendance, appearance, viewing, or schedule information: [event-calendar-policy.md](references/event-calendar-policy.md), before deciding whether an event is needed. Annual audits apply only when explicitly requested or scheduled.
-- Explicit specialist discovery: relevant sections of [research-policy.md](references/research-policy.md).
+- X tag/search discovery and fanwork, or explicit specialist discovery: relevant sections of [research-policy.md](references/research-policy.md).
 
 ## Working loop
 
@@ -39,6 +39,6 @@ Before ending, inspect unfinished coverage, candidates, media, and public projec
 
 ## Profiles
 
-`routine` is the default for “更新网站” and “看看最近有什么”: fixed coverage plus autonomous discovery about tracked works, without a separate Discovery campaign.
+`routine` is the default for “更新网站” and “看看最近有什么”: fixed coverage plus autonomous discovery about tracked works, including X tags/searches for official, creator, and fanwork posts, without a separate Discovery campaign.
 
 Use `social-audit` for an explicit verified-account/tag audit; `discovery` for explicit broad catalog, tag, fanwork, community, or specialist searches; `account-discovery` for explicit account enrollment/verification scoped by `--anime-id=<ids>` or `--person-id=<ids>` (optionally `--platform=<values>`). Reading and verifying an unfamiliar original for a routine story does not enroll its author in monitoring. `rapid` and `repair` describe scope, not CLI profiles.

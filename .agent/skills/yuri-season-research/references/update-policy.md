@@ -15,7 +15,9 @@ Choose promising questions about tracked works from recent developments and info
 
 Discovery can happen alongside fixed coverage, without separate permission or a `discovery` campaign. Avoid repeating recent completed or zero-result searches. Stop searching when a lead becomes repetitive, irrelevant, or unlikely to yield evidence; prioritize ready publication and overdue coverage over speculative searches. Honor user-specified search budgets. Otherwise bound optional search sessions without treating that limit as a deadline for mandatory coverage or qualified publication. Explain briefly when no worthwhile question exists; there is no search or publication quota.
 
-Bulk account enrollment, season-wide catalog audits, X tag scans, Pixiv/Instagram discovery, fanwork/community sweeps, and birthday audits remain separate assignments. Opening a relevant original and checking its authorship for a story is not bulk account discovery.
+Use signed-in X search with evidenced official tags, work names, and confirmed aliases to find official, creator, and fanwork posts beyond the watchlist. Choose searches from recent episodes, events, visuals, and information gaps; do not exhaust every tag each run. Verify the original author and stable post ID, deduplicate before further work, and apply the relevant sections of `research-policy.md`. A tag does not establish official identity. Record query, check time, inspected results, findings, and next action in existing editorial evidence; search sessions need not exhaust X and never substitute for timeline coverage. Resolve every qualified candidate actually found.
+
+Bulk account enrollment, season-wide catalog audits, Pixiv/Instagram discovery, broad cross-work fanwork/community sweeps, and birthday audits remain separate assignments. Opening a relevant original and checking its authorship for a story is not bulk account discovery.
 
 ## Editorial judgment
 

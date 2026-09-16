@@ -12,29 +12,53 @@ import {
 import { decodeFeedCursor, encodeFeedCursor } from "./feed-cursor";
 import { canonicalInstant } from "~/shared/time";
 import { readPublicationAssetGroups, readPublicationDocuments } from "./publications";
+import { decodeSubscriptionCursor, encodeSubscriptionCursor } from "./subscription-cursor";
 
-/** A bounded, three-query snapshot; backfilled news is ordered by site publication time. */
-export async function readSubscriptionFeed(db: D1Database, options: FeedOptions = {}) {
-  const rows = await readNativeFeedPage(db, {
+const subscriptionPageSize = 100;
+
+// Leave room for visibility predicates under D1's 100-parameter limit.
+async function readBatches<T>(ids: string[], read: (ids: string[]) => Promise<Map<string, T>>) {
+  const batches = [];
+  for (let offset = 0; offset < ids.length; offset += 80) {
+    batches.push(read(ids.slice(offset, offset + 80)));
+  }
+  return new Map((await Promise.all(batches)).flatMap((batch) => [...batch]));
+}
+
+/** Backfilled news is ordered by site publication time, independently of website pinning. */
+export async function readSubscriptionFeed(
+  db: D1Database,
+  options: Omit<FeedOptions, "limit"> = {},
+) {
+  const results = await readNativeFeedPage(db, {
     ...options,
-    cursor: undefined,
     order: "created",
-    limit: 80,
+    cursor: options.cursor === undefined ? undefined : decodeSubscriptionCursor(options.cursor),
+    limit: subscriptionPageSize + 1,
   });
+  const rows = results.slice(0, subscriptionPageSize);
+  const last = rows.at(-1);
+  const nextCursor =
+    results.length > subscriptionPageSize && last
+      ? encodeSubscriptionCursor({ createdAt: last.created_at_sort, id: last.id })
+      : null;
   const mediaIds = [...new Set(rows.flatMap((row) => (row.media_id ? [row.media_id] : [])))];
   const [documents, assets] = await Promise.all([
-    readPublicationDocuments(
-      db,
+    readBatches(
       rows.map((row) => row.id),
+      (ids) => readPublicationDocuments(db, ids),
     ),
-    readPublicationAssetGroups(db, mediaIds),
+    readBatches(mediaIds, (ids) => readPublicationAssetGroups(db, ids)),
   ]);
-  return rows.map((row) => ({
-    item: mapFeed(row),
-    createdAt: canonicalInstant(row.created_at),
-    document: documents.get(row.id) ?? null,
-    assets: row.media_id ? (assets.get(row.media_id) ?? []) : [],
-  }));
+  return {
+    nextCursor,
+    entries: rows.map((row) => ({
+      item: mapFeed(row),
+      createdAt: row.created_at,
+      document: documents.get(row.id) ?? null,
+      assets: row.media_id ? (assets.get(row.media_id) ?? []) : [],
+    })),
+  };
 }
 
 export type FeedOptions = {

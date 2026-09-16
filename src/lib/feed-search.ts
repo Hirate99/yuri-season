@@ -34,12 +34,13 @@ export function feedQuery(search: FeedSearch) {
   return { limit: "20", q: search.q, anime: search.anime, classes: feedClasses(search)?.join(",") };
 }
 
-export function subscriptionPath(search: FeedSearch = {}): string {
+export function subscriptionPath(search: FeedSearch = {}, cursor?: string): string {
   const params = new URLSearchParams();
   const normalized = parseFeedSearch(search);
   for (const key of ["anime", "category", "q"] as const) {
     if (normalized[key]) params.set(key, normalized[key]);
   }
+  if (cursor) params.set("cursor", cursor);
   return `/rss.xml${params.size ? `?${params}` : ""}`;
 }
 

@@ -24,6 +24,7 @@ export type MediaRow = {
 export type FeedRow = {
   id: string;
   created_at: string;
+  created_at_sort: string;
   anime_id: string | null;
   anime_slug: string | null;
   anime_title: string | null;

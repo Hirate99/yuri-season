@@ -18,16 +18,21 @@ export function resolveCurrentEpisode(
   input: EpisodeProgressInput,
   now = new Date(),
 ): number | null {
-  if (input.latestVerifiedEpisode !== null)
-    return cap(input.latestVerifiedEpisode, input.episodeCount);
-
   if (input.status === "finished") return input.episodeCount;
   if (input.status !== "airing") return null;
 
   const premiere = Date.parse(input.premiereAt);
-  if (!Number.isFinite(premiere) || now.getTime() < premiere) return null;
+  if (!Number.isFinite(premiere) || now.getTime() < premiere)
+    return input.latestVerifiedEpisode === null
+      ? null
+      : cap(input.latestVerifiedEpisode, input.episodeCount);
 
   const weeklyAdvances = Math.floor((now.getTime() - premiere) / WEEK_MS);
+  const scheduledEpisode = input.premiereEpisodeCount + weeklyAdvances;
+  const currentEpisode =
+    input.latestVerifiedEpisode === null
+      ? scheduledEpisode
+      : Math.max(scheduledEpisode, input.latestVerifiedEpisode);
 
-  return cap(input.premiereEpisodeCount + weeklyAdvances, input.episodeCount);
+  return cap(currentEpisode, input.episodeCount);
 }

@@ -51,7 +51,7 @@ describe("publication policy", () => {
     ).toBe("hold");
   });
 
-  test("always holds newly discovered fanwork", () => {
+  test("allows reviewed fanwork under normal publication policy", () => {
     expect(
       applyReviewPolicy(context, {
         ...review,
@@ -59,6 +59,6 @@ describe("publication policy", () => {
         confidence: 0.99,
         decision: "publish",
       }).decision,
-    ).toBe("hold");
+    ).toBe("publish");
   });
 });

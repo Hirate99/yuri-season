@@ -10,13 +10,6 @@ export type PolicyResult = {
 export function applyReviewPolicy(context: ReviewContext, review: LlmReview): PolicyResult {
   const reasons = [...review.reasons];
 
-  if (review.contentClass === "fanwork") {
-    return {
-      decision: "hold",
-      reasons: [...reasons, "新发现同人必须由 Admin 复核原作者、分级与作品关联"],
-    };
-  }
-
   if (review.safetyRating === "adult" || review.safetyRating === "unknown") {
     return { decision: "hold", reasons: [...reasons, "安全分级需要人工复核"] };
   }

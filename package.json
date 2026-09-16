@@ -26,7 +26,6 @@
     "research": "bun scripts/research.ts",
     "research:commit": "bun scripts/source-diff.ts commit",
     "research:diff": "bun scripts/source-diff.ts check",
-    "research:discard": "bun scripts/source-diff.ts discard",
     "research:discover": "bun scripts/full-discovery.ts",
     "research:discover:next": "bun scripts/discovery-campaign.ts next",
     "research:discover:record": "bun scripts/discovery-campaign.ts record",

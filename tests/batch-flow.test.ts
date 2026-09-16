@@ -3,6 +3,7 @@ import { ingestResearchBatch } from "~/research/batch";
 import { readPublicationPage } from "~/application/public/service";
 import { applyCandidateDecision } from "~/repositories/candidates/decisions";
 import { createCandidate } from "~/repositories/candidates/write";
+import { backfillCandidatePlatformIdentity } from "~/repositories/candidates/identity";
 import { rememberSearch } from "~/repositories/search-memory";
 import { TestD1 } from "./support/d1-adapter";
 import { readAdminDashboard } from "~/application/admin/service";
@@ -353,6 +354,58 @@ describe("local research batch", () => {
     ).toEqual({ count: 0 });
   });
 
+  test("backfills a stable platform identity on one active legacy publication", async () => {
+    const id = await createCandidate(database.binding(), {
+      animeId: "anime-nanoha-exceeds",
+      contentClass: "official_news",
+      sourceIdentity: "official",
+      title: "旧版官网动态",
+      summary: "历史候选没有平台对象 ID。",
+      url: "https://example.test/news/#legacy-item",
+      sourceName: "动画公式 NEWS",
+      publishedAt: "2026-08-13T00:00:00+09:00",
+    });
+    await applyCandidateDecision(database.binding(), id, "publish", { reviewerType: "admin" });
+
+    await backfillCandidatePlatformIdentity(
+      database.binding(),
+      id,
+      "https://example.test/news/#legacy-item",
+      "legacy-item",
+    );
+    await backfillCandidatePlatformIdentity(
+      database.binding(),
+      id,
+      "https://example.test/news/#legacy-item",
+      "legacy-item",
+    );
+
+    expect(
+      database.sqlite.query(`SELECT platform_object_id FROM feed_candidates WHERE id = ?`).get(id),
+    ).toEqual({ platform_object_id: "legacy-item" });
+    expect(
+      database.sqlite
+        .query(`SELECT platform_object_id FROM feed_items WHERE candidate_id = ?`)
+        .get(id),
+    ).toEqual({ platform_object_id: "legacy-item" });
+    expect(
+      database.sqlite
+        .query(
+          `SELECT COUNT(*) AS count FROM audit_log WHERE entity_id = ? AND action = 'backfill_candidate_platform_identity'`,
+        )
+        .get(id),
+    ).toEqual({ count: 1 });
+
+    await expect(
+      backfillCandidatePlatformIdentity(
+        database.binding(),
+        id,
+        "https://example.test/news/#wrong-item",
+        "wrong-item",
+      ),
+    ).rejects.toThrow("候选 URL 已变化");
+  });
+
   test("registers and globally removes one community thread across all linked anime pages", async () => {
     const id = await createCandidate(database.binding(), {
       animeId: "anime-kimishinu",
@@ -681,7 +734,7 @@ describe("local research batch", () => {
     );
   });
 
-  test("always holds original fanwork and stores only link-only media", async () => {
+  test("publishes reviewed original fanwork and preserves community attribution", async () => {
     const value = {
       schemaVersion: "1",
       batchId: "batch-fanwork-1",
@@ -735,7 +788,7 @@ describe("local research batch", () => {
       ],
     };
     const result = await ingestResearchBatch(database.binding(), value as never);
-    expect(result).toMatchObject({ published: 0, held: 1 });
+    expect(result).toMatchObject({ published: 1, held: 0 });
     expect(
       database.sqlite
         .query(
@@ -747,7 +800,7 @@ describe("local research batch", () => {
         )
         .get(),
     ).toMatchObject({
-      status: "held",
+      status: "published",
       source_identity: "community",
       presentation_mode: "link_only",
       original_url: "https://x.com/example_artist/status/1955000000000000003",

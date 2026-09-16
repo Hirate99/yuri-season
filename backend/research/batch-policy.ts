@@ -40,13 +40,6 @@ export function decideBatchCandidate(
   if (candidate.review.decision !== "publish")
     return { decision: candidate.review.decision, reasons };
 
-  if (candidate.contentClass === "fanwork") {
-    return {
-      decision: "hold" as const,
-      reasons: [...reasons, "New fan works require an administrator review."],
-    };
-  }
-
   if ((candidate.safetyRating ?? "unknown") !== "safe") {
     return {
       decision: "hold" as const,
@@ -71,7 +64,11 @@ export function decideBatchCandidate(
   const deterministicCommunity =
     source.trustLevel === "community" && isDeterministicCommunityCandidate(candidate, observation);
 
-  if (["community", "unverified"].includes(source.trustLevel) && !deterministicCommunity) {
+  if (
+    ["community", "unverified"].includes(source.trustLevel) &&
+    !deterministicCommunity &&
+    !(source.trustLevel === "community" && candidate.contentClass === "fanwork")
+  ) {
     return { decision: "hold" as const, reasons: [...reasons, "社区与未验证来源需要人工复核"] };
   }
 

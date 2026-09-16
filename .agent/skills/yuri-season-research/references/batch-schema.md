@@ -109,7 +109,7 @@ Account discovery belongs in `accountDiscoveries` on a traceable observation. It
 
 ## Fanwork
 
-Fanwork requires an inline creator source, original creator post, and media metadata. Candidate `url` must equal `media.originalUrl`. Allowed media classes are `fanart`, `fan_video`, and `cosplay`. The server forces `link_only` and holds every fanwork in phase one.
+Fanwork requires an inline creator source, original creator post, and media metadata. Candidate `url` must equal `media.originalUrl`. Allowed media classes are `fanart`, `fan_video`, and `cosplay`. Reviewed fanwork can publish under the normal safety, spoiler, confidence, attribution, and media requirements. Candidate presentation remains `link_only`; media must satisfy the publication policy.
 
 ```json
 {
@@ -149,9 +149,9 @@ Fanwork requires an inline creator source, original creator post, and media meta
         "rightsNote": "仅链接原帖，不复制图片"
       },
       "review": {
-        "decision": "hold",
+        "decision": "publish",
         "confidence": 0.94,
-        "reasons": ["已确认原作者原帖", "同人内容需人工审核"]
+        "reasons": ["已确认原作者原帖", "原作关联与媒体使用依据已核实"]
       }
     }
   ]

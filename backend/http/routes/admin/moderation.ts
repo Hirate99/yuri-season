@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 
 import { candidateDraftSchema } from "@/domain/inputs/anime";
+import { httpUrl, requiredText } from "@/domain/inputs/schema";
 import type { ApiEnvironment } from "~/http/shared";
 import { validate } from "~/http/shared";
 
@@ -19,6 +20,11 @@ const deleteReasonSchema = z.object({
   reason: z.string().trim().min(1, "彻底删除需要填写原因。").max(300),
 });
 
+const platformIdentitySchema = z.object({
+  expectedUrl: httpUrl("expectedUrl"),
+  platformObjectId: requiredText(240, "platformObjectId"),
+});
+
 export const moderationRoutes = new Hono<ApiEnvironment>()
   .delete("/discussions/:id", validate("json", deleteReasonSchema), async (context) => {
     await context.var.services.admin.discussions.delete(
@@ -33,6 +39,20 @@ export const moderationRoutes = new Hono<ApiEnvironment>()
 
     return context.json({ id }, 201);
   })
+  .patch(
+    "/candidates/:id/platform-identity",
+    validate("json", platformIdentitySchema),
+    async (context) => {
+      const input = context.req.valid("json");
+      await context.var.services.admin.candidates.backfillPlatformIdentity(
+        context.req.param("id"),
+        input.expectedUrl,
+        input.platformObjectId,
+      );
+
+      return context.json({ ok: true });
+    },
+  )
   .post("/candidates/:id/decision", validate("json", decisionSchema), async (context) => {
     const input = context.req.valid("json");
 

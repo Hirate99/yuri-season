@@ -98,7 +98,7 @@ describe("current-season catalog", () => {
       yuriKind: "adjacent",
       yuriStatus: "confirmed",
       coverUrl: expect.any(String),
-      currentEpisode: 6,
+      currentEpisode: expect.any(Number),
     });
     expect(Object.keys(korekaite ?? {}).sort()).toEqual([
       "coverUrl",

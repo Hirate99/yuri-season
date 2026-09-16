@@ -27,13 +27,19 @@ describe("episode progress", () => {
     ).toBe(8);
   });
 
-  test("lets verified progress override the estimate and caps at the total", () => {
+  test("treats verified progress as a floor and caps at the total", () => {
     expect(
       resolveCurrentEpisode(
         { ...weekly, latestVerifiedEpisode: 7 },
         new Date("2026-08-01T00:00:00+09:00"),
       ),
     ).toBe(7);
+    expect(
+      resolveCurrentEpisode(
+        { ...weekly, latestVerifiedEpisode: 7 },
+        new Date("2026-08-23T00:01:00+09:00"),
+      ),
+    ).toBe(8);
     expect(
       resolveCurrentEpisode(
         { ...weekly, latestVerifiedEpisode: 99 },
@@ -44,5 +50,24 @@ describe("episode progress", () => {
 
   test("does not show an episode before premiere", () => {
     expect(resolveCurrentEpisode(weekly, new Date("2026-07-04T23:59:59+09:00"))).toBeNull();
+  });
+
+  test("keeps an explicitly verified episode before the configured premiere", () => {
+    expect(
+      resolveCurrentEpisode(
+        { ...weekly, latestVerifiedEpisode: 1 },
+        new Date("2026-07-04T23:59:59+09:00"),
+      ),
+    ).toBe(1);
+  });
+
+  test("shows the full episode count for a finished work even if verification is stale", () => {
+    expect(
+      resolveCurrentEpisode({
+        ...weekly,
+        status: "finished",
+        latestVerifiedEpisode: 11,
+      }),
+    ).toBe(12);
   });
 });

@@ -22,6 +22,7 @@ export type DiscoveryCampaign = {
   season: { id: string; slug: string; label: string };
   queryBudget: number;
   queries: CampaignQuery[];
+  pendingSubmission?: { results: DiscoveryResult[]; preparedAt: string };
 };
 
 export type DiscoveryResult = {
@@ -229,6 +230,13 @@ export function cancelCampaignQueries(
       (query.state === "pending" || query.state === "leased"),
   );
 
+  const awaitingSync = new Set(campaign.pendingSubmission?.results.map((result) => result.queryId));
+  if (matches.some((query) => awaitingSync.has(query.id))) {
+    throw new Error(
+      "cannot cancel inspected coverage awaiting sync; submit or correct its saved evidence first",
+    );
+  }
+
   for (const query of matches) {
     query.state = "cancelled";
     query.leaseUntil = null;
@@ -243,10 +251,12 @@ export function cancelCampaignQueries(
 
 export function recoverExpiredCampaignQueries(campaign: DiscoveryCampaign, now: Date): number {
   let recovered = 0;
+  const awaitingSync = new Set(campaign.pendingSubmission?.results.map((result) => result.queryId));
 
   for (const query of campaign.queries) {
     if (
       query.state === "leased" &&
+      !awaitingSync.has(query.id) &&
       query.leaseUntil &&
       Date.parse(query.leaseUntil) <= now.valueOf()
     ) {
@@ -339,6 +349,23 @@ export async function memoryRecordsForResults(
   );
 }
 
+export function stageCampaignResults(
+  campaign: DiscoveryCampaign,
+  results: DiscoveryResult[],
+  now: Date,
+): void {
+  const staged = new Map(
+    campaign.pendingSubmission?.results.map((result) => [result.queryId, result]),
+  );
+  for (const result of results) {
+    const query = campaign.queries.find((item) => item.id === result.queryId);
+    if (!query) throw new Error(`unknown campaign query ${result.queryId}`);
+    validateResult(query, result);
+    staged.set(result.queryId, result);
+  }
+  campaign.pendingSubmission = { results: [...staged.values()], preparedAt: now.toISOString() };
+}
+
 export function completeCampaignResults(
   campaign: DiscoveryCampaign,
   results: DiscoveryResult[],
@@ -361,23 +388,28 @@ export function completeCampaignResults(
       result.outcome === "partial" ? null : new Date(result.searchedAt).toISOString();
   }
 
+  if (campaign.pendingSubmission) {
+    const completed = new Set(results.map((result) => result.queryId));
+    campaign.pendingSubmission.results = campaign.pendingSubmission.results.filter(
+      (result) => !completed.has(result.queryId),
+    );
+    if (campaign.pendingSubmission.results.length === 0) delete campaign.pendingSubmission;
+  }
   campaign.updatedAt = now.toISOString();
 }
 
 export function campaignSummary(campaign: DiscoveryCampaign) {
-  const count = (state: CampaignQuery["state"]) =>
-    campaign.queries.filter((query) => query.state === state).length;
+  const counts = { pending: 0, leased: 0, completed: 0, blocked: 0, cancelled: 0 };
+  for (const query of campaign.queries) counts[query.state]++;
 
   return {
     profile: campaign.profile ?? null,
     campaignId: campaign.campaignId,
+    createdAt: campaign.createdAt,
+    awaitingSync: campaign.pendingSubmission?.results.length ?? 0,
     season: campaign.season.label,
     total: campaign.queries.length,
-    pending: count("pending"),
-    leased: count("leased"),
-    completed: count("completed"),
-    blocked: count("blocked"),
-    cancelled: count("cancelled"),
+    ...counts,
     updatedAt: campaign.updatedAt,
   };
 }

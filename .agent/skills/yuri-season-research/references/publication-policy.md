@@ -22,6 +22,8 @@ The editor performs routine review and publication under the update authorizatio
 
 ## Publication media invariant
 
+- Classify media by the verified publishing relationship: official promotional or commissioned material, creator-original work, or independent fanwork. A commissioned illustration announced by the official project is not automatically independent fanwork because an outside artist drew it or the caption calls it fan art. Preserve the artist credit and evidence of the commission; check any stated restrictions. Conversely, an official repost does not establish ownership or permission for an independent creator's work. Apply the same source-specific policy check below; neither a category label nor a copyright mark alone resolves permitted use. A concrete rights conflict remains held with its evidence and missing condition, not a generic demand for the user's editorial approval.
+
 - Every automatically published observation, including an official webpage, must declare `mediaDisposition: none | attached | unavailable | link_only_policy`. `none` is valid only after opening the original and confirming that it has no media. `attached` requires uploaded `candidate.media.assets`.
 - Reserve `unavailable` for source bytes that cannot actually be recovered after reasonable attempts, such as deleted, private, or persistently inaccessible media.
 - `link_only_policy` is an evidence-backed exception, never a safe default. Use it only when an opened source or platform rule explicitly prohibits redistribution, rehosting, or embedding. `mediaDispositionReason` must identify the rule and include its URL.

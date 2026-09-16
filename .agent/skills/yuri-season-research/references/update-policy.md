@@ -27,6 +27,8 @@ For each relevant original, decide independently whether readers need a Feed upd
 
 Ignore unrelated private activity and giveaways. Skip pure reposts and repetitive reminders as new Feed cards after resolving any relevant structured facts. Merge announcements of the same content through existing corrections, preserving source identity and dates. An interview is the story, with its referring post retained as discovery evidence. Apply [publication-policy.md](publication-policy.md) for copy, media, and verification; editorial review is the agent's responsibility.
 
+Decide from each original's actual text, images, and quoted source before generating submission JSON. Builders may serialize those decisions, but must not default every hit to `ignored` or infer Feed rejection from the presence of an event ID. A merge names the existing matching publication; resource coverage names the matching resource and supported facts. Shared reasons are appropriate only for originals individually verified to belong to the same repetitive cluster. Unresolved originals remain work to adjudicate, not generic reminders.
+
 ## Browser access
 
 For X use the signed-in original timeline. Read the available browser-control skill and try the in-app browser first, then the user's Chrome if the first surface lacks usable access. Reuse one dedicated research tab per required browser surface; do not take over unrelated tabs. An uninitialized browser is not a blocker.
@@ -39,9 +41,43 @@ At each resumed run, revalidate previous access blockers with a fresh browser ob
 
 Keep access status and editorial disposition separate: an inaccessible source is blocked/partial, never ignored or a zero-result check. Preserve each task's actual progress; do not assign all unvisited accounts the failure of one account or invent resume cursors. Record attempted URL, time, browser surface, observed error, recovery attempts, and the real last inspected ID/cursor. Report unvisited tasks as pending, and report uninspected creator output as unverified rather than “no new art”.
 
+## CLI operations
+
+Select the operation needed for the current editorial action; these are not sequential approval stages.
+
+| Action | Operation |
+| --- | --- |
+| Check registered official sources; retain unresolved changes and detect newer ones | `bun run research -- sources` |
+| Plan due verified X coverage independently of website changes | `bun run research -- plan --profile=routine` |
+| Refresh both sources and timeline planning, or resume an unfinished campaign | `bun run research -- cycle --profile=routine` |
+| Acquire planned coverage work | `bun run research -- next --profile=routine --limit=<n>` |
+| Persist and submit inspected timeline results | `bun run research -- submit <results.json> --profile=routine` |
+| Retry saved unsynchronized results, when the failure permits retry | `bun run research -- submit --profile=routine` |
+| Import an independently verified story | `bun run research:import <batch.json>` |
+| Audit the specified campaign snapshot | `bun run research -- finish --profile=routine` |
+
+`plan` preserves unfinished work; use `next` to resume it. Query IDs are generated locally from stable source keys. Neither an absent query ID nor a failed planner prohibits reading originals or publishing verified stories. Save unplanned coverage evidence by account/source, observed boundary, inspection time, and original IDs; reconcile it with a legitimate plan before advancing durable cursors. Do not manufacture query IDs or use `research:remember` to bypass timeline validation.
+
+Website changes remain in `.research-cache/pending-diff.json` with version-specific `changeId` values. Continue checking while items remain pending. After Feed and resource decisions plus required public readbacks are resolved, run `bun run research:commit <resolutions.json>` with `{ "resolutions": [{ "changeId": "<exact changeId>", "outcome": "published", "reason": "<item-specific decision>", "evidenceUrls": ["<public readback URL>"] }] }`. Outcomes are `published`, `covered`, or `ignored`; published/covered require evidence URLs, and ignored requires its editorial reason. Leave blocked items unresolved. This acknowledges only the selected versions and archives their evidence; whole-diff commit/discard has been removed. A legacy v2 diff migrates on the next source check without resolving its content.
+
+Coverage submissions preserve validated results locally before contacting production. `awaitingSync` counts inspected results awaiting persistence, not unchecked accounts. Continue other accounts and publications. Corrected payloads can be submitted normally; prior attempts stay archived. After recovery, retry saved results with their original inspection times, then inspect any newly due boundary. Archived result files alone do not prove successful sync or publication.
+
+## Operation failures and resumption
+
+- Retain leased task IDs and real resume cursors. Do not wait for lease expiry to continue inspection. Saved unsynchronized results retain their leases for replay; untouched expired tasks can be leased again. Never replace a campaign with saved unsynchronized evidence.
+- For an approval rejection, preserve the exact rejected operation and stated reason. Compare the original post ID, text, media, proposed resource relationships, and submitted payload with the evidence. Correct local factual or payload defects first. Retry through the normal reviewed path only when allowed and supported by corrected evidence or changed authorization; never disguise the same rejected operation or switch write channels to bypass review. Do not call a rejection a reviewer mistake without inspecting its actual reason and your own input.
+- Existing editorial authorization remains valid. Ask for user input only when a concrete unresolved authorization or material decision actually requires it, stating what remains missing. A rejected import does not automatically block other sources, preparation, or unrelated authorized writes; determine its actual scope and continue unaffected work.
+- Goal-tool blocked thresholds are necessary conditions, not a reason to manufacture repeated audit turns. Mark blocked only under the tool's rules and when no mandatory work can meaningfully advance. A checkpoint, unchanged counter, or missing browser handle alone does not establish that condition.
+
 ## Handoff and completion
 
 Read `.research-cache/routine-editorial.md` at the start and maintain it at the end: URL, related work, last check, finding/blocker, next action, and revisit time. Retain unresolved leads and recent completed/zero-result searches. Do not invent leased IDs for editorial searches or alter timeline cursors with external evidence.
+
+Keep one current recovery summary at the top and update it in place; do not prepend another "current" summary each turn. Archive detailed run evidence under existing routine reports and link it from the summary. Distinguish observed coverage, successfully synchronized coverage, published items/resources, and unresolved work with their last verification times. A prior "all work exhausted" conclusion expires when sources become due or new originals appear. Automation memory should point to this summary and avoid duplicating its full history. Read history selectively for unresolved IDs or evidence.
+
+Reconcile candidates from this run's discovery results and carried-over unfinished evidence, including candidates never imported into Admin. The Admin held list alone is not the full queue. Match stable original URLs/post IDs against production Feed and the work's media collection; check semantic duplicates before creating a new item. Close a qualified item only with its public Feed ID/link and required media/resource readback. Otherwise complete the existing candidate or repair the existing publication, or retain a concrete blocker and next action. Record a reason for an editorial rejection rather than silently dropping the item.
+
+The committed cursor bounds new timeline discovery, not publication eligibility. A candidate at or below it still needs publication reconciliation; `seen`, `candidate`, coverage completion, and `nextCheckAt` do not prove publication. Continue known unfinished items even when their account is not due. Scoped missing-image repairs may revisit older originals without resetting or advancing discovery cursors. A zero-due queue does not close unfinished publication work.
 
 Completion requires all due coverage to pass and every relevant original's Feed and structured-resource decisions to be resolved. Reconcile this run's time-bearing sources against actual event/schedule records, including sources ignored as duplicate Feed content; verify required resources in Admin and their public projections. Checking only resources already written, or receiving HTTP 200 from a related endpoint, does not establish that nothing is missing. Qualified publications, required reading, and projection repairs must also be complete. Optional speculative leads can carry over. Actual blockers follow the main Skill's stopping rule.
 

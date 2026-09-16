@@ -74,6 +74,7 @@ export async function rememberSearch(db: D1Database, records: SearchMemoryWrite[
           searchMemoryTable.targetKey,
         ],
         set: values,
+        setWhere: sql`${searchMemoryTable.lastSearchedAt} IS NULL OR julianday(${searchMemoryTable.lastSearchedAt}) <= julianday(${record.searchedAt})`,
       });
 
     await orm.batch([
@@ -106,6 +107,7 @@ export async function rememberSearch(db: D1Database, records: SearchMemoryWrite[
               observationId: hit.observationId ?? sql`${searchMemoryHitsTable.observationId}`,
               candidateId: hit.candidateId ?? sql`${searchMemoryHitsTable.candidateId}`,
             },
+            setWhere: sql`julianday(${searchMemoryHitsTable.lastSeenAt}) <= julianday(${record.searchedAt})`,
           });
       }),
     ]);

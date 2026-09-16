@@ -3,7 +3,14 @@ import { normalizerVersion } from "~/research/connectors/normalize";
 import { adminSourceRecord } from "./lib/admin-source-record";
 import { fetchAdminDashboard } from "./lib/admin-dashboard";
 import { localSourceTransport } from "./lib/local-source-transport";
-import { partitionSourceChanges, sourceChangeKind, type SourceChange } from "./lib/source-change";
+import { sourceChangeKind, type SourceChange } from "./lib/source-change";
+import {
+  mergeSourceBacklog,
+  resolveSourceBacklog,
+  type SourceBacklog,
+  type SourceResolution,
+} from "./lib/source-backlog";
+import { readResearchJson, writeResearchJson } from "./lib/research-cache";
 import { changedItems, isReusableSourceState } from "./lib/source-state";
 import { isRoutineUpdateSource, rotatingSourceSelection } from "./lib/source-selection";
 
@@ -25,19 +32,25 @@ const statePath = `${cacheDirectory}/source-state.json`;
 const proposedPath = `${cacheDirectory}/proposed-state.json`;
 const diffPath = `${cacheDirectory}/pending-diff.json`;
 
-async function readJson<T>(path: string, fallback: T): Promise<T> {
-  const file = Bun.file(path);
-
-  return (await file.exists()) ? (file.json() as Promise<T>) : fallback;
+async function loadCache(): Promise<{ pending: SourceBacklog | null; current: CacheState }> {
+  let pending = await readResearchJson<SourceBacklog | null>(diffPath, null);
+  const hasProposed = Boolean(pending && (await Bun.file(proposedPath).exists()));
+  // Migrate the old proposed baseline without acknowledging any unresolved content.
+  const current = await readResearchJson<CacheState>(hasProposed ? proposedPath : statePath, {
+    version: 3,
+    sources: {},
+  });
+  if (pending && (pending.schemaVersion === 2 || hasProposed)) {
+    pending = mergeSourceBacklog(pending, [], [], [], new Date().toISOString());
+    await writeResearchJson(diffPath, pending);
+    await writeResearchJson(statePath, current);
+    if (hasProposed) await Bun.file(proposedPath).delete();
+  }
+  return { pending, current };
 }
 
 async function check(): Promise<void> {
-  const pending = Bun.file(diffPath);
-
-  if (await pending.exists())
-    throw new Error("pending-diff.json already exists; ingest and commit it before checking again");
-
-  const current = await readJson<CacheState>(statePath, { version: 2, sources: {} });
+  const { pending, current } = await loadCache();
 
   const next: CacheState = {
     version: 3,
@@ -106,45 +119,18 @@ async function check(): Promise<void> {
     }
   }
 
-  await Bun.write(proposedPath, JSON.stringify(next, null, 2));
-
-  if (changes.length === 0) {
-    await Bun.write(statePath, JSON.stringify(next, null, 2));
-    await Bun.file(proposedPath).delete();
-    process.stdout.write(
-      JSON.stringify(
-        {
-          baseline: Object.keys(current.sources).length === 0,
-          profile: profile ?? "all-enabled",
-          checkedSources: selection.selected.length,
-          remainingSources: selection.remaining,
-          changes: 0,
-          errors,
-        },
-        null,
-        2,
-      ),
-    );
-
-    return;
-  }
-
-  const { catalogChanges, feedChanges } = partitionSourceChanges(changes);
-
-  await Bun.write(
-    diffPath,
-    JSON.stringify(
-      {
-        schemaVersion: 2,
-        createdAt: new Date().toISOString(),
-        catalogChanges,
-        feedChanges,
-        errors,
-      },
-      null,
-      2,
-    ),
+  const backlog = mergeSourceBacklog(
+    pending,
+    changes,
+    errors,
+    selection.selected.map((source) => source.id),
+    new Date().toISOString(),
   );
+  // Persist evidence before advancing the fetch baseline. A crash can repeat detection,
+  // but mergeSourceBacklog will deduplicate it without losing unresolved versions.
+  await writeResearchJson(diffPath, backlog);
+  await writeResearchJson(statePath, next);
+  if (await Bun.file(proposedPath).exists()) await Bun.file(proposedPath).delete();
   process.stdout.write(
     JSON.stringify(
       {
@@ -152,9 +138,9 @@ async function check(): Promise<void> {
         changes: changes.length,
         checkedSources: selection.selected.length,
         remainingSources: selection.remaining,
-        catalogChanges: catalogChanges.length,
-        feedChanges: feedChanges.length,
-        errors,
+        catalogChanges: backlog.catalogChanges.length,
+        feedChanges: backlog.feedChanges.length,
+        errors: backlog.errors,
         path: diffPath,
       },
       null,
@@ -164,33 +150,41 @@ async function check(): Promise<void> {
 }
 
 async function commit(): Promise<void> {
-  const proposed = Bun.file(proposedPath);
-  if (!(await proposed.exists())) throw new Error("no proposed state to commit");
-
-  await Bun.write(statePath, await proposed.text());
-  if (await Bun.file(diffPath).exists()) await Bun.file(diffPath).delete();
-
-  await proposed.delete();
-  process.stdout.write("research diff committed\n");
-}
-
-async function discard(): Promise<void> {
-  let removed = 0;
-
-  for (const path of [proposedPath, diffPath]) {
-    const file = Bun.file(path);
-    if (!(await file.exists())) continue;
-
-    await file.delete();
-    removed += 1;
-  }
-
-  process.stdout.write(`discarded ${removed} pending research file(s)\n`);
+  const path = process.argv[3];
+  if (!path)
+    throw new Error(
+      "usage: research:commit <resolutions.json>; whole-diff commit/discard is no longer supported",
+    );
+  const { pending: backlog } = await loadCache();
+  if (!backlog) throw new Error("no source backlog; run research:diff first");
+  const { resolutions } = (await Bun.file(path).json()) as { resolutions: SourceResolution[] };
+  if (!Array.isArray(resolutions)) throw new Error("resolutions array is required");
+  const next = resolveSourceBacklog(backlog, resolutions);
+  const remaining = new Set([...next.catalogChanges, ...next.feedChanges]);
+  const archive = `${cacheDirectory}/source-resolutions/${Date.now()}-${crypto.randomUUID()}.json`;
+  await writeResearchJson(archive, {
+    resolvedAt: new Date().toISOString(),
+    resolutions,
+    changes: [...backlog.catalogChanges, ...backlog.feedChanges].filter(
+      (change) => !remaining.has(change),
+    ),
+  });
+  await writeResearchJson(diffPath, next);
+  process.stdout.write(
+    JSON.stringify(
+      {
+        resolved: resolutions.length,
+        pending: next.catalogChanges.length + next.feedChanges.length,
+        archive,
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 const mode = process.argv[2] ?? "check";
 
-if (!new Set(["check", "commit", "discard"]).has(mode))
-  throw new Error(`unknown source diff mode: ${mode}`);
+if (mode !== "check" && mode !== "commit") throw new Error(`unknown source diff mode: ${mode}`);
 
-await (mode === "commit" ? commit() : mode === "discard" ? discard() : check());
+await (mode === "commit" ? commit() : check());

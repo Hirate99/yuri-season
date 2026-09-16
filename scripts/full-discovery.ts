@@ -6,6 +6,7 @@ import {
   type DiscoveryCampaign,
 } from "./lib/discovery-campaign";
 import { campaignPathForProfile, parseResearchProfile } from "./lib/research-profile";
+import { writeResearchJson } from "./lib/research-cache";
 
 function integerArgument(name: string, fallback: number) {
   const prefix = `--${name}=`;
@@ -57,12 +58,15 @@ if (profile === "account-discovery" && !animeIds?.size && !personIds?.size) {
 const limit = integerArgument("limit", Number.MAX_SAFE_INTEGER);
 const priorFile = Bun.file(outputPath);
 
-if ((await priorFile.exists()) && !replace) {
+if (await priorFile.exists()) {
   const prior = (await priorFile.json()) as Partial<DiscoveryCampaign>;
+  if (prior.pendingSubmission?.results.length)
+    throw new Error("coverage evidence awaits sync; resume this campaign before replacing it");
 
   if (
     prior.schemaVersion === 3 &&
     prior.mode === "discovery-campaign" &&
+    !replace &&
     hasUnfinishedQueries(prior as DiscoveryCampaign)
   ) {
     throw new Error(
@@ -104,7 +108,7 @@ const result = createCampaign({
   queries,
 });
 
-await Bun.write(outputPath, JSON.stringify(result, null, 2));
+await writeResearchJson(outputPath, result);
 
 const byKind = Object.fromEntries(
   [...new Set(queries.map((query) => query.searchKind))]

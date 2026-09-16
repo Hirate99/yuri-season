@@ -1,4 +1,3 @@
-import { mkdir } from "node:fs/promises";
 import type { DiscoveryResult } from "./lib/discovery-campaign";
 import {
   cancelCampaignQueries,
@@ -6,10 +5,12 @@ import {
   completeCampaignResults,
   leaseCampaignQueries,
   memoryRecordsForResults,
+  stageCampaignResults,
   type DiscoveryCampaign,
 } from "./lib/discovery-campaign";
 import { rememberSearchRecords } from "./lib/search-memory-client";
 import { campaignPathForProfile, parseResearchProfile } from "./lib/research-profile";
+import { readResearchJson, writeResearchJson } from "./lib/research-cache";
 
 const resultsDirectory = ".research-cache/discovery-results";
 
@@ -17,10 +18,8 @@ async function loadCampaign(
   campaignPath: string,
   expectedProfile: string,
 ): Promise<DiscoveryCampaign> {
-  const file = Bun.file(campaignPath);
-  if (!(await file.exists())) throw new Error("run research:discover before leasing queries");
-
-  const campaign = (await file.json()) as DiscoveryCampaign;
+  const campaign = await readResearchJson<DiscoveryCampaign | null>(campaignPath, null);
+  if (!campaign) throw new Error("run research:discover before leasing queries");
 
   if (campaign.schemaVersion !== 3 || campaign.mode !== "discovery-campaign") {
     throw new Error("discovery plan is from an older version; regenerate it with --replace");
@@ -33,10 +32,6 @@ async function loadCampaign(
   }
 
   return campaign;
-}
-
-async function saveCampaign(campaignPath: string, campaign: DiscoveryCampaign): Promise<void> {
-  await Bun.write(campaignPath, JSON.stringify(campaign, null, 2));
 }
 
 function batchLimit(raw: string | undefined): number {
@@ -93,7 +88,7 @@ async function lease(arguments_: string[], campaignPath: string, profile: string
       (!targetSuffix || query.targetKey.endsWith(targetSuffix)),
   );
 
-  await saveCampaign(campaignPath, campaign);
+  await writeResearchJson(campaignPath, campaign);
   process.stdout.write(
     JSON.stringify(
       {
@@ -114,29 +109,28 @@ async function record(
   campaignPath: string,
   profile: string,
 ): Promise<void> {
-  if (!path) throw new Error("result JSON path is required");
-
   const campaign = await loadCampaign(campaignPath, profile);
-  const input = (await Bun.file(path).json()) as { campaignId: string; results: DiscoveryResult[] };
+  const input = path
+    ? ((await Bun.file(path).json()) as { campaignId: string; results: DiscoveryResult[] })
+    : { campaignId: campaign.campaignId, results: campaign.pendingSubmission?.results ?? [] };
 
   if (input.campaignId !== campaign.campaignId)
     throw new Error("result campaignId does not match active campaign");
 
   if (!Array.isArray(input.results) || input.results.length < 1) {
-    throw new Error("results must contain at least one entry");
+    throw new Error("provide a result JSON path, or omit it to retry a pending submission");
   }
 
-  const memory = await rememberSearchRecords(
-    await memoryRecordsForResults(campaign, input.results),
-  );
+  const records = await memoryRecordsForResults(campaign, input.results);
+  // Archive each validated attempt, including corrections to an earlier failed payload.
+  const archive = `${resultsDirectory}/${campaign.campaignId}-${Date.now()}-${crypto.randomUUID()}.json`;
+  await writeResearchJson(archive, input);
+  stageCampaignResults(campaign, input.results, new Date());
+  await writeResearchJson(campaignPath, campaign);
+  const memory = await rememberSearchRecords(records);
 
   completeCampaignResults(campaign, input.results, new Date());
-  await saveCampaign(campaignPath, campaign);
-  await mkdir(resultsDirectory, { recursive: true });
-
-  const archive = `${resultsDirectory}/${campaign.campaignId}-${Date.now()}.json`;
-
-  await Bun.write(archive, JSON.stringify(input, null, 2));
+  await writeResearchJson(campaignPath, campaign);
   process.stdout.write(JSON.stringify({ memory, archive, ...campaignSummary(campaign) }, null, 2));
 }
 
@@ -160,7 +154,7 @@ async function cancel(
   );
   if (cancelledNow === 0) throw new Error(`no unfinished queries matched ${scopeType}:${scopeId}`);
 
-  await saveCampaign(campaignPath, campaign);
+  await writeResearchJson(campaignPath, campaign);
   process.stdout.write(JSON.stringify({ ...campaignSummary(campaign), cancelledNow }, null, 2));
 }
 

@@ -1,6 +1,6 @@
 # Discovery result file
 
-Use the timeline example below for routine X coverage; account-discovery, fanwork, and community examples apply only to those explicit tasks. Record one result for every executed leased task, including zero-hit, partial, and blocked work. `outcome` describes execution completeness; `status` controls durable search memory.
+Use the timeline example below for routine X coverage. Fanwork fields also apply to routine X discovery; account-discovery and community examples apply only to those explicit tasks. Record one result for every executed leased task, including zero-hit, partial, and blocked work; leave unvisited tasks pending rather than generating a result for every planned query. `outcome` describes execution completeness; `status` controls durable search memory.
 
 ```json
 {
@@ -119,11 +119,12 @@ For community-thread results preserve:
 - Before recording a browser-dependent surface as blocked, attempt the app's in-app browser and then the user's Chrome browser unless the user selected a different surface or the first attempt produced a platform-level rate limit. In `notes`, identify each attempted surface and its concrete failure. HTTP 429 stops that platform without an immediate retry or browser switch; preserve partial coverage and the resume cursor so later work does not repeat already inspected originals.
 - Search-engine results cannot complete `timeline_scan` or `tag_scan`. Routine X requires the signed-in original timeline. In an explicit audit that permits embeds, they may complete an account timeline only when the previous cursor was reached; they cannot complete a global newest-first tag scan.
 - Every inspected original in a timeline or tag scan must be represented by a hit with a stable `metadata.platformObjectId`, including ignored and rejected posts.
+- Serialize item-specific decisions from the editorial evidence. Before submit, check stable ID to text/media/resource mappings and confirm each `ignored` or merged hit has its actual reason and any claimed existing publication/resource. A successfully generated file does not establish that originals were read or that its dispositions are true.
 - `nextCheckAt` is the agent's scheduling decision, not a fixed lane cadence. Every completed active task must provide it and explain it with short `reasonCodes`; the CLI enforces only a missed-coverage deadline and prevents partial work from being deferred.
 - Put newly verified tags, aliases, units, characters, or pair terms in `discoveredTerms` with the original source URL so later tag scans can reuse them without waiting for a person to update the query.
 - Use canonical HTTP(S) original-page URLs. Search pages and snippets are not hits.
 - `outcome` is `seen`, `candidate`, `published`, `held`, `rejected`, or `ignored`. Do not claim `published` before a successful batch import.
-- Existing published, held, rejected, or ignored URLs are not new discoveries unless the original page materially changed.
+- Existing published, held, rejected, or ignored URLs are not new discoveries unless the original page materially changed. This discovery deduplication does not close unfinished candidates or media repairs; reconcile publication separately under [update-policy.md](update-policy.md#handoff-and-completion), even below the committed cursor.
 - For account discovery, identity evidence and content evidence are separate. A credible account lead is still unverified until the account record is reviewed.
 - For fanwork, aggregators, mirrors, reposts, and quote-posts are `ignored` or `rejected`, not candidates.
 - Record completed results promptly in any convenient chunk. The recorder derives hashes, counts, next-search time, and durable memory. Chunk size is an implementation detail, never a reason to stop while relevant due work remains.

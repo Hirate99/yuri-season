@@ -7,6 +7,7 @@ import {
   leaseCampaignQueries,
   memoryRecordsForResults,
   recoverExpiredCampaignQueries,
+  stageCampaignResults,
 } from "../scripts/lib/discovery-campaign";
 import type { DiscoveryQuery } from "../scripts/lib/discovery-query-plan";
 
@@ -39,6 +40,84 @@ function query(id: string): DiscoveryQuery {
 }
 
 describe("resumable discovery campaigns", () => {
+  test("failed sync survives lease expiry while unrelated work can finish", async () => {
+    const campaign = createCampaign({
+      createdAt: "2026-09-15T02:00:00Z",
+      force: false,
+      season: { id: "season-1", slug: "summer", label: "summer" },
+      queryBudget: 3,
+      queries: [query("q1"), query("q2"), query("q3")],
+    });
+    leaseCampaignQueries(campaign, 2, new Date("2026-09-15T02:00:00Z"));
+    const result = {
+      queryId: "q1",
+      searchedAt: "2026-09-15T02:10:00Z",
+      outcome: "complete" as const,
+      status: "active" as const,
+      nextCheckAt: "2026-09-15T08:00:00Z",
+      hits: [],
+    };
+    const before = await memoryRecordsForResults(campaign, [result]);
+    stageCampaignResults(campaign, [result], new Date("2026-09-15T02:11:00Z"));
+    // Persist/reload just as a failed network submission followed by a new run does.
+    const recovered = JSON.parse(JSON.stringify(campaign)) as typeof campaign;
+    expect(recoverExpiredCampaignQueries(recovered, new Date("2026-09-15T09:00:00Z"))).toBe(1);
+    expect(recovered.queries[0].state).toBe("leased");
+    expect(recovered.queries[0].completedAt).toBeNull();
+    expect(() =>
+      cancelCampaignQueries(recovered, "anime", "anime-1", "removed", new Date()),
+    ).toThrow("awaiting sync");
+    expect(recovered.queries[0].state).toBe("leased");
+    expect(
+      leaseCampaignQueries(recovered, 2, new Date("2026-09-15T09:00:00Z")).map((item) => item.id),
+    ).toEqual(["q2", "q3"]);
+    const unrelated = {
+      ...result,
+      queryId: "q2",
+      searchedAt: "2026-09-15T09:05:00Z",
+      nextCheckAt: "2026-09-15T15:00:00Z",
+    };
+    stageCampaignResults(recovered, [unrelated], new Date("2026-09-15T09:05:00Z"));
+    completeCampaignResults(recovered, [unrelated], new Date("2026-09-15T09:06:00Z"));
+    expect(recovered.pendingSubmission?.results).toEqual([result]);
+    expect(await memoryRecordsForResults(recovered, recovered.pendingSubmission!.results)).toEqual(
+      before,
+    );
+    completeCampaignResults(recovered, [result], new Date("2026-09-15T09:07:00Z"));
+    expect(recovered.pendingSubmission).toBeUndefined();
+    expect(recovered.queries[0].completedAt).toBe(new Date(result.searchedAt).toISOString());
+  });
+
+  test("a correction replaces only its pending result and still passes coverage validation", () => {
+    const campaign = createCampaign({
+      createdAt: "2026-09-15T02:00:00Z",
+      force: false,
+      season: { id: "season-1", slug: "summer", label: "summer" },
+      queryBudget: 2,
+      queries: [query("q1"), query("q2")],
+    });
+    leaseCampaignQueries(campaign, 2, new Date("2026-09-15T02:00:00Z"));
+    const result = {
+      queryId: "q1",
+      searchedAt: "2026-09-15T02:10:00Z",
+      outcome: "complete" as const,
+      status: "active" as const,
+      nextCheckAt: "2026-09-15T08:00:00Z",
+      hits: [],
+    };
+    stageCampaignResults(campaign, [result, { ...result, queryId: "q2" }], new Date());
+    stageCampaignResults(
+      campaign,
+      [{ ...result, notes: "corrected source relationship" }],
+      new Date(),
+    );
+    expect(campaign.pendingSubmission?.results).toHaveLength(2);
+    expect(campaign.pendingSubmission?.results[0].notes).toBe("corrected source relationship");
+    expect(() =>
+      stageCampaignResults(campaign, [{ ...result, nextCheckAt: "invalid" }], new Date()),
+    ).toThrow();
+    expect(campaign.queries.every((item) => item.completedAt === null)).toBe(true);
+  });
   test("leases a bounded workset and recovers an expired lease", () => {
     const campaign = createCampaign({
       createdAt: "2026-08-11T20:00:00Z",

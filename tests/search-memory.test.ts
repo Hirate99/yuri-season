@@ -45,6 +45,28 @@ function batch(outcome: "seen" | "published" = "seen") {
 }
 
 describe("search memory", () => {
+  test("replaying older coverage cannot roll back a newer cursor or hit", async () => {
+    const [old] = batch();
+    old.cursor = { committedPostId: "100" };
+    const recent = structuredClone(old);
+    recent.searchedAt = "2026-08-12T20:00:00Z";
+    recent.nextSearchAt = "2026-08-19T20:00:00Z";
+    recent.cursor = { committedPostId: "200" };
+    recent.hits[0].title = "newer original";
+    recent.hits[0].contentHash = "newer-version";
+    await rememberSearch(database.binding(), [recent]);
+    await rememberSearch(database.binding(), [old]);
+    await rememberSearch(database.binding(), [old]);
+    const records = await readSearchMemory(database.binding());
+    expect(records).toHaveLength(1);
+    expect(records[0].cursor).toEqual({ committedPostId: "200" });
+    expect(records[0].searchedAt).toBe(recent.searchedAt);
+    expect(records[0].nextSearchAt).toBe(recent.nextSearchAt);
+    expect(
+      database.sqlite.query("SELECT title, content_hash FROM search_memory_hits").all(),
+    ).toEqual([{ title: "newer original", content_hash: "newer-version" }]);
+  });
+
   test("remembers seen URLs and does not downgrade a resolved outcome", async () => {
     const [published] = batch("published");
     published.hits = Array.from({ length: 100 }, (_, index) => ({

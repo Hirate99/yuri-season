@@ -19,21 +19,21 @@ Choose stories, organize sources, translate, attribute, and resolve duplicates y
 - Sources with attendance, appearance, viewing, or schedule information: [event-calendar-policy.md](references/event-calendar-policy.md), before deciding whether an event is needed. Annual audits apply only when explicitly requested or scheduled.
 - X tag/search discovery and fanwork, or explicit specialist discovery: relevant sections of [research-policy.md](references/research-policy.md).
 
-## Working loop
+## Editorial loop
 
-1. Restore due unfinished work from `.research-cache/routine-editorial.md`, then run `bun run research -- cycle --profile=routine`.
-2. Process source differences and lease due timelines with `bun run research -- next --profile=routine --limit=<n>`. Interleave useful discovery and publication according to urgency; do not accumulate all candidates until scanning ends.
-3. Open originals and decide both their Feed value and the event/schedule or other structured facts they support. Reconcile those facts even when no new Feed card is needed. Complete ready items through media, content/resource imports, and public verification in manageable batches. A partial timeline does not prevent publishing an independently verified post; publication does not prove timeline completion.
-4. Record leased coverage with `bun run research -- submit <results.json> --profile=routine`. Resolve source differences before rerunning `cycle`; repeat the work, then run `bun run research -- finish --profile=routine`.
-5. Check remaining editorial and public-verification work separately. CLI convergence proves planned coverage only.
+1. Restore unfinished stories and the latest verified source boundaries. Refresh due-source context and inspect recent publications to identify gaps. Treat old handoff conclusions as dated evidence, not instructions to wait.
+2. Choose the next useful action: inspect an overdue source, follow a promising original or quote chain, finish ready media/copy, or reconcile a missing resource. Interleave these actions according to reader value and urgency; the registered watchlist is a coverage floor.
+3. Read the original text and media. Decide separately whether a Feed update is worthwhile and whether its facts require event, schedule, music, or other resource changes. Check existing records before merging or claiming coverage.
+4. Complete ready publications/resources through the existing importer/Admin APIs, then verify their public projections. Save item-specific evidence and coverage progress as work proceeds; unresolved stories survive cursor advancement.
+5. Reconcile due coverage, unfinished stories, required resources, and public readbacks. Report remaining work by its actual dependency. Follow [update-policy.md](references/update-policy.md#handoff-and-completion) for completion and handoff.
+
+Use the [CLI operations](references/update-policy.md#cli-operations) as tools for these actions. Campaigns track source coverage; they do not grant editorial permission or gate publication. A failed source diff or coverage submission leaves that operation pending while independent reading, discovery, and publication continue.
 
 Use existing CLI/Admin APIs and the documented batch importer for writes. Preserve existing code and credentials: routine does not authorize changing `package.json`, committing, pushing, or deploying code. Put temporary builders in workspace `.tmp`; clean only this run's disposable files after verification, retaining unfinished evidence and the editorial handoff. Record tooling defects for separate repair without turning content work into a development task.
 
 ## Failure handling and stopping
 
-An error changes the next action, not the objective. Identify the failed operation and its actual dependents, try an applicable alternative, then continue another executable item. A page error is not automatically a platform outage. Do not repeat a failing method without new evidence or bypass rate limits or approval rejections.
-
-Unverified text, unfinished uploads, and pending imports are the editor's work queue. If the schema calls them `held`, that does not imply human review. A deferred item must identify its missing condition, attempted recovery, and next action; perform that action now when possible. Reserve human intervention for a specific unresolved decision, not ordinary editorial judgment or tool inconvenience.
+Identify the failed operation and its actual dependents; continue executable work elsewhere. Follow [update-policy.md](references/update-policy.md#operation-failures-and-resumption) for recovery. `held` means an unresolved item, not automatic human review. Record the missing condition, attempted recovery, and next action. Do not bypass rate limits or approval rejections.
 
 Before ending, inspect unfinished coverage, candidates, media, and public projections. Continue while any authorized next action is executable. End only when work is complete, all remaining mandatory work has concrete blockers, the user stops the run, or an externally specified execution limit is reached. Do not invent a short run window. Save recoverable state and report incomplete work honestly when forced to stop; a checkpoint alone is not a stop condition.
 

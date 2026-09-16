@@ -49,7 +49,11 @@ export function AnimePage({
           >
             {(content) =>
               content ? (
-                <UpdatesSection items={content.feed} animeSlug={anime.slug} />
+                <UpdatesSection
+                  items={content.feed}
+                  animeSlug={anime.slug}
+                  animeTitle={anime.titleZh}
+                />
               ) : (
                 <p id="updates" className="text-sm text-muted" role="status">
                   相关内容加载失败，请刷新重试。

@@ -16,8 +16,17 @@ export async function readPublicationDocument(
   db: D1Database,
   feedItemId: string,
 ): Promise<PublicationDocument | null> {
-  const row = await database(db)
+  return (await readPublicationDocuments(db, [feedItemId])).get(feedItemId) ?? null;
+}
+
+export async function readPublicationDocuments(
+  db: D1Database,
+  feedItemIds: string[],
+): Promise<Map<string, PublicationDocument>> {
+  if (!feedItemIds.length) return new Map();
+  const rows = await database(db)
     .select({
+      feedItemId: publicationDocumentsTable.feedItemId,
       sourceTitle: publicationDocumentsTable.sourceTitle,
       authorName: publicationDocumentsTable.authorName,
       sourceLanguage: publicationDocumentsTable.sourceLanguage,
@@ -31,23 +40,30 @@ export async function readPublicationDocument(
     .from(publicationDocumentsTable)
     .where(
       and(
-        eq(publicationDocumentsTable.feedItemId, feedItemId),
+        inArray(publicationDocumentsTable.feedItemId, feedItemIds),
         eq(publicationDocumentsTable.sourceStatus, "active"),
       ),
-    )
-    .get();
+    );
 
-  return row ?? null;
+  return new Map(rows.map(({ feedItemId, ...document }) => [feedItemId, document]));
 }
 
 export async function readPublicationAssets(
   db: D1Database,
   mediaId: string | null,
 ): Promise<PublicationAsset[]> {
-  if (!mediaId) return [];
+  return mediaId ? ((await readPublicationAssetGroups(db, [mediaId])).get(mediaId) ?? []) : [];
+}
+
+export async function readPublicationAssetGroups(
+  db: D1Database,
+  mediaIds: string[],
+): Promise<Map<string, PublicationAsset[]>> {
+  if (!mediaIds.length) return new Map();
 
   const rows = await database(db)
     .select({
+      mediaId: mediaAssetsTable.mediaId,
       id: mediaAssetsTable.id,
       r2Key: mediaAssetsTable.r2Key,
       sourceUrl: mediaAssetsTable.sourceUrl,
@@ -62,7 +78,7 @@ export async function readPublicationAssets(
     .from(mediaAssetsTable)
     .where(
       and(
-        eq(mediaAssetsTable.mediaId, mediaId),
+        inArray(mediaAssetsTable.mediaId, mediaIds),
         eq(mediaAssetsTable.status, "active"),
         isNull(mediaAssetsTable.withdrawnAt),
         inArray(mediaAssetsTable.rightsStatus, publicRights),
@@ -92,7 +108,8 @@ export async function readPublicationAssets(
   const preferred = new Map<string, (typeof publicAssets)[number]>();
 
   for (const asset of publicAssets) {
-    const current = preferred.get(asset.sourceUrl);
+    const key = JSON.stringify([asset.mediaId, asset.sourceUrl]);
+    const current = preferred.get(key);
 
     if (
       !current ||
@@ -100,11 +117,19 @@ export async function readPublicationAssets(
       (variantPriority[asset.variant] === variantPriority[current.variant] &&
         (asset.width ?? 0) > (current.width ?? 0))
     ) {
-      preferred.set(asset.sourceUrl, asset);
+      preferred.set(key, asset);
     }
   }
 
-  return [...preferred.values()].sort((left, right) => left.sortOrder - right.sortOrder);
+  const groups = new Map<string, PublicationAsset[]>();
+  for (const { mediaId, ...asset } of [...preferred.values()].sort(
+    (left, right) => left.sortOrder - right.sortOrder,
+  )) {
+    const assets = groups.get(mediaId) ?? [];
+    assets.push(asset);
+    groups.set(mediaId, assets);
+  }
+  return groups;
 }
 
 export async function readPublicationCorrections(

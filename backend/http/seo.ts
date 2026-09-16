@@ -1,20 +1,7 @@
 import { Hono } from "hono";
 import { createPublicService } from "~/application/public/service";
 import { pageUrl } from "@/lib/seo";
-
-function escapeXml(value: string): string {
-  return value.replace(
-    /[<>&"']/gu,
-    (character) =>
-      ({
-        "<": "&lt;",
-        ">": "&gt;",
-        "&": "&amp;",
-        '"': "&quot;",
-        "'": "&apos;",
-      })[character]!,
-  );
-}
+import { escapeXml } from "~/shared/xml";
 
 export const seoRoutes = new Hono<{ Bindings: Env }>()
   .get("/robots.txt", (context) =>

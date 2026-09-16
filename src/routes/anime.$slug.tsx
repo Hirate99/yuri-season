@@ -4,6 +4,7 @@ import { loadAnimeData, loadAnimeRelatedData } from "@/lib/public-loaders";
 import { serverContextFromLoader } from "@/server-context";
 import { seoHead } from "@/lib/seo";
 import { animeDescription } from "@/lib/seo-descriptions";
+import { subscriptionPath } from "@/lib/feed-search";
 
 export const Route = createFileRoute("/anime/$slug")({
   staleTime: 180_000,
@@ -17,13 +18,26 @@ export const Route = createFileRoute("/anime/$slug")({
 
     return { data: await loadAnimeData(input), related };
   },
-  head: ({ loaderData, params }) =>
-    seoHead({
+  head: ({ loaderData, params }) => {
+    const head = seoHead({
       title: loaderData?.data.anime.titleZh ?? "作品",
       description: loaderData ? animeDescription(loaderData.data.anime) : undefined,
       path: `/anime/${encodeURIComponent(loaderData?.data.anime.slug ?? params.slug)}`,
       image: loaderData?.data.anime.coverUrl,
-    }),
+    });
+    return {
+      ...head,
+      links: [
+        ...head.links,
+        {
+          rel: "alternate",
+          type: "application/rss+xml",
+          title: `${loaderData?.data.anime.titleZh ?? "作品"} · 情报订阅`,
+          href: subscriptionPath({ anime: params.slug }),
+        },
+      ],
+    };
+  },
   component: AnimeRoute,
 });
 

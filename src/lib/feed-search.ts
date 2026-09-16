@@ -33,3 +33,22 @@ export function feedClasses(search: FeedSearch) {
 export function feedQuery(search: FeedSearch) {
   return { limit: "20", q: search.q, anime: search.anime, classes: feedClasses(search)?.join(",") };
 }
+
+export function subscriptionPath(search: FeedSearch = {}): string {
+  const params = new URLSearchParams();
+  const normalized = parseFeedSearch(search);
+  for (const key of ["anime", "category", "q"] as const) {
+    if (normalized[key]) params.set(key, normalized[key]);
+  }
+  return `/rss.xml${params.size ? `?${params}` : ""}`;
+}
+
+export function subscriptionLabel(search: FeedSearch = {}, animeTitle?: string): string {
+  return [
+    search.anime ? (animeTitle ?? search.anime) : "全部作品",
+    feedFilters.find((filter) => filter.value === search.category)?.label ?? "全部情报",
+    search.q ? `关键词：${search.q}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}

@@ -11,6 +11,31 @@ import {
 } from "~/infrastructure/db/schema";
 import { decodeFeedCursor, encodeFeedCursor } from "./feed-cursor";
 import { canonicalInstant } from "~/shared/time";
+import { readPublicationAssetGroups, readPublicationDocuments } from "./publications";
+
+/** A bounded, three-query snapshot; backfilled news is ordered by site publication time. */
+export async function readSubscriptionFeed(db: D1Database, options: FeedOptions = {}) {
+  const rows = await readNativeFeedPage(db, {
+    ...options,
+    cursor: undefined,
+    order: "created",
+    limit: 80,
+  });
+  const mediaIds = [...new Set(rows.flatMap((row) => (row.media_id ? [row.media_id] : [])))];
+  const [documents, assets] = await Promise.all([
+    readPublicationDocuments(
+      db,
+      rows.map((row) => row.id),
+    ),
+    readPublicationAssetGroups(db, mediaIds),
+  ]);
+  return rows.map((row) => ({
+    item: mapFeed(row),
+    createdAt: canonicalInstant(row.created_at),
+    document: documents.get(row.id) ?? null,
+    assets: row.media_id ? (assets.get(row.media_id) ?? []) : [],
+  }));
+}
 
 export type FeedOptions = {
   animeId?: string;

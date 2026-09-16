@@ -10,11 +10,12 @@ export type NativeFeedFilter = {
   animeId?: string;
   animeSlug?: string;
   contentClasses?: ContentClass[];
-  cursor?: FeedCursor;
   limit: number;
   query?: string;
-  order?: "created";
-};
+} & (
+  | { order: "created"; cursor?: { createdAt: string; id: string } }
+  | { order?: "published"; cursor?: FeedCursor }
+);
 
 const PUBLIC_FEED_ITEM = "fi.withdrawn_at IS NULL";
 
@@ -53,6 +54,7 @@ const FEED_SELECT = `
     fi.source_account, fi.importance, fi.published_at, fi.safety_rating, fi.spoiler_level,
     fi.auto_published, fi.is_pinned,
     strftime('%Y-%m-%dT%H:%M:%fZ', fi.created_at) AS created_at,
+    fi.created_at AS created_at_sort,
     m.id AS media_id, m.content_class AS media_content_class, m.title AS media_title,
     m.creator_name, m.creator_url, m.original_url, m.preview_url,
     (SELECT asset.r2_key FROM media_assets asset
@@ -113,7 +115,10 @@ function buildWhere(filter: NativeFeedFilter) {
     bindings.push(token.slice(0, 48));
   }
 
-  if (filter.cursor) {
+  if (filter.order === "created" && filter.cursor) {
+    clauses.push("(fi.created_at, fi.id) < (?, ?)");
+    bindings.push(filter.cursor.createdAt, filter.cursor.id);
+  } else if (filter.order !== "created" && filter.cursor) {
     clauses.push(`(fi.is_pinned < ? OR
       (fi.is_pinned = ? AND fi.published_at < ?) OR
       (fi.is_pinned = ? AND fi.published_at = ? AND fi.id < ?))`);

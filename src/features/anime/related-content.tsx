@@ -5,20 +5,32 @@ import { EmptyState } from "@/components/empty-state";
 import { FeedCard } from "@/components/feed-card";
 import { SectionHeading } from "@/components/section-heading";
 import { shortDate } from "@/lib/format";
+import { RssSubscribe } from "@/components/rss-subscribe";
 
-export function UpdatesSection({ items, animeSlug }: { items: FeedItem[]; animeSlug: string }) {
+export function UpdatesSection({
+  items,
+  animeSlug,
+  animeTitle,
+}: {
+  items: FeedItem[];
+  animeSlug: string;
+  animeTitle?: string;
+}) {
   return (
     <section id="updates">
       <SectionHeading
         title="相关动态"
         action={
-          <Link
-            className="text-sm font-semibold text-accent"
-            to="/feed"
-            search={{ anime: animeSlug }}
-          >
-            全部动态 →
-          </Link>
+          <div className="flex items-center gap-3">
+            <RssSubscribe search={{ anime: animeSlug }} animeTitle={animeTitle} />
+            <Link
+              className="text-sm font-semibold text-accent"
+              to="/feed"
+              search={{ anime: animeSlug }}
+            >
+              全部动态 →
+            </Link>
+          </div>
         }
       />
       {items.length > 0 ? (

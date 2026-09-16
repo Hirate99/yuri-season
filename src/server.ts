@@ -1,6 +1,7 @@
 import startHandler from "@tanstack/react-start/server-entry";
 import { api } from "~/http/api";
 import { seoRoutes } from "~/http/seo";
+import { rssRoutes } from "~/http/rss";
 import { redirectPublicAdmin } from "~/platform/admin-boundary";
 import { laneForCron, runResearch } from "~/research/scheduler";
 import {
@@ -27,6 +28,7 @@ export default {
     if (adminRedirect) return adminRedirect;
 
     const pathname = new URL(request.url).pathname;
+    if (pathname === "/rss.xml") return rssRoutes.fetch(request, env, executionContext);
 
     if (pathname === "/robots.txt" || pathname === "/sitemap.xml") {
       return seoRoutes.fetch(request, env, executionContext);

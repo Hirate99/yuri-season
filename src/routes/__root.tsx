@@ -17,6 +17,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      {
+        rel: "alternate",
+        type: "application/rss+xml",
+        title: "百合季 · 全部情报",
+        href: "/rss.xml",
+      },
     ],
   }),
   component: AppShell,

@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import type { AnimeOption } from "@/domain";
 import { EmptyState } from "@/components/empty-state";
 import { FeedCard } from "@/components/feed-card";
+import { RssSubscribe } from "@/components/rss-subscribe";
 import { AnimeCombobox } from "@/components/anime-combobox";
 import { VirtualWindowGrid } from "@/components/virtual-window-grid";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -29,10 +30,10 @@ export function FeedPage({
 
   return (
     <div className={page}>
-      <header className="page-header">
-        <h1 className="page-title">情报</h1>
+      <header className="mb-6 grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-6">
+        <h1 className="page-title !mt-0">情报</h1>
         <form
-          className="flex h-10 w-full max-w-64 items-center gap-2 justify-self-end rounded-lg bg-raised pl-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-accent-soft"
+          className="flex h-10 w-full items-center gap-2 justify-self-end rounded-lg bg-raised pl-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-accent-soft sm:max-w-64"
           onSubmit={(event) => {
             event.preventDefault();
             onSearch({ ...search, q: query.trim() || undefined });
@@ -66,7 +67,7 @@ export function FeedPage({
       </header>
 
       <section className="min-w-0" aria-label="情报列表" aria-busy={refreshing}>
-        <div className="sticky top-15 z-20 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-white pb-2 md:top-16 md:grid-cols-[1fr_180px] md:py-2">
+        <div className="sticky top-15 z-20 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-white pb-2 md:top-16 md:gap-4 md:py-2">
           <div
             className="scrollbar-hidden flex min-w-0 gap-1 overflow-x-auto md:w-fit"
             aria-label="筛选动态"
@@ -77,7 +78,7 @@ export function FeedPage({
                 type="button"
                 aria-pressed={(search.category ?? "all") === filter.value}
                 className={cn(
-                  "rounded-lg px-2 py-2 text-[13px] whitespace-nowrap transition-colors md:px-3 md:text-sm",
+                  "inline-flex h-10 items-center rounded-lg px-2 text-[13px] whitespace-nowrap transition-colors md:px-3 md:text-sm",
                   (search.category ?? "all") === filter.value
                     ? "bg-accent-soft/70 font-semibold text-accent"
                     : "text-muted hover:text-ink",
@@ -94,7 +95,7 @@ export function FeedPage({
             ))}
           </div>
           <div className="flex items-center justify-end gap-2">
-            <div className="w-10 min-w-0 md:w-full">
+            <div className="w-10 min-w-0 md:w-44">
               <AnimeCombobox
                 compact
                 anime={animeOptions}
@@ -104,12 +105,18 @@ export function FeedPage({
             </div>
             {(search.anime || search.q || search.category) && (
               <button
-                className="shrink-0 text-xs font-semibold text-accent"
+                className="h-10 shrink-0 text-xs font-semibold text-accent"
                 onClick={() => onSearch({})}
               >
                 重置
               </button>
             )}
+            <span aria-hidden="true" className="h-4 w-px shrink-0 bg-line" />
+            <RssSubscribe
+              key={JSON.stringify(search)}
+              search={search}
+              animeTitle={animeOptions.find((anime) => anime.slug === search.anime)?.titleZh}
+            />
           </div>
         </div>
         {search.anime && (

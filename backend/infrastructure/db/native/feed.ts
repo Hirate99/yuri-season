@@ -13,6 +13,7 @@ export type NativeFeedFilter = {
   cursor?: FeedCursor;
   limit: number;
   query?: string;
+  order?: "created";
 };
 
 const PUBLIC_FEED_ITEM = "fi.withdrawn_at IS NULL";
@@ -51,6 +52,7 @@ const FEED_SELECT = `
     CASE WHEN fi.content_class = 'community_thread' THEN COALESCE(thread.platform, fi.source_name) ELSE fi.source_name END AS source_name,
     fi.source_account, fi.importance, fi.published_at, fi.safety_rating, fi.spoiler_level,
     fi.auto_published, fi.is_pinned,
+    strftime('%Y-%m-%dT%H:%M:%fZ', fi.created_at) AS created_at,
     m.id AS media_id, m.content_class AS media_content_class, m.title AS media_title,
     m.creator_name, m.creator_url, m.original_url, m.preview_url,
     (SELECT asset.r2_key FROM media_assets asset
@@ -136,7 +138,7 @@ export function readNativeFeedPage(db: D1Database, filter: NativeFeedFilter): Pr
     `
     ${FEED_SELECT}
     WHERE ${where.text}
-    ORDER BY fi.is_pinned DESC, fi.published_at DESC, fi.id DESC
+    ORDER BY ${filter.order === "created" ? "fi.created_at DESC, fi.id DESC" : "fi.is_pinned DESC, fi.published_at DESC, fi.id DESC"}
     LIMIT ?
   `,
     [...where.bindings, filter.limit],

@@ -24,6 +24,7 @@ import { deleteDiscussionEverywhere } from "~/repositories/admin/discussion";
 import { readAdminAnimeResources } from "~/repositories/admin/resources";
 import { createAnime, patchAnime } from "~/repositories/anime/write";
 import { applyCandidateDecision } from "~/repositories/candidates/decisions";
+import { backfillCandidatePlatformIdentity } from "~/repositories/candidates/identity";
 import { createCandidate } from "~/repositories/candidates/write";
 import { readSeasons } from "~/repositories/catalog";
 import { createSeason, updateSeason } from "~/repositories/seasons/write";
@@ -85,6 +86,8 @@ export function createAdminService(env: Env, principal?: AdminPrincipal) {
     },
     candidates: {
       create: (value: CandidateDraft) => createCandidate(env.DB, value),
+      backfillPlatformIdentity: (id: string, expectedUrl: string, platformObjectId: string) =>
+        backfillCandidatePlatformIdentity(env.DB, id, expectedUrl, platformObjectId, principal),
       decide: (id: string, decision: ReviewDecision, reason: string) =>
         applyCandidateDecision(env.DB, id, decision, {
           reviewerType: "admin",

@@ -26,6 +26,7 @@ const catalog: CatalogResponse = {
       coverUrl: null,
       yuriKind: "canon",
       yuriStatus: "confirmed",
+      status: "airing",
       currentEpisode: 9,
       primarySlot: {
         id: "friday-slot",
@@ -45,6 +46,7 @@ const catalog: CatalogResponse = {
       coverUrl: null,
       yuriKind: "strong",
       yuriStatus: "confirmed",
+      status: "airing",
       currentEpisode: 8,
       primarySlot: {
         id: "monday-slot",

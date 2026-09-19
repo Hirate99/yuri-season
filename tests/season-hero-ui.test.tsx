@@ -16,6 +16,7 @@ const featured: CatalogAnime = {
   titleJa: "メイン作品",
   yuriKind: "canon",
   yuriStatus: "confirmed",
+  status: "airing",
   currentEpisode: 8,
   coverUrl: "https://example.com/featured.webp",
   primarySlot: {
@@ -37,14 +38,18 @@ const supporting = [1, 2].map((index): CatalogAnime => ({
   coverUrl: `https://example.com/supporting-${index}.webp`,
 }));
 
-async function renderHero(season: Season, archived = false) {
+async function renderHero(
+  season: Season,
+  archived = false,
+  anime: CatalogAnime[] = [featured, ...supporting],
+) {
   const routeTree = createRootRoute({
     component: () => (
       <SeasonHero
         season={season}
         count={11}
         archived={archived}
-        anime={[featured, ...supporting]}
+        anime={anime}
         viewerTimeZone="America/Los_Angeles"
         now={new Date("2026-09-04T12:00:00Z")}
       />
@@ -96,4 +101,31 @@ test("season hero binds the cover, pagination, schedule, and archive copy into t
   expect(html).toContain("23:30");
   expect(html).toContain("季度归档");
   expect(html).toContain('href="#works"');
+});
+
+test("season hero respects lifecycle status even when a weekly slot remains", async () => {
+  const season: Season = {
+    id: "summer-status",
+    slug: "2026-summer-status",
+    label: "2026 夏",
+    startsOn: "2026-07-01",
+    endsOn: "2026-09-30",
+  };
+  for (const [status, label] of [
+    ["finished", "已完结"],
+    ["paused", "暂停"],
+    ["upcoming", "未放送"],
+    ["airing", "今日放送"],
+  ] as const) {
+    const html = await renderHero(season, false, [{ ...featured, status }]);
+    expect(html).toContain(label);
+    expect(html).not.toContain("即将放送");
+    if (status === "finished" || status === "paused") {
+      expect(html).not.toContain("23:30");
+      expect(html).not.toContain("今日放送");
+    }
+  }
+  const archived = await renderHero(season, true, [{ ...featured, status: "finished" }]);
+  expect(archived).toContain("季度归档");
+  expect(archived).not.toContain("即将放送");
 });

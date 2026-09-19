@@ -143,6 +143,7 @@ export type CatalogAnime = Pick<
   | "titleJa"
   | "yuriKind"
   | "yuriStatus"
+  | "status"
   | "currentEpisode"
   | "coverUrl"
   | "primarySlot"

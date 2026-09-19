@@ -26,6 +26,7 @@ const catalog: CatalogResponse = {
       coverUrl: null,
       yuriKind: "canon",
       yuriStatus: "confirmed",
+      status: "airing",
       currentEpisode: 9,
       primarySlot: {
         id: "slot",

@@ -120,7 +120,14 @@ test("season hero respects lifecycle status even when a weekly slot remains", as
     const html = await renderHero(season, false, [{ ...featured, status }]);
     expect(html).toContain(label);
     expect(html).not.toContain("即将放送");
-    if (status === "finished" || status === "paused") {
+    if (status === "finished") {
+      expect(html).toContain("23:30");
+      expect(html).toContain("周五");
+      expect(html).toContain("07:30");
+      expect(html).toContain("PDT");
+      expect(html).not.toContain("今日放送");
+    }
+    if (status === "paused") {
       expect(html).not.toContain("23:30");
       expect(html).not.toContain("今日放送");
     }

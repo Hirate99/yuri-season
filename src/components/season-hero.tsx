@@ -112,8 +112,7 @@ export function SeasonHero({
   const active = cards[visibleIndex];
   const effectiveTimeZone = viewerTimeZone ?? "Asia/Tokyo";
   const referenceNow = now ?? new Date();
-  const slot =
-    active?.status === "finished" || active?.status === "paused" ? null : active?.primarySlot;
+  const slot = active?.status === "paused" ? null : active?.primarySlot;
 
   const local =
     slot && effectiveTimeZone !== slot.timezone

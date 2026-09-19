@@ -1,6 +1,6 @@
 # Research lane policy
 
-Use the tags and fanwork sections for routine X discovery about tracked works; other specialist sections apply to explicitly requested `discovery`, `social-audit`, or `account-discovery`. Routine coverage follows `update-policy.md`. Read only the sections relevant to the leased task; the CLI's structured completion policy is authoritative for execution completeness, while this document governs evidence and content judgment.
+Use the tags and fanwork sections for routine X discovery about tracked works; other specialist sections apply to explicitly requested `discovery`, `social-audit`, or `account-discovery`. Routine coverage follows `update-policy.md`. Read only the sections relevant to the selected story or source. The agent chooses searches; CLI recording validates evidence and never establishes editorial completion.
 
 ## Editorial operating judgment
 

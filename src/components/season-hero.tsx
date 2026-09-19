@@ -10,6 +10,21 @@ import { SeasonGlyphArt } from "./season-glyph-art";
 
 const rememberedCardIndexBySeason = new Map<string, number>();
 
+function getBroadcastLabel(
+  anime: CatalogAnime | undefined,
+  archived: boolean,
+  timeZone: string,
+  now: Date,
+): string {
+  if (archived) return "季度归档";
+  if (anime?.status === "finished") return "已完结";
+  if (anime?.status === "paused") return "暂停";
+  if (anime?.status === "upcoming") return "未放送";
+  if (!anime?.primarySlot) return "本季作品";
+
+  return broadcastInstantOnViewerDate(anime.primarySlot, timeZone, now) ? "今日放送" : "即将放送";
+}
+
 function seasonYear(season: Season): string {
   return season.label.match(/\d{4}/)?.[0] ?? season.startsOn.slice(0, 4);
 }
@@ -97,20 +112,15 @@ export function SeasonHero({
   const active = cards[visibleIndex];
   const effectiveTimeZone = viewerTimeZone ?? "Asia/Tokyo";
   const referenceNow = now ?? new Date();
-  const slot = active?.primarySlot;
+  const slot =
+    active?.status === "finished" || active?.status === "paused" ? null : active?.primarySlot;
 
   const local =
     slot && effectiveTimeZone !== slot.timezone
       ? localBroadcastDisplay(slot, effectiveTimeZone, referenceNow)
       : null;
 
-  const broadcastLabel = archived
-    ? "季度归档"
-    : slot
-      ? broadcastInstantOnViewerDate(slot, effectiveTimeZone, referenceNow)
-        ? "今日放送"
-        : "即将放送"
-      : "本季作品";
+  const broadcastLabel = getBroadcastLabel(active, archived, effectiveTimeZone, referenceNow);
 
   useEffect(() => {
     if (paused || cards.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches)

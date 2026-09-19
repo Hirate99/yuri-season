@@ -75,6 +75,7 @@ function mapCatalogAnime(row: CatalogAnimeRecord): CatalogAnime {
     titleJa: row.titleJa,
     yuriKind: row.yuriKind,
     yuriStatus: row.yuriStatus,
+    status: row.status,
     currentEpisode: resolveCurrentEpisode(row),
     coverUrl: row.coverUrl,
     primarySlot:

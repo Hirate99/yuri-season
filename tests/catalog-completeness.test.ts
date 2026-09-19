@@ -106,6 +106,7 @@ describe("current-season catalog", () => {
       "id",
       "primarySlot",
       "slug",
+      "status",
       "titleJa",
       "titleZh",
       "yuriKind",

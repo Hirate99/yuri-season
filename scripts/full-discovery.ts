@@ -31,6 +31,8 @@ const profileArgument = process.argv
   ?.slice("--profile=".length);
 
 const profile = parseResearchProfile(profileArgument, "discovery");
+if (profile === "routine")
+  throw new Error("Routine uses research context/sources/record; do not create a campaign.");
 const outputPath = campaignPathForProfile(profile);
 
 function valuesArgument(name: string): Set<string> | null {

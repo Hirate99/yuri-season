@@ -84,9 +84,7 @@ function validTimestamp(value: string | null | undefined): value is string {
   return Boolean(value && !Number.isNaN(Date.parse(value)));
 }
 
-function validateResult(query: CampaignQuery, result: DiscoveryResult): void {
-  if (query.state !== "leased") throw new Error(`query ${result.queryId} is not leased`);
-
+function validateResult(query: DiscoveryQuery, result: DiscoveryResult): void {
   if (!validTimestamp(result.searchedAt))
     throw new Error(`invalid searchedAt for ${result.queryId}`);
 
@@ -166,7 +164,7 @@ function validateResult(query: CampaignQuery, result: DiscoveryResult): void {
   }
 }
 
-function cursorForResult(query: CampaignQuery, result: DiscoveryResult): Record<string, unknown> {
+function cursorForResult(query: DiscoveryQuery, result: DiscoveryResult): Record<string, unknown> {
   const prior = query.cursor ?? {};
 
   if (result.outcome === "partial") {
@@ -203,7 +201,7 @@ function cursorForResult(query: CampaignQuery, result: DiscoveryResult): Record<
   };
 }
 
-function nextSearchAt(query: CampaignQuery, result: DiscoveryResult): string {
+function nextSearchAt(query: DiscoveryQuery, result: DiscoveryResult): string {
   const searched = Date.parse(result.searchedAt);
   if (result.outcome === "partial") return new Date(searched).toISOString();
 
@@ -312,41 +310,52 @@ export async function memoryRecordsForResults(
       const query = campaign.queries.find((item) => item.id === result.queryId);
       if (!query) throw new Error(`unknown campaign query ${result.queryId}`);
 
-      validateResult(query, result);
+      validateLeasedResult(query, result);
 
-      const hitKey = result.hits
-        .map((hit) => `${hit.canonicalUrl}\u0000${hit.contentHash ?? ""}`)
-        .sort()
-        .join("\u0001");
-
-      const useful = result.hits.filter(
-        (hit) => !["seen", "ignored", "rejected"].includes(hit.outcome),
-      ).length;
-
-      return {
-        scopeType: query.scopeType,
-        scopeId: query.scopeId,
-        searchKind: query.searchKind,
-        targetKey: query.targetKey,
-        queryText: query.queryText,
-        status: result.status,
-        cursor: cursorForResult(query, result),
-        lastResultHash: await stableFingerprint(hitKey),
-        lastResultCount: result.hits.length,
-        usefulResultCount: useful,
-        searchedAt: new Date(result.searchedAt).toISOString(),
-        nextSearchAt: nextSearchAt(query, result),
-        notes:
-          [
-            result.notes,
-            result.reasonCodes?.length ? `schedule:${result.reasonCodes.join(",")}` : null,
-          ]
-            .filter(Boolean)
-            .join(" | ") || null,
-        hits: result.hits,
-      };
+      return memoryRecordForResult(query, result);
     }),
   );
+}
+
+/** Shared evidence validation and serialization; routine does not require a campaign. */
+export async function memoryRecordForResult(
+  query: DiscoveryQuery,
+  result: DiscoveryResult,
+): Promise<SearchMemoryWrite> {
+  validateResult(query, result);
+  const hitKey = result.hits
+    .map((hit) => `${hit.canonicalUrl}\u0000${hit.contentHash ?? ""}`)
+    .sort()
+    .join("\u0001");
+
+  const useful = result.hits.filter(
+    (hit) => !["seen", "ignored", "rejected"].includes(hit.outcome),
+  ).length;
+
+  return {
+    scopeType: query.scopeType,
+    scopeId: query.scopeId,
+    searchKind: query.searchKind,
+    targetKey: query.targetKey,
+    queryText: query.queryText,
+    status: result.status,
+    cursor: cursorForResult(query, result),
+    lastResultHash: await stableFingerprint(hitKey),
+    lastResultCount: result.hits.length,
+    usefulResultCount: useful,
+    searchedAt: new Date(result.searchedAt).toISOString(),
+    nextSearchAt: nextSearchAt(query, result),
+    notes:
+      [result.notes, result.reasonCodes?.length ? `schedule:${result.reasonCodes.join(",")}` : null]
+        .filter(Boolean)
+        .join(" | ") || null,
+    hits: result.hits,
+  };
+}
+
+function validateLeasedResult(query: CampaignQuery, result: DiscoveryResult): void {
+  if (query.state !== "leased") throw new Error(`query ${result.queryId} is not leased`);
+  validateResult(query, result);
 }
 
 export function stageCampaignResults(
@@ -360,7 +369,7 @@ export function stageCampaignResults(
   for (const result of results) {
     const query = campaign.queries.find((item) => item.id === result.queryId);
     if (!query) throw new Error(`unknown campaign query ${result.queryId}`);
-    validateResult(query, result);
+    validateLeasedResult(query, result);
     staged.set(result.queryId, result);
   }
   campaign.pendingSubmission = { results: [...staged.values()], preparedAt: now.toISOString() };
@@ -375,7 +384,7 @@ export function completeCampaignResults(
     const query = campaign.queries.find((item) => item.id === result.queryId);
     if (!query) throw new Error(`unknown campaign query ${result.queryId}`);
 
-    validateResult(query, result);
+    validateLeasedResult(query, result);
     query.cursor = cursorForResult(query, result);
     query.state =
       result.outcome === "complete"
@@ -411,30 +420,5 @@ export function campaignSummary(campaign: DiscoveryCampaign) {
     total: campaign.queries.length,
     ...counts,
     updatedAt: campaign.updatedAt,
-  };
-}
-
-export function campaignCompletionAudit(campaign: DiscoveryCampaign) {
-  const officialTimelines = campaign.queries.filter(
-    (query) => query.operation === "timeline_scan" && query.contentLane === "official",
-  );
-
-  const completedOfficial = officialTimelines.filter((query) => query.state === "completed");
-
-  const zeroOriginals = completedOfficial.filter(
-    (query) => query.cursor.lastOriginalPostsInspected === 0,
-  );
-
-  const anomalies: string[] = [];
-
-  if (completedOfficial.length >= 3 && zeroOriginals.length === completedOfficial.length) {
-    anomalies.push("all_completed_official_timelines_reported_zero_originals");
-  }
-
-  return {
-    officialTimelineTasks: officialTimelines.length,
-    completedOfficialTimelines: completedOfficial.length,
-    zeroOriginalOfficialTimelines: zeroOriginals.length,
-    anomalies,
   };
 }

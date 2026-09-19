@@ -15,7 +15,7 @@ Choose stories, organize sources, translate, attribute, and resolve duplicates y
 
 - Routine: [update-policy.md](references/update-policy.md).
 - Publishing: [publication-policy.md](references/publication-policy.md) owns copy, media, and public verification requirements.
-- Recording leased coverage: [discovery-results.md](references/discovery-results.md); constructing imports: relevant sections of [batch-schema.md](references/batch-schema.md). These describe data formats, not additional approval stages.
+- Recording inspected source evidence: [discovery-results.md](references/discovery-results.md); constructing imports: relevant sections of [batch-schema.md](references/batch-schema.md). These describe data formats, not additional approval stages.
 - Sources with attendance, appearance, viewing, or schedule information: [event-calendar-policy.md](references/event-calendar-policy.md), before deciding whether an event is needed. Annual audits apply only when explicitly requested or scheduled.
 - X tag/search discovery and fanwork, or explicit specialist discovery: relevant sections of [research-policy.md](references/research-policy.md).
 
@@ -27,13 +27,15 @@ Choose stories, organize sources, translate, attribute, and resolve duplicates y
 4. Complete ready publications/resources through the existing importer/Admin APIs, then verify their public projections. Save item-specific evidence and coverage progress as work proceeds; unresolved stories survive cursor advancement.
 5. Reconcile due coverage, unfinished stories, required resources, and public readbacks. Report remaining work by its actual dependency. Follow [update-policy.md](references/update-policy.md#handoff-and-completion) for completion and handoff.
 
-Use the [CLI operations](references/update-policy.md#cli-operations) as tools for these actions. Campaigns track source coverage; they do not grant editorial permission or gate publication. A failed source diff or coverage submission leaves that operation pending while independent reading, discovery, and publication continue.
+Use [context, sources and record](references/update-policy.md#cli-operations) as independent tools. Routine has no campaign/lease/finish workflow: the agent chooses stories and sources. Completely checked X accounts return after 3 hours; unresolved work and new leads remain actionable. A failed context, source check or evidence sync does not stop independent reading and publication.
 
 Use existing CLI/Admin APIs and the documented batch importer for writes. Preserve existing code and credentials: routine does not authorize changing `package.json`, committing, pushing, or deploying code. Put temporary builders in workspace `.tmp`; clean only this run's disposable files after verification, retaining unfinished evidence and the editorial handoff. Record tooling defects for separate repair without turning content work into a development task.
 
 ## Failure handling and stopping
 
 Identify the failed operation and its actual dependents; continue executable work elsewhere. Follow [update-policy.md](references/update-policy.md#operation-failures-and-resumption) for recovery. `held` means an unresolved item, not automatic human review. Record the missing condition, attempted recovery, and next action. Do not bypass rate limits or approval rejections.
+
+Pace X even while it works: one research tab, sequential requests, no rapid refresh/search/scroll bursts. Generic X errors can mean throttling without 429; pause and back off instead of immediately testing other accounts or browsers. Follow the concrete intervals and recovery procedure in [Browser access](references/update-policy.md#browser-access).
 
 Before ending, inspect unfinished coverage, candidates, media, and public projections. Continue while any authorized next action is executable. End only when work is complete, all remaining mandatory work has concrete blockers, the user stops the run, or an externally specified execution limit is reached. Do not invent a short run window. Save recoverable state and report incomplete work honestly when forced to stop; a checkpoint alone is not a stop condition.
 

@@ -25,9 +25,3 @@ export function campaignPathForProfile(profile: ResearchProfile): string {
     ? ".research-cache/update-plan.json"
     : ".research-cache/discovery-plan.json";
 }
-
-export function withDefaultProfile(arguments_: string[], fallback: ResearchProfile): string[] {
-  return arguments_.some((argument) => argument.startsWith("--profile="))
-    ? arguments_
-    : [...arguments_, `--profile=${fallback}`];
-}

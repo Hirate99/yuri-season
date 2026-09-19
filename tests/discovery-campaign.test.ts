@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import {
-  campaignCompletionAudit,
   cancelCampaignQueries,
   completeCampaignResults,
   createCampaign,
@@ -443,38 +442,6 @@ describe("resumable discovery campaigns", () => {
         },
       ]),
     ).rejects.toThrow("must choose nextCheckAt");
-  });
-
-  test("flags an all-zero official timeline sweep for operator attention", () => {
-    const timelines = ["a", "b", "c"].map((id) => ({
-      ...query(id),
-      operation: "timeline_scan" as const,
-      stage: "official" as const,
-      contentLane: "official" as const,
-      state: "completed" as const,
-      cursor: { lastOriginalPostsInspected: 0 },
-      socialAuditEligible: true,
-      completionPolicy: {
-        allowedCompleteSurfaces: ["signed_in_timeline"],
-        mustReachPreviousCursor: true,
-        recordEveryOriginal: true,
-        searchEngineCanComplete: false,
-      } satisfies DiscoveryQuery["completionPolicy"],
-      attemptCount: 1,
-      leaseUntil: null,
-      completedAt: "2026-08-11T20:00:00Z",
-    }));
-    const campaign = createCampaign({
-      createdAt: "2026-08-11T20:00:00Z",
-      force: false,
-      season: { id: "season-1", slug: "2026-summer", label: "2026 夏" },
-      queryBudget: 3,
-      queries: timelines,
-    });
-    campaign.queries = timelines;
-    expect(campaignCompletionAudit(campaign).anomalies).toContain(
-      "all_completed_official_timelines_reported_zero_originals",
-    );
   });
 
   test("cancels removed scopes without creating search memory", () => {

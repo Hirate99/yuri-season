@@ -1,6 +1,42 @@
 # Discovery result file
 
-Use the timeline example below for routine X coverage. Fanwork fields also apply to routine X discovery; account-discovery and community examples apply only to those explicit tasks. Record one result for every executed leased task, including zero-hit, partial, and blocked work; leave unvisited tasks pending rather than generating a result for every planned query. `outcome` describes execution completeness; `status` controls durable search memory.
+## Routine observations
+
+Run `bun run research -- record <file.json>` after inspecting originals. Copy the stable `sourceId` and `cursor.committedPostId` from `research context`; these identify a source, not a leased task. No campaign, next-check date or schedule reason is needed.
+
+```json
+{
+  "observations": [{
+    "sourceId": "person:person-id:social:updates:anime-id:account-id",
+    "previousPostId": "1954930000000000000",
+    "searchedAt": "2026-08-11T22:00:00Z",
+    "outcome": "complete",
+    "surface": "signed_in_timeline",
+    "coverage": {
+      "reachedPreviousCursor": true,
+      "originalPostsInspected": 1,
+      "newestPostId": "1954930000000000003",
+      "oldestPostId": "1954930000000000000"
+    },
+    "notes": "Original inspected; Feed and resource decisions are recorded on the hit.",
+    "hits": [{
+      "canonicalUrl": "https://x.com/account/status/1954930000000000003",
+      "title": "Original post",
+      "outcome": "candidate",
+      "metadata": {
+        "platformObjectId": "1954930000000000003",
+        "verifiedOriginal": true
+      }
+    }]
+  }]
+}
+```
+
+Use `partial` with the real `coverage.resumeCursor` when the old boundary was not reached, or `blocked` with current access evidence. Complete checks use a fixed 3-hour interval; partial/blocked observations do not postpone unfinished work. A changed previous cursor requires reconciliation, not guessing a new boundary. Each original still needs separate Feed/resource dispositions, links or a not-applicable reason in hit metadata/notes. Publication through the importer is independent of recording coverage.
+
+## Explicit campaigns and legacy replay
+
+The following campaign format applies to explicit specialist audits and saved legacy routine evidence. Do not generate new routine campaigns. Record only actually inspected tasks; `outcome` describes inspection completeness, not editorial completion.
 
 ```json
 {
@@ -39,7 +75,7 @@ Use the timeline example below for routine X coverage. Fanwork fields also apply
 }
 ```
 
-Timeline and tag tasks require coverage evidence. The agent chooses `nextCheckAt` from current activity, events, unresolved leads, and prior yield; the CLI clamps it to the task's maximum freshness deadline.
+Explicit timeline/tag campaign tasks require coverage evidence and keep their existing nextCheckAt format. Routine uses the observation format above and computes its 3-hour interval automatically.
 
 ```json
 {
@@ -115,12 +151,12 @@ For community-thread results preserve:
 
 - Use `active` when the target should be searched again, `exhausted` after repeated targeted searches find no credible lead, and `blocked` for login, CAPTCHA, or inaccessible sources.
 - Use `complete` only after satisfying the leased task's completion policy. Use `partial` when more pages remain and include `coverage.resumeCursor`; use `blocked` with `status: blocked` when the required surface is unavailable.
-- For routine access failures, first follow the verification and recovery procedure in `update-policy.md`. Record actual per-task progress: an unvisited account does not become partial because another account failed, and an inaccessible post is not editorially ignored. Revalidate old blockers in the current run; never fabricate a resume cursor or infer a rate limit from a generic page error.
-- Before recording a browser-dependent surface as blocked, attempt the app's in-app browser and then the user's Chrome browser unless the user selected a different surface or the first attempt produced a platform-level rate limit. In `notes`, identify each attempted surface and its concrete failure. HTTP 429 stops that platform without an immediate retry or browser switch; preserve partial coverage and the resume cursor so later work does not repeat already inspected originals.
+- For routine access failures, follow [Browser access](update-policy.md#browser-access). Generic X errors without 429 may be throttling: preserve the observation and back off; label suspected versus confirmed limits accurately. An unvisited account remains unvisited, and an inaccessible post is not editorially ignored. Never fabricate a resume cursor.
+- Record the surface, error time, recovery attempt and earliest retry time in notes. Chrome fallback is only for a demonstrated browser/login issue; do not require or attempt it during suspected or confirmed throttling. New runs honor saved access backoff before retrying; preserve the actual progress so recovery does not repeat inspected originals.
 - Search-engine results cannot complete `timeline_scan` or `tag_scan`. Routine X requires the signed-in original timeline. In an explicit audit that permits embeds, they may complete an account timeline only when the previous cursor was reached; they cannot complete a global newest-first tag scan.
 - Every inspected original in a timeline or tag scan must be represented by a hit with a stable `metadata.platformObjectId`, including ignored and rejected posts.
 - Serialize item-specific decisions from the editorial evidence. Before submit, check stable ID to text/media/resource mappings and confirm each `ignored` or merged hit has its actual reason and any claimed existing publication/resource. A successfully generated file does not establish that originals were read or that its dispositions are true.
-- `nextCheckAt` is the agent's scheduling decision, not a fixed lane cadence. Every completed active task must provide it and explain it with short `reasonCodes`; the CLI enforces only a missed-coverage deadline and prevents partial work from being deferred.
+- Only explicit campaigns retain `nextCheckAt` and `reasonCodes`. Routine observations omit both.
 - Put newly verified tags, aliases, units, characters, or pair terms in `discoveredTerms` with the original source URL so later tag scans can reuse them without waiting for a person to update the query.
 - Use canonical HTTP(S) original-page URLs. Search pages and snippets are not hits.
 - `outcome` is `seen`, `candidate`, `published`, `held`, `rejected`, or `ignored`. Do not claim `published` before a successful batch import.

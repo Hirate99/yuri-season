@@ -1,5 +1,4 @@
-import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import type { CatalogAnime, CatalogResponse } from "@/domain";
 import { useViewerTimeZone } from "@/hooks/use-viewer-timezone";
@@ -89,18 +88,38 @@ export function HomeCalendar({
   const now = new Date(renderedAt);
   const today = weekdayInTimeZone(viewerTimeZone, now);
 
-  const [daySelection, setDaySelection] = useState<{ weekday: number; timeZone: string } | null>(
-    null,
-  );
-
-  const selectedDay = daySelection?.timeZone === viewerTimeZone ? daySelection.weekday : today;
-  const [broadcastPage, setBroadcastPage] = useState(0);
-  const [eventPage, setEventPage] = useState(0);
-
+  const location = useLocation();
+  const navigate = useNavigate();
   const week = currentWeek(now, viewerTimeZone).map((date) => ({
     ...date,
     entries: entriesForDay(catalog.anime, date, viewerTimeZone),
   }));
+  const monday = week[0]!;
+  const scope = `${catalog.season.id}:${viewerTimeZone}:${monday.year}-${monday.month}-${monday.day}`;
+  const saved = location.state.yuriHomeCalendar;
+  const selection = saved?.scope === scope ? saved : undefined;
+  const selectedDay = selection?.weekday ?? today;
+  const broadcastPage = selection?.broadcastPage ?? 0;
+  const eventPage = selection?.eventPage ?? 0;
+
+  function updateSelection(patch: Partial<NonNullable<typeof saved>>) {
+    void navigate({
+      to: ".",
+      replace: true,
+      resetScroll: false,
+      hash: location.hash,
+      state: (previous) => ({
+        ...previous,
+        yuriHomeCalendar: {
+          scope,
+          weekday: selectedDay,
+          broadcastPage,
+          eventPage,
+          ...patch,
+        },
+      }),
+    });
+  }
 
   const selectedDate = week.find((date) => date.weekday === selectedDay)!;
   const selectedEntries = selectedDate.entries;
@@ -171,8 +190,7 @@ export function HomeCalendar({
                     key={date.weekday}
                     aria-pressed={isSelected}
                     onClick={() => {
-                      setDaySelection({ weekday: date.weekday, timeZone: viewerTimeZone });
-                      setBroadcastPage(0);
+                      updateSelection({ weekday: date.weekday, broadcastPage: 0 });
                     }}
                     className={cn(
                       "group relative grid min-w-0 justify-items-center gap-1 rounded-[14px] px-1 py-2 transition sm:rounded-[20px]",
@@ -234,7 +252,9 @@ export function HomeCalendar({
                       type="button"
                       aria-label="上一组本日放送"
                       disabled={visibleBroadcastPage === 0}
-                      onClick={() => setBroadcastPage((page) => Math.max(0, page - 1))}
+                      onClick={() =>
+                        updateSelection({ broadcastPage: Math.max(0, visibleBroadcastPage - 1) })
+                      }
                       className="grid size-6 place-items-center rounded-full bg-white/65 transition hover:bg-white hover:text-ink disabled:cursor-default disabled:opacity-30"
                     >
                       <ChevronLeft size={13} />
@@ -244,7 +264,9 @@ export function HomeCalendar({
                       aria-label="下一组本日放送"
                       disabled={visibleBroadcastPage === broadcastPageCount - 1}
                       onClick={() =>
-                        setBroadcastPage((page) => Math.min(broadcastPageCount - 1, page + 1))
+                        updateSelection({
+                          broadcastPage: Math.min(broadcastPageCount - 1, visibleBroadcastPage + 1),
+                        })
                       }
                       className="grid size-6 place-items-center rounded-full bg-white/65 transition hover:bg-white hover:text-ink disabled:cursor-default disabled:opacity-30"
                     >
@@ -335,7 +357,9 @@ export function HomeCalendar({
                     type="button"
                     aria-label="上一组近期事件"
                     disabled={visibleEventPage === 0}
-                    onClick={() => setEventPage((page) => Math.max(0, page - 1))}
+                    onClick={() =>
+                      updateSelection({ eventPage: Math.max(0, visibleEventPage - 1) })
+                    }
                     className="grid size-6 place-items-center rounded-full bg-white/70 text-muted transition hover:bg-white hover:text-ink disabled:cursor-default disabled:opacity-30"
                   >
                     <ChevronLeft size={13} />
@@ -344,7 +368,11 @@ export function HomeCalendar({
                     type="button"
                     aria-label="下一组近期事件"
                     disabled={visibleEventPage === eventPageCount - 1}
-                    onClick={() => setEventPage((page) => Math.min(eventPageCount - 1, page + 1))}
+                    onClick={() =>
+                      updateSelection({
+                        eventPage: Math.min(eventPageCount - 1, visibleEventPage + 1),
+                      })
+                    }
                     className="grid size-6 place-items-center rounded-full bg-white/70 text-muted transition hover:bg-white hover:text-ink disabled:cursor-default disabled:opacity-30"
                   >
                     <ChevronRight size={13} />

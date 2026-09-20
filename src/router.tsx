@@ -39,5 +39,11 @@ declare module "@tanstack/react-router" {
 declare module "@tanstack/history" {
   interface HistoryState {
     yuriReturnToPrevious?: boolean;
+    yuriHomeCalendar?: {
+      scope: string;
+      weekday: number;
+      broadcastPage: number;
+      eventPage: number;
+    };
   }
 }

@@ -86,9 +86,16 @@ const catalog: CatalogResponse = {
 async function renderCalendar(
   data: CatalogResponse = catalog,
   viewerTimeZone = "America/Los_Angeles",
+  saved?: import("@tanstack/history").HistoryState["yuriHomeCalendar"],
 ) {
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  if (saved) {
+    history.replace("/", { yuriHomeCalendar: saved });
+    history.push("/anime/monday");
+    history.back();
+  }
   const router = createRouter({
-    history: createMemoryHistory({ initialEntries: ["/"] }),
+    history,
     routeTree: createRootRoute({
       component: () => (
         <HomeCalendar
@@ -244,4 +251,57 @@ test("home calendar prioritizes local-day starts and short events over long ongo
   expect(html.indexOf("两日活动")).toBeLessThan(html.indexOf("三日活动"));
   expect(html).not.toContain("长期活动");
   expect(html).not.toContain("未来单日活动");
+});
+
+test("home calendar restores the selected day after returning from an anime", async () => {
+  const html = await renderCalendar(catalog, "America/Los_Angeles", {
+    scope: `${catalog.season.id}:America/Los_Angeles:2026-8-31`,
+    weekday: 1,
+    broadcastPage: 0,
+    eventPage: 0,
+  });
+  expect(html).toContain("周一放送");
+  expect(html).toContain("周一的作品");
+  expect(html).not.toContain("周五放送");
+});
+
+test("home calendar ignores a saved selection from another week or timezone", async () => {
+  for (const scope of [
+    `${catalog.season.id}:America/Los_Angeles:2026-8-24`,
+    `${catalog.season.id}:Asia/Tokyo:2026-8-31`,
+  ]) {
+    const html = await renderCalendar(catalog, "America/Los_Angeles", {
+      scope,
+      weekday: 1,
+      broadcastPage: 2,
+      eventPage: 2,
+    });
+    expect(html).toContain("周五放送");
+    expect(html).toContain("周五的作品");
+  }
+});
+
+test("home calendar restores broadcast pagination from the previous entry", async () => {
+  const source = catalog.anime[0]!;
+  const html = await renderCalendar(
+    {
+      ...catalog,
+      anime: Array.from({ length: 5 }, (_, index) => ({
+        ...source,
+        id: `show-${index}`,
+        slug: `show-${index}`,
+        titleZh: `作品 ${index}`,
+      })),
+    },
+    "America/Los_Angeles",
+    {
+      scope: `${catalog.season.id}:America/Los_Angeles:2026-8-31`,
+      weekday: 5,
+      broadcastPage: 1,
+      eventPage: 0,
+    },
+  );
+  expect(html).toContain("2 / 2");
+  expect(html).toContain("作品 4");
+  expect(html).not.toContain("作品 0");
 });

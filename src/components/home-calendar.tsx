@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import type { CatalogAnime, CatalogResponse } from "@/domain";
 import { useViewerTimeZone } from "@/hooks/use-viewer-timezone";
@@ -88,7 +88,12 @@ export function HomeCalendar({
   const now = new Date(renderedAt);
   const today = weekdayInTimeZone(viewerTimeZone, now);
 
-  const location = useLocation();
+  // The destination location changes before the outgoing homepage unmounts.
+  // Keep reading the homepage entry while its content is still on screen.
+  const location = useRouterState({
+    select: (state) =>
+      state.location.pathname === "/" ? state.location : (state.resolvedLocation ?? state.location),
+  });
   const navigate = useNavigate();
   const week = currentWeek(now, viewerTimeZone).map((date) => ({
     ...date,

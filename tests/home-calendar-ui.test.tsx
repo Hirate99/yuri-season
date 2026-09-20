@@ -87,6 +87,7 @@ async function renderCalendar(
   data: CatalogResponse = catalog,
   viewerTimeZone = "America/Los_Angeles",
   saved?: import("@tanstack/history").HistoryState["yuriHomeCalendar"],
+  leavingHome = false,
 ) {
   const history = createMemoryHistory({ initialEntries: ["/"] });
   if (saved) {
@@ -107,6 +108,16 @@ async function renderCalendar(
     }),
   });
   await router.load();
+  if (leavingHome) {
+    // Navigation has updated the URL, but the outgoing home is still rendered.
+    router.stores.resolvedLocation.set(router.state.location);
+    router.stores.location.set({
+      ...router.state.location,
+      pathname: "/anime/monday",
+      href: "/anime/monday",
+      state: { __TSR_index: 1 },
+    });
+  }
   return renderToStaticMarkup(<RouterProvider router={router} />);
 }
 
@@ -304,4 +315,21 @@ test("home calendar restores broadcast pagination from the previous entry", asyn
   expect(html).toContain("2 / 2");
   expect(html).toContain("作品 4");
   expect(html).not.toContain("作品 0");
+});
+
+test("home calendar keeps its selected day while navigating to the anime detail", async () => {
+  const html = await renderCalendar(
+    catalog,
+    "America/Los_Angeles",
+    {
+      scope: `${catalog.season.id}:America/Los_Angeles:2026-8-31`,
+      weekday: 1,
+      broadcastPage: 0,
+      eventPage: 0,
+    },
+    true,
+  );
+  expect(html).toContain("周一放送");
+  expect(html).toContain("周一的作品");
+  expect(html).not.toContain("周五放送");
 });

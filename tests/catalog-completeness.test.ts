@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   readCatalog,
   readCatalogForSeason,
+  readCalendar,
   readCurrentAnimeOptions,
   readSeasons,
 } from "~/repositories/catalog";
@@ -121,12 +122,34 @@ describe("current-season catalog", () => {
       VALUES ('season-2026-autumn', '2026-autumn', '2026 秋', '2026-10-01', '2026-12-31', 1);
     `);
 
-    const index = await readSeasons(database.binding());
+    const index = await readSeasons(database.binding(), new Date("2026-10-01T00:00:00Z"));
     const summer = await readCatalogForSeason(database.binding(), "2026-summer");
     expect(index.currentSlug).toBe("2026-autumn");
     expect(index.seasons.map((season) => season.slug)).toEqual(["2026-autumn", "2026-summer"]);
     expect(index.seasons.find((season) => season.slug === "2026-summer")?.animeCount).toBe(11);
     expect(summer.anime).toHaveLength(11);
+  });
+
+  test("uses the Japanese date for catalog, calendar, options and season labels", async () => {
+    database.exec(`
+      UPDATE seasons SET is_current = 0;
+      INSERT INTO seasons (id, slug, label, starts_on, ends_on, is_current)
+      VALUES ('season-2026-autumn', '2026-autumn', '2026 秋', '2026-10-01', '2026-12-31', 1);
+    `);
+    const before = new Date("2026-09-30T14:59:59Z");
+    const after = new Date("2026-09-30T15:00:00Z");
+
+    expect((await readCatalog(database.binding(), { now: before })).season.slug).toBe(
+      "2026-summer",
+    );
+    expect((await readCalendar(database.binding(), before)).season.slug).toBe("2026-summer");
+    expect(await readCurrentAnimeOptions(database.binding(), before)).toHaveLength(11);
+    expect((await readSeasons(database.binding(), before)).currentSlug).toBe("2026-summer");
+
+    expect((await readCatalog(database.binding(), { now: after })).season.slug).toBe("2026-autumn");
+    expect((await readCalendar(database.binding(), after)).season.slug).toBe("2026-autumn");
+    expect(await readCurrentAnimeOptions(database.binding(), after)).toHaveLength(0);
+    expect((await readSeasons(database.binding(), after)).currentSlug).toBe("2026-autumn");
   });
 
   test("loads staff, cast, accounts and Japanese broadcast times on new detail pages", async () => {

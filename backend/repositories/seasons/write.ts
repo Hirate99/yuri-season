@@ -1,5 +1,5 @@
 import type { SeasonWrite } from "@/domain";
-import { eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { database } from "~/infrastructure/db/client";
 import { seasonsTable } from "~/infrastructure/db/schema";
@@ -23,21 +23,13 @@ export async function createSeason(
 ): Promise<string> {
   const id = createId("season");
   const orm = database(db);
-  const insert = orm.insert(seasonsTable).values({ id, ...value });
+  const insert = orm.insert(seasonsTable).values({ id, ...value, isCurrent: false });
 
   try {
-    if (value.isCurrent) {
-      await orm.batch([
-        orm.update(seasonsTable).set({ isCurrent: false }),
-        insert,
-        auditInsert(db, "admin", "create_season", "season", id, { principal, after: value }),
-      ]);
-    } else {
-      await orm.batch([
-        insert,
-        auditInsert(db, "admin", "create_season", "season", id, { principal, after: value }),
-      ]);
-    }
+    await orm.batch([
+      insert,
+      auditInsert(db, "admin", "create_season", "season", id, { principal, after: value }),
+    ]);
   } catch (error) {
     translateSeasonConstraint(error);
   }
@@ -59,15 +51,11 @@ export async function updateSeason(
       label: seasonsTable.label,
       startsOn: seasonsTable.startsOn,
       endsOn: seasonsTable.endsOn,
-      isCurrent: seasonsTable.isCurrent,
     })
     .from(seasonsTable)
     .where(eq(seasonsTable.id, id))
     .get();
   if (!existing) throw new HttpError(404, "季度不存在。");
-
-  if (existing.isCurrent && !value.isCurrent)
-    throw new HttpError(400, "请先把另一个季度设为当季。");
 
   const update = orm.update(seasonsTable).set(value).where(eq(seasonsTable.id, id));
 
@@ -78,15 +66,7 @@ export async function updateSeason(
   });
 
   try {
-    if (value.isCurrent) {
-      await orm.batch([
-        orm.update(seasonsTable).set({ isCurrent: false }).where(ne(seasonsTable.id, id)),
-        update,
-        audit,
-      ]);
-    } else {
-      await orm.batch([update, audit]);
-    }
+    await orm.batch([update, audit]);
   } catch (error) {
     translateSeasonConstraint(error);
   }

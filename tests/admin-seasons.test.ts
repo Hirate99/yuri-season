@@ -16,21 +16,22 @@ beforeEach(async () => {
 afterEach(() => database.close());
 
 describe("Admin seasons", () => {
-  test("creates the next season and atomically switches the current catalog", async () => {
+  test("creates the next season and switches when its Japanese start date arrives", async () => {
     const value = seasonSchema.parse({
       slug: "2026-autumn",
       label: "2026 秋",
       startsOn: "2026-10-01",
       endsOn: "2026-12-31",
-      isCurrent: true,
     });
     const id = await createSeason(database.binding(), value);
-    let seasons = await readSeasons(database.binding());
+    let seasons = await readSeasons(database.binding(), new Date("2026-09-30T14:59:59Z"));
+    expect(seasons.currentSlug).toBe("2026-summer");
+    seasons = await readSeasons(database.binding(), new Date("2026-09-30T15:00:00Z"));
     expect(seasons.currentSlug).toBe("2026-autumn");
     expect(seasons.seasons.find((season) => season.slug === "2026-summer")?.isCurrent).toBe(false);
 
     await updateSeason(database.binding(), id, { ...value, label: "2026 秋季" });
-    seasons = await readSeasons(database.binding());
+    seasons = await readSeasons(database.binding(), new Date("2026-09-30T15:00:00Z"));
     expect(seasons.seasons.find((season) => season.id === id)?.label).toBe("2026 秋季");
     expect(
       database.sqlite
@@ -43,15 +44,15 @@ describe("Admin seasons", () => {
     ).toEqual([{ action: "create_season" }, { action: "update_season" }]);
   });
 
-  test("does not allow removing the only current season", async () => {
-    await expect(
-      updateSeason(database.binding(), "season-2026-summer", {
-        slug: "2026-summer",
-        label: "2026 夏",
-        startsOn: "2026-07-01",
-        endsOn: "2026-09-30",
-        isCurrent: false,
-      }),
-    ).rejects.toThrow("先把另一个季度设为当季");
+  test("lets editors correct dates without changing a manual current flag", async () => {
+    await updateSeason(database.binding(), "season-2026-summer", {
+      slug: "2026-summer",
+      label: "2026 夏",
+      startsOn: "2026-07-01",
+      endsOn: "2026-09-29",
+    });
+    expect(
+      (await readSeasons(database.binding(), new Date("2026-09-30T00:00:00Z"))).currentSlug,
+    ).toBe("2026-summer");
   });
 });

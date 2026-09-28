@@ -22,7 +22,7 @@ function SeasonForm({ item }: { item?: SeasonSummary }) {
     formState: { errors },
   } = useForm<z.input<typeof seasonSchema>, unknown, SeasonWrite>({
     resolver: zodResolver(seasonSchema),
-    defaultValues: item ?? { isCurrent: false },
+    defaultValues: item,
   });
 
   const submit = handleSubmit((value) => {
@@ -43,10 +43,7 @@ function SeasonForm({ item }: { item?: SeasonSummary }) {
       <AdminField label="结束">
         <input className={adminInput} {...register("endsOn")} type="date" required />
       </AdminField>
-      <label className="inline-flex items-center gap-2 text-[10px] md:col-span-2">
-        <input {...register("isCurrent")} type="checkbox" disabled={item?.isCurrent} />
-        当季
-      </label>
+      <p className="text-[10px] text-muted md:col-span-2">当季按日本日期和开始日期自动切换。</p>
       <FormErrors errors={errors} error={save.error} />
       <ResourceActions busy={save.isPending} />
     </form>

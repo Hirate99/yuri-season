@@ -11,7 +11,6 @@ export const seasonSchema = z
     label: requiredText(80, "label"),
     startsOn: dateOnly("startsOn"),
     endsOn: dateOnly("endsOn"),
-    isCurrent: z.boolean("isCurrent 必须是布尔值。"),
   })
   .refine((value) => value.startsOn <= value.endsOn, {
     message: "季度结束日期不能早于开始日期。",

@@ -18,6 +18,7 @@ import {
 import { readCalendarSlots, readEventsForSeason } from "~/infrastructure/db/read-models/catalog";
 import { animeTable, seasonsTable } from "~/infrastructure/db/schema";
 import { HttpError } from "~/shared/http-error";
+import { currentSeasonOn } from "./seasons/current";
 
 const seasonProjection = {
   id: seasonsTable.id,
@@ -27,12 +28,12 @@ const seasonProjection = {
   endsOn: seasonsTable.endsOn,
 };
 
-export async function currentSeason(db: D1Database): Promise<Season> {
-  const [row] = await database(db)
+export async function currentSeason(db: D1Database, now = new Date()): Promise<Season> {
+  const rows = await database(db)
     .select(seasonProjection)
     .from(seasonsTable)
-    .where(eq(seasonsTable.isCurrent, true))
-    .limit(1);
+    .orderBy(desc(seasonsTable.startsOn));
+  const row = currentSeasonOn(rows, now);
   if (!row) throw new HttpError(503, "The current season has not been configured.");
 
   return row;
@@ -49,11 +50,10 @@ export async function seasonBySlug(db: D1Database, slug: string): Promise<Season
   return row;
 }
 
-export async function readSeasons(db: D1Database): Promise<SeasonsResponse> {
+export async function readSeasons(db: D1Database, now = new Date()): Promise<SeasonsResponse> {
   const seasons = await database(db)
     .select({
       ...seasonProjection,
-      isCurrent: seasonsTable.isCurrent,
       animeCount: count(animeTable.id),
     })
     .from(seasonsTable)
@@ -61,9 +61,10 @@ export async function readSeasons(db: D1Database): Promise<SeasonsResponse> {
     .groupBy(seasonsTable.id)
     .orderBy(desc(seasonsTable.startsOn));
 
+  const current = currentSeasonOn(seasons, now);
   return {
-    seasons,
-    currentSlug: seasons.find((season) => season.isCurrent)?.slug ?? null,
+    seasons: seasons.map((season) => ({ ...season, isCurrent: season.id === current?.id })),
+    currentSlug: current?.slug ?? null,
   };
 }
 
@@ -97,7 +98,11 @@ function mapCatalogAnime(row: CatalogAnimeRecord): CatalogAnime {
   };
 }
 
-export function readCurrentAnimeOptions(db: D1Database): Promise<AnimeOption[]> {
+export async function readCurrentAnimeOptions(
+  db: D1Database,
+  now = new Date(),
+): Promise<AnimeOption[]> {
+  const season = await currentSeason(db, now);
   return database(db)
     .select({
       id: animeTable.id,
@@ -107,8 +112,7 @@ export function readCurrentAnimeOptions(db: D1Database): Promise<AnimeOption[]> 
       titleEn: animeTable.titleEn,
     })
     .from(animeTable)
-    .innerJoin(seasonsTable, eq(seasonsTable.id, animeTable.seasonId))
-    .where(eq(seasonsTable.isCurrent, true))
+    .where(eq(animeTable.seasonId, season.id))
     .orderBy(asc(animeTable.titleZh));
 }
 
@@ -143,7 +147,7 @@ export async function readCatalog(
   db: D1Database,
   options: CatalogOptions = {},
 ): Promise<CatalogResponse> {
-  return catalogForSeason(db, await currentSeason(db), options);
+  return catalogForSeason(db, await currentSeason(db, options.now), options);
 }
 
 export async function readCatalogForSeason(
@@ -184,8 +188,8 @@ async function calendarForSeason(db: D1Database, season: Season): Promise<Calend
   return { season, entries, events };
 }
 
-export async function readCalendar(db: D1Database): Promise<CalendarResponse> {
-  return calendarForSeason(db, await currentSeason(db));
+export async function readCalendar(db: D1Database, now = new Date()): Promise<CalendarResponse> {
+  return calendarForSeason(db, await currentSeason(db, now));
 }
 
 export async function readCalendarForSeason(

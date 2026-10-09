@@ -33,11 +33,18 @@ The editor performs routine review and publication under the update authorizatio
 
 ## Storage, migration, and deduplication
 
+- Apply the [sandbox write gate](../SKILL.md#sandbox-write-gate) before preparing files, checking authenticated R2 access, or publishing. A sandbox blocks these writes and Wrangler authentication probes even when previous runs were authorized and logged in.
 - Treat a format migration as a storage operation, not a URL edit. Verify source bytes, transcode when needed, upload, then fetch and decode the new object. A suffix does not prove MIME type.
 - Audit both public Feed projection and every affected work's Admin resource collection. Feed media may be projected from approved `media_assets`; checking only candidate fields or one API misses legacy objects.
 - Before a batch migration, record total scope and classify items by stable original URL, non-null platform object ID, and semantic content. Never group null platform IDs together. Exact URL/ID uniqueness does not rule out semantic duplicates.
 - For semantic duplicates, retain the item with stronger provenance and reader value—normally the stable original post with preserved source text and an approved stored asset—and withdraw the weaker duplicate with an audit reason. Do not merge materially different updates because their titles or images look similar.
 - Production media work requires confirmed remote R2 write access. Login, D1 access, or public R2 GET does not imply object write permission. If the remote bucket cannot be listed or written, stop before changing media records; do not use a local Wrangler object, external hotlink, or renamed URL.
+
+## Media file transfer
+
+- Verify the original page, source identity, text, and media relationship in Chrome, then retain the actual observed media URL and source-page URL. Prefer local scripts (such as Python, PowerShell, or curl) for downloading those verified image/video files, WebP conversion, and the existing Wrangler R2 upload flow. Chrome-only browsing does not require using Chrome's download API for file transfer.
+- Scripted GETs of the resulting public R2 media URLs are allowed for HTTP status, MIME, dimensions, byte count, and SHA-256 verification. Continue checking the rendered Feed/detail/Calendar pages in Chrome.
+- Reuse already downloaded, verified bytes for the same asset. Do not loop on browser download APIs when a normal script can retrieve the verified URL. Preserve provenance and existing media/rights requirements; do not use this exception for webpage scraping, account/session rotation, credential extraction, or bypassing access controls, throttling, or an explicit operation refusal.
 
 ## Reader-facing completion gate
 

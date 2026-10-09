@@ -50,6 +50,18 @@ describe("calendar event dates", () => {
     expect(groups.past.map(({ id }) => id)).toEqual(["past"]);
   });
 
+  test("orders same-day timed events chronologically before using title as a tie-break", () => {
+    const groups = partitionCalendarEvents(
+      [
+        event("A later stream", "2026-10-16T18:00:00+09:00"),
+        event("Z earlier delivery", "2026-10-16T12:00:00+09:00"),
+      ],
+      new Date("2026-10-08T00:00:00Z"),
+    );
+
+    expect(groups.upcoming.map(({ id }) => id)).toEqual(["Z earlier delivery", "A later stream"]);
+  });
+
   test("keeps a date-only birthday independent of viewer timezone", () => {
     expect(eventDateKey(event("birthday", "2026-08-15"))).toBe("2026-08-15");
   });

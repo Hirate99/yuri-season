@@ -109,6 +109,40 @@ describe("D1 read budgets", () => {
     );
   });
 
+  test("includes completed verified events in the public calendar but omits cancelled events", async () => {
+    database.sqlite
+      .query(
+        `INSERT INTO events (id, anime_id, event_type, title, starts_at, timezone, verified, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "calendar-completed",
+        "anime-kimishinu",
+        "broadcast",
+        "Completed public event",
+        "2026-10-07T14:45:00Z",
+        "Asia/Tokyo",
+        1,
+        "completed",
+        "calendar-cancelled",
+        "anime-kimishinu",
+        "broadcast",
+        "Cancelled public event",
+        "2026-10-08T14:45:00Z",
+        "Asia/Tokyo",
+        1,
+        "cancelled",
+      );
+
+    const calendar = await readCalendar(database.binding());
+    expect(calendar.events).toContainEqual(
+      expect.objectContaining({ id: "calendar-completed", status: "completed" }),
+    );
+    expect(calendar.events).not.toContainEqual(
+      expect.objectContaining({ id: "calendar-cancelled" }),
+    );
+  });
+
   test("batches admin resource sections and preserves character/person columns", async () => {
     const resources = await readAdminAnimeResources(database.binding(), "anime-kimishinu");
     expect(database.calls).toBe(3);

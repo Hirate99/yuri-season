@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { database } from "../client";
 import { animeTable, broadcastSlotsTable, charactersTable, eventsTable } from "../schema";
 
@@ -36,7 +36,7 @@ export function readEventsForSeason(db: D1Database, seasonId: string) {
     .where(
       and(
         eq(animeTable.seasonId, seasonId),
-        eq(eventsTable.status, "scheduled"),
+        inArray(eventsTable.status, ["scheduled", "completed"]),
         eq(eventsTable.verified, true),
       ),
     )

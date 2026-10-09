@@ -150,6 +150,21 @@ export function partitionCalendarEvents(events: CalendarEvent[], now = new Date(
 
   const tieBreak = (left: CalendarEvent, right: CalendarEvent) =>
     left.title.localeCompare(right.title) || left.id.localeCompare(right.id);
+  const tieBreakByStartTime = (left: CalendarEvent, right: CalendarEvent) => {
+    if (
+      !left.startsAt ||
+      !right.startsAt ||
+      /^\d{4}-\d{2}-\d{2}$/.test(left.startsAt) ||
+      /^\d{4}-\d{2}-\d{2}$/.test(right.startsAt)
+    )
+      return tieBreak(left, right);
+
+    const leftStart = Date.parse(left.startsAt);
+    const rightStart = Date.parse(right.startsAt);
+    return Number.isFinite(leftStart) && Number.isFinite(rightStart) && leftStart !== rightStart
+      ? leftStart - rightStart
+      : tieBreak(left, right);
+  };
 
   upcoming.sort((left, right) => {
     if (left.dateKey === null)
@@ -157,10 +172,13 @@ export function partitionCalendarEvents(events: CalendarEvent[], now = new Date(
 
     if (right.dateKey === null) return -1;
 
-    return left.dateKey.localeCompare(right.dateKey) || tieBreak(left.event, right.event);
+    return (
+      left.dateKey.localeCompare(right.dateKey) || tieBreakByStartTime(left.event, right.event)
+    );
   });
   past.sort(
-    (left, right) => left.dateKey.localeCompare(right.dateKey) || tieBreak(left.event, right.event),
+    (left, right) =>
+      left.dateKey.localeCompare(right.dateKey) || tieBreakByStartTime(left.event, right.event),
   );
 
   return {

@@ -1,6 +1,6 @@
 # Research lane policy
 
-Use the tags and fanwork sections for routine X discovery about tracked works; other specialist sections apply to explicitly requested `discovery`, `social-audit`, or `account-discovery`. Routine coverage follows `update-policy.md`. Read only the sections relevant to the selected story or source. The agent chooses searches; CLI recording validates evidence and never establishes editorial completion.
+Use the tags and fanwork sections for routine X discovery primarily about current-season anime; major non-current-season leads follow the exceptions in [scope and priority](update-policy.md#scope-and-priority). Other specialist sections apply to explicitly requested `discovery`, `social-audit`, or `account-discovery` and retain their requested scope. Routine coverage follows `update-policy.md`. Read only the sections relevant to the selected story or source. The agent chooses searches; CLI recording validates evidence and never establishes editorial completion.
 
 ## Editorial operating judgment
 
@@ -14,7 +14,7 @@ Use the tags and fanwork sections for routine X discovery about tracked works; o
 
 ## Official accounts and tags
 
-- Account timelines are monitored by routine only after the account is registered, verified, and enabled. Routine can search tags for tracked works under `update-policy.md`; broad tag audits remain explicit.
+- Account timelines are monitored by routine only after the account is registered, verified, enabled, and associated with an included current-season work. Major non-current-season stories permit focused original/source follow-ups without adding the entire historical account set to mandatory coverage. Routine can search tags for current-season works under `update-policy.md`; broad tag audits remain explicit.
 - Inspect verified current-season work/project accounts from their actual timeline, platform API, or an explicitly allowed public embed. Do not substitute a title search for an account timeline.
 - Timeline and tag surfaces are complementary. Share durable stable post IDs so the same original is not reconsidered through multiple paths.
 - Recover active official work, anime, project, campaign, unit, and character tags from verified profiles and recent official originals. Preserve the term and its source post as evidence; do not hard-code a season's tags into the skill.
@@ -34,7 +34,7 @@ Model cast content as `character → cast credit → person → verified account
 
 ## Media and fanwork
 
-- Routine includes X fanwork and creator-art searches about tracked works. Other platforms and broad sweeps require an explicit scope.
+- Routine includes supplementary X fanwork and creator-art searches directly related to current-season anime, after prioritizing substantive anime news and due coverage. Standalone non-current-season fanwork does not qualify as a major-news exception. Other platforms and broad sweeps require an explicit scope.
 - Use the original creator post, never an aggregator, mirror, search thumbnail, quote-post, or repost.
 - Judge fanwork yourself: verify original authorship, work association, quality, safety, spoilers, and the actual permitted media use. Qualified work does not need per-item human editorial approval. Use [publication-policy.md](publication-policy.md#publication-media-invariant) for media classification and source-specific restrictions, including official commissions versus reposts of independent fanwork. Apply the normal safety, spoiler, confidence, attribution, and media requirements; fanwork classification alone does not require hold.
 - AI-generated fanwork is out of scope. On Pixiv require the platform AI status to be explicitly non-AI; do not infer undocumented enum meanings or human authorship from style or missing tags. Explicit AI labels, disclosures, or generation-tool tags are rejected and remembered without creating a batch candidate.

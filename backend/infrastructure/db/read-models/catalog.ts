@@ -75,7 +75,7 @@ export function readCalendarSlots(db: D1Database, seasonId: string) {
     })
     .from(animeTable)
     .innerJoin(broadcastSlotsTable, eq(broadcastSlotsTable.animeId, animeTable.id))
-    .where(eq(animeTable.seasonId, seasonId))
+    .where(and(eq(animeTable.seasonId, seasonId), eq(broadcastSlotsTable.isPrimary, true)))
     .orderBy(
       asc(broadcastSlotsTable.weekday),
       asc(broadcastSlotsTable.localTime),

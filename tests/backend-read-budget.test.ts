@@ -109,6 +109,22 @@ describe("D1 read budgets", () => {
     );
   });
 
+  test("only lists primary broadcasts in the calendar while retaining other slots in detail", async () => {
+    database.exec(`INSERT INTO broadcast_slots
+      (id, anime_id, label, weekday, local_time, timezone, is_primary)
+      VALUES ('calendar-repeat', 'anime-kimishinu', '重播', 0, '12:00', 'Asia/Tokyo', 0)`);
+
+    const calendar = await readCalendar(database.binding());
+    const detail = (await readAnimeDetail(database.binding(), "kimishinu"))!;
+    const primary = detail.broadcasts.find((slot) => slot.isPrimary)!;
+    expect(primary).toBeDefined();
+    expect(
+      calendar.entries.filter((entry) => entry.animeId === detail.id).map((entry) => entry.slot.id),
+    ).toEqual([primary.id]);
+    expect(calendar.entries.every((entry) => entry.slot.isPrimary)).toBe(true);
+    expect(detail.broadcasts.some((slot) => slot.id === "calendar-repeat")).toBe(true);
+  });
+
   test("includes completed verified events in the public calendar but omits cancelled events", async () => {
     database.sqlite
       .query(

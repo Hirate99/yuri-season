@@ -18,7 +18,12 @@ describe("broadcast local-time layout", () => {
 
   test("fills the reserved line when the viewer timezone is already known", () => {
     const html = renderToStaticMarkup(
-      <BroadcastTime slot={slot} viewerTimeZone="America/Los_Angeles" reserveLocalSpace />,
+      <BroadcastTime
+        slot={slot}
+        viewerTimeZone="America/Los_Angeles"
+        now={new Date("2026-08-10T00:00:00Z")}
+        reserveLocalSpace
+      />,
     );
 
     expect(html).toContain("PDT");

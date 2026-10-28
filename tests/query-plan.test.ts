@@ -31,6 +31,7 @@ describe("backend query plans", () => {
     );
     expect(statement).toBeDefined();
     const actual = plan(statement!);
+    expect(actual).toContain("SCAN media_items USING COVERING INDEX idx_media_coverage");
     expect(actual).toContain("SEARCH feed_candidates USING COVERING INDEX idx_candidates_media");
     expect(actual).toContain("SEARCH feed_items USING COVERING INDEX idx_feed_items_media_public");
     expect(actual).not.toContain("SCAN feed_candidates");

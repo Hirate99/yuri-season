@@ -26,14 +26,18 @@ function countMap(rows: CountByAnime[]): Map<string, number> {
   return new Map(rows.flatMap((row) => (row.animeId ? [[row.animeId, row.count] as const] : [])));
 }
 
+function creditCounts(rows: { animeId: string }[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const row of rows) counts.set(row.animeId, (counts.get(row.animeId) ?? 0) + 1);
+  return counts;
+}
+
 export async function readAdminCoverage(db: D1Database): Promise<AdminAnimeCoverage[]> {
   const orm = database(db);
 
   const [
     anime,
     broadcasts,
-    staff,
-    cast,
     characters,
     accounts,
     workPeople,
@@ -58,14 +62,6 @@ export async function readAdminCoverage(db: D1Database): Promise<AdminAnimeCover
       .select({ animeId: broadcastSlotsTable.animeId, count: count() })
       .from(broadcastSlotsTable)
       .groupBy(broadcastSlotsTable.animeId),
-    orm
-      .select({ animeId: workCreditsTable.animeId, count: count() })
-      .from(workCreditsTable)
-      .groupBy(workCreditsTable.animeId),
-    orm
-      .select({ animeId: castCreditsTable.animeId, count: count() })
-      .from(castCreditsTable)
-      .groupBy(castCreditsTable.animeId),
     orm
       .select({
         animeId: charactersTable.animeId,
@@ -167,8 +163,9 @@ export async function readAdminCoverage(db: D1Database): Promise<AdminAnimeCover
   }
 
   const broadcastCounts = countMap(broadcasts);
-  const staffCounts = countMap(staff);
-  const castCounts = countMap(cast);
+  // These rows are already needed for account coverage; count credits without reading them again.
+  const staffCounts = creditCounts(workPeople);
+  const castCounts = creditCounts(castPeople);
   const sourceCounts = countMap(sources);
   const eventCounts = countMap(events);
   const mediaCounts = countMap(media);

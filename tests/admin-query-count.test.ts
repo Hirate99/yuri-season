@@ -16,6 +16,22 @@ beforeEach(async () => {
 afterEach(() => database.close());
 
 describe("Admin dashboard query budget", () => {
+  test("reuses credit rows while counting multiple roles for the same person", async () => {
+    database.exec(`
+      INSERT INTO people (id, name, primary_kind) VALUES ('multi-role', 'Multi Role', 'staff');
+      INSERT INTO work_credits (id, anime_id, person_id, role) VALUES
+        ('role-one', 'anime-kimishinu', 'multi-role', 'Director'),
+        ('role-two', 'anime-kimishinu', 'multi-role', 'Writer');
+    `);
+    const expected = database.sqlite
+      .query("SELECT count(*) AS total FROM work_credits WHERE anime_id = ?")
+      .get("anime-kimishinu") as { total: number };
+    database.resetMetrics();
+    const coverage = await readAdminCoverage(database.binding());
+    expect(coverage.find((item) => item.animeId === "anime-kimishinu")?.staff).toBe(expected.total);
+    expect(database.executedStatements).toBe(11);
+  });
+
   test("does not add one catalog query per season", async () => {
     database.resetMetrics();
     await readAdminDashboard(database.binding());

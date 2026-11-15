@@ -2,13 +2,13 @@ import type {
   AdminAnimeResources,
   AdminAnimeSummary,
   SearchMemoryHitSummary,
-  SearchMemorySummary,
+  SearchMemoryState,
 } from "@/domain";
 import { accountUpdateQuery, accountUpdateTarget, afterDate } from "./discovery-account-updates";
 import type { ResearchProfile } from "./research-profile";
 
-type SearchKind = SearchMemorySummary["searchKind"];
-type ScopeType = SearchMemorySummary["scopeType"];
+type SearchKind = SearchMemoryState["searchKind"];
+type ScopeType = SearchMemoryState["scopeType"];
 
 export type DiscoveryOperation = "search" | "timeline_scan" | "tag_scan";
 export type DiscoveryStage = "sources" | "official" | "tags" | "people" | "explore";
@@ -62,7 +62,7 @@ type PlanInput = {
   seasonLabel: string;
   anime: AdminAnimeSummary[];
   resources: Record<string, AdminAnimeResources>;
-  memory: SearchMemorySummary[];
+  memory: SearchMemoryState[];
   memoryHits: SearchMemoryHitSummary[];
   now: Date;
   force: boolean;
@@ -108,7 +108,7 @@ function memoryKey(
   return `${scopeType}\u0000${scopeId}\u0000${searchKind}\u0000${targetKey}`;
 }
 
-function isDue(memory: SearchMemorySummary | undefined, now: Date, operation: DiscoveryOperation) {
+function isDue(memory: SearchMemoryState | undefined, now: Date, operation: DiscoveryOperation) {
   if (!memory) return true;
 
   // Exhaustion is durable only for bounded searches. A timeline is an ongoing

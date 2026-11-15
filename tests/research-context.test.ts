@@ -28,7 +28,7 @@ test("saving one source does not read the dashboard, unrelated works, or hit his
     "feed_candidates",
   ])
     expect(queries).not.toContain(`from "${table}"`);
-  expect(queries).not.toContain('from "search_memory_hits"');
+  expect(queries).not.toContain('"search_memory_hits"');
   expect(database.executedStatements).toBeLessThanOrEqual(10);
 });
 
@@ -38,4 +38,33 @@ test("bad source identifiers fail before any database reads", async () => {
     "无效",
   );
   expect(database.executedStatements).toBe(0);
+});
+
+test("routine retains old source cursors beyond 300 unrelated searches and batches many accounts", async () => {
+  for (let i = 0; i < 31; i++) {
+    database.sqlite
+      .query(
+        `INSERT INTO accounts(id, owner_type, owner_id, platform, url, verified)
+      VALUES (?, 'anime', 'anime-kimishinu', 'X', ?, 1)`,
+      )
+      .run(`account-budget-${i}`, `https://x.com/budget${i}`);
+    database.sqlite
+      .query(
+        `INSERT INTO search_memory(id, scope_type, scope_id, search_kind,
+      target_key, query_text, cursor_json, last_searched_at)
+      VALUES (?, 'anime', 'anime-kimishinu', 'social', ?, 'source', '{"committedPostId":"100"}', '2026-01-01')`,
+      )
+      .run(`memory-budget-${i}`, `updates:anime-kimishinu:account-budget-${i}`);
+  }
+  for (let i = 0; i < 301; i++)
+    database.sqlite
+      .query(
+        `INSERT INTO search_memory(id, scope_type, scope_id, search_kind,
+      target_key, query_text, last_searched_at) VALUES (?, 'global', 'all', 'catalog', ?, 'unrelated', '2026-11-15')`,
+      )
+      .run(`unrelated-${i}`, `search-${i}`);
+  const result = await readResearchContext(database.binding(), "routine");
+  expect(result.memory.filter((record) => record.id.startsWith("memory-budget-"))).toHaveLength(31);
+  expect(result.memory.every((record) => record.cursor?.committedPostId === "100")).toBe(true);
+  expect(result.recentSearches).toHaveLength(30);
 });

@@ -1,4 +1,9 @@
-import type { SearchMemoryHitSummary, SearchMemorySummary, SearchMemoryWrite } from "@/domain";
+import type {
+  SearchMemoryHitSummary,
+  SearchMemorySummary,
+  SearchMemoryState,
+  SearchMemoryWrite,
+} from "@/domain";
 import { and, desc, eq, or, sql } from "drizzle-orm";
 
 import { database } from "~/infrastructure/db/client";
@@ -6,6 +11,39 @@ import { searchMemoryHitsTable, searchMemoryTable } from "~/infrastructure/db/sc
 import { createId } from "~/shared/id";
 
 export type SearchHitOutcome = "seen" | "candidate" | "published" | "held" | "rejected" | "ignored";
+
+type MemoryKey = Pick<SearchMemoryWrite, "scopeType" | "scopeId" | "searchKind" | "targetKey">;
+function memoryKeysWhere(keys: MemoryKey[]) {
+  return or(
+    ...keys.map((key) =>
+      and(
+        eq(searchMemoryTable.scopeType, key.scopeType),
+        eq(searchMemoryTable.scopeId, key.scopeId),
+        eq(searchMemoryTable.searchKind, key.searchKind),
+        eq(searchMemoryTable.targetKey, key.targetKey),
+      ),
+    ),
+  );
+}
+
+/** Source execution needs cursors, never lifetime hit aggregates. */
+export async function readSearchMemoryState(
+  db: D1Database,
+  keys: MemoryKey[],
+): Promise<SearchMemoryState[]> {
+  if (!keys.length) return [];
+  const rows = await database(db).select().from(searchMemoryTable).where(memoryKeysWhere(keys));
+  return rows.map(
+    ({ cursorJson, lastSearchedAt, createdAt: _createdAt, updatedAt: _updatedAt, ...row }) => ({
+      ...row,
+      scopeType: row.scopeType as SearchMemoryState["scopeType"],
+      searchKind: row.searchKind as SearchMemoryState["searchKind"],
+      status: row.status as SearchMemoryState["status"],
+      cursor: JSON.parse(cursorJson || "{}") as Record<string, unknown>,
+      searchedAt: lastSearchedAt ?? "",
+    }),
+  );
+}
 
 export async function resolveSearchHit(
   db: D1Database,
@@ -119,7 +157,7 @@ export async function rememberSearch(db: D1Database, records: SearchMemoryWrite[
 
 export async function readSearchMemory(
   db: D1Database,
-  keys?: Array<Pick<SearchMemoryWrite, "scopeType" | "scopeId" | "searchKind" | "targetKey">>,
+  keys?: MemoryKey[],
 ): Promise<SearchMemorySummary[]> {
   if (keys?.length === 0) return [];
   const rows = await database(db)
@@ -147,20 +185,7 @@ export async function readSearchMemory(
     })
     .from(searchMemoryTable)
     .leftJoin(searchMemoryHitsTable, eq(searchMemoryHitsTable.memoryId, searchMemoryTable.id))
-    .where(
-      keys
-        ? or(
-            ...keys.map((key) =>
-              and(
-                eq(searchMemoryTable.scopeType, key.scopeType),
-                eq(searchMemoryTable.scopeId, key.scopeId),
-                eq(searchMemoryTable.searchKind, key.searchKind),
-                eq(searchMemoryTable.targetKey, key.targetKey),
-              ),
-            ),
-          )
-        : undefined,
-    )
+    .where(keys ? memoryKeysWhere(keys) : undefined)
     .groupBy(searchMemoryTable.id)
     .orderBy(desc(searchMemoryTable.lastSearchedAt), searchMemoryTable.id)
     .limit(300);
@@ -209,4 +234,20 @@ export async function readSearchMemoryHits(
     outcome: outcome as SearchMemoryHitSummary["outcome"],
     metadata: JSON.parse(metadataJson || "{}") as Record<string, unknown>,
   }));
+}
+
+/** A small briefing of exploratory searches, without aggregating their hit history. */
+export function readRecentDiscoverySearches(db: D1Database) {
+  return database(db)
+    .select({
+      queryText: searchMemoryTable.queryText,
+      searchedAt: searchMemoryTable.lastSearchedAt,
+      status: searchMemoryTable.status,
+      lastResultCount: searchMemoryTable.lastResultCount,
+      usefulResultCount: searchMemoryTable.usefulResultCount,
+    })
+    .from(searchMemoryTable)
+    .where(sql`substr(${searchMemoryTable.targetKey}, 1, 8) <> 'updates:'`)
+    .orderBy(desc(searchMemoryTable.lastSearchedAt), searchMemoryTable.id)
+    .limit(30);
 }

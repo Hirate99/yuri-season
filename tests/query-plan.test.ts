@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { TestD1 } from "./support/d1-adapter";
 import { readFeed } from "~/repositories/feed";
 import { readAdminCoverage } from "~/repositories/admin/coverage";
-import { readSearchMemoryHits, resolveSearchHit } from "~/repositories/search-memory";
+import {
+  readRecentDiscoverySearches,
+  readSearchMemoryHits,
+  resolveSearchHit,
+} from "~/repositories/search-memory";
 import { readAudit, readPublications, readRuns } from "~/repositories/admin/dashboard";
 
 type QueryPlanRow = { detail: string };
@@ -25,6 +29,14 @@ function plan(sql: string, ...bindings: Array<string | number>): string {
 }
 
 describe("backend query plans", () => {
+  test("discovery briefing does not scan timeline memories or join their hits", async () => {
+    database.resetMetrics();
+    await readRecentDiscoverySearches(database.binding());
+    const actual = plan(database.statements[0], 30);
+    expect(actual).toContain("idx_search_memory_discovery_recent");
+    expect(actual).not.toContain("USE TEMP B-TREE");
+    expect(actual).not.toContain("search_memory_hits");
+  });
   test("global search hit reads use the recency index without sorting the full history", async () => {
     database.resetMetrics();
     await readSearchMemoryHits(database.binding());

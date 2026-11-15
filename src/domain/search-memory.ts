@@ -35,9 +35,12 @@ export type SearchMemoryWrite = {
   hits: SearchMemoryHitWrite[];
 };
 
-export type SearchMemorySummary = Omit<SearchMemoryWrite, "hits" | "cursor"> & {
+export type SearchMemoryState = Omit<SearchMemoryWrite, "hits" | "cursor"> & {
   id: string;
   cursor?: Record<string, unknown>;
+};
+
+export type SearchMemorySummary = SearchMemoryState & {
   seenCount: number;
   candidateCount: number;
   publishedCount: number;

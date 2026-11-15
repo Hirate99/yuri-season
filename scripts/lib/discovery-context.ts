@@ -2,7 +2,7 @@ import type {
   AdminAnimeResources,
   AdminDashboard,
   SearchMemoryHitSummary,
-  SearchMemorySummary,
+  SearchMemoryState,
 } from "@/domain";
 import { adminApi } from "./admin-dashboard";
 import { rpcData } from "@/lib/rpc";
@@ -10,8 +10,15 @@ import { rpcData } from "@/lib/rpc";
 export type DiscoveryContext = {
   dashboard: Pick<AdminDashboard, "anime" | "seasons" | "recentPublications" | "heldCandidates">;
   resources: Record<string, AdminAnimeResources>;
-  memory: SearchMemorySummary[];
+  memory: SearchMemoryState[];
   memoryHits: SearchMemoryHitSummary[];
+  recentSearches?: Array<{
+    queryText: string;
+    searchedAt: string | null;
+    status: string;
+    lastResultCount: number;
+    usefulResultCount: number;
+  }>;
 };
 
 export async function fetchDiscoveryContext(

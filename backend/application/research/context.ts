@@ -4,7 +4,12 @@ import { animeTable } from "~/infrastructure/db/schema";
 import { readHeldCandidates, readPublications, readWorks } from "~/repositories/admin/dashboard";
 import { readAdminAnimeResources } from "~/repositories/admin/resources";
 import { currentSeason } from "~/repositories/catalog";
-import { readSearchMemory, readSearchMemoryHits } from "~/repositories/search-memory";
+import {
+  readRecentDiscoverySearches,
+  readSearchMemory,
+  readSearchMemoryState,
+  readSearchMemoryHits,
+} from "~/repositories/search-memory";
 import { HttpError } from "~/shared/http-error";
 
 function routineKey(sourceId: string) {
@@ -46,12 +51,40 @@ export async function readResearchContext(
       }),
     );
   }
-  const [memory, memoryHits, recentPublications, heldCandidates] = await Promise.all([
-    readSearchMemory(db, keys),
-    keys ? Promise.resolve([]) : readSearchMemoryHits(db, mode === "routine"),
-    keys ? Promise.resolve([]) : readPublications(db),
-    keys ? Promise.resolve([]) : readHeldCandidates(db),
-  ]);
+  const routineKeys =
+    keys ??
+    anime.flatMap((work) =>
+      resources[work.id].accounts
+        .filter(
+          (account) =>
+            account.verified &&
+            account.monitorMode !== "disabled" &&
+            ["x", "twitter"].includes(account.platform.toLowerCase()),
+        )
+        .map((account) => ({
+          scopeType: account.ownerType === "person" ? ("person" as const) : ("anime" as const),
+          scopeId: account.ownerType === "person" ? account.ownerId : work.id,
+          searchKind: "social" as const,
+          targetKey: `updates:${work.id}:${account.id}`,
+        })),
+    );
+  async function scopedMemory() {
+    if (mode === "discovery" && !keys) return readSearchMemory(db);
+    const records = [];
+    // Four parameters per key; keep below D1's 100-parameter ceiling.
+    // Do not truncate current source cursors to a global recent-history window.
+    for (let offset = 0; offset < routineKeys.length; offset += 20)
+      records.push(...(await readSearchMemoryState(db, routineKeys.slice(offset, offset + 20))));
+    return records;
+  }
+  const [memory, memoryHits, recentPublications, heldCandidates, recentSearches] =
+    await Promise.all([
+      scopedMemory(),
+      keys ? Promise.resolve([]) : readSearchMemoryHits(db, mode === "routine"),
+      keys ? Promise.resolve([]) : readPublications(db),
+      keys ? Promise.resolve([]) : readHeldCandidates(db),
+      keys ? Promise.resolve([]) : readRecentDiscoverySearches(db),
+    ]);
   return {
     dashboard: {
       anime,
@@ -62,5 +95,6 @@ export async function readResearchContext(
     resources,
     memory,
     memoryHits,
+    recentSearches,
   };
 }

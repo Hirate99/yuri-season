@@ -67,7 +67,7 @@ type PlanInput = {
   now: Date;
   force: boolean;
   includeBirthdays?: boolean;
-  profile?: ResearchProfile;
+  profile?: Exclude<ResearchProfile, "routine">;
   animeIds?: Set<string> | null;
   personIds?: Set<string> | null;
   platforms?: Set<string> | null;
@@ -672,15 +672,6 @@ export function buildDiscoveryPlan(input: PlanInput): DiscoveryQuery[] {
     // Omitted profiles preserve the low-level planner's legacy all-lanes behavior.
     // Production entry points always pass an explicit profile.
     if (!input.profile) return true;
-
-    if (input.profile === "routine") {
-      return (
-        Boolean(query.accountId) &&
-        query.targetKey.startsWith("updates:") &&
-        query.operation !== "tag_scan" &&
-        ["x", "twitter"].includes(query.platform?.toLowerCase() ?? "")
-      );
-    }
 
     if (input.profile === "account-discovery") return isAccountDiscovery(query);
 

@@ -13,14 +13,15 @@ import { createId } from "~/shared/id";
 export type SearchHitOutcome = "seen" | "candidate" | "published" | "held" | "rejected" | "ignored";
 
 type MemoryKey = Pick<SearchMemoryWrite, "scopeType" | "scopeId" | "searchKind" | "targetKey">;
-function memoryKeysWhere(keys: MemoryKey[]) {
+type MemoryScope = Pick<MemoryKey, "scopeType" | "scopeId">;
+function memoryKeysWhere(keys: (MemoryKey | MemoryScope)[]) {
   return or(
     ...keys.map((key) =>
       and(
         eq(searchMemoryTable.scopeType, key.scopeType),
         eq(searchMemoryTable.scopeId, key.scopeId),
-        eq(searchMemoryTable.searchKind, key.searchKind),
-        eq(searchMemoryTable.targetKey, key.targetKey),
+        "searchKind" in key ? eq(searchMemoryTable.searchKind, key.searchKind) : undefined,
+        "targetKey" in key ? eq(searchMemoryTable.targetKey, key.targetKey) : undefined,
       ),
     ),
   );
@@ -29,7 +30,7 @@ function memoryKeysWhere(keys: MemoryKey[]) {
 /** Source execution needs cursors, never lifetime hit aggregates. */
 export async function readSearchMemoryState(
   db: D1Database,
-  keys: MemoryKey[],
+  keys: (MemoryKey | MemoryScope)[],
 ): Promise<SearchMemoryState[]> {
   if (!keys.length) return [];
   const rows = await database(db).select().from(searchMemoryTable).where(memoryKeysWhere(keys));

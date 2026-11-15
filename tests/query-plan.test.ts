@@ -5,6 +5,7 @@ import { readAdminCoverage } from "~/repositories/admin/coverage";
 import {
   readRecentDiscoverySearches,
   readSearchMemoryHits,
+  readSearchMemoryState,
   resolveSearchHit,
 } from "~/repositories/search-memory";
 import { readAudit, readPublications, readRuns } from "~/repositories/admin/dashboard";
@@ -29,6 +30,24 @@ function plan(sql: string, ...bindings: Array<string | number>): string {
 }
 
 describe("backend query plans", () => {
+  test("scoped discovery state uses entity indexes without hit joins or sorting", async () => {
+    database.resetMetrics();
+    await readSearchMemoryState(database.binding(), [
+      { scopeType: "anime", scopeId: "anime-kimishinu" },
+      { scopeType: "person", scopeId: "person-test" },
+    ]);
+    const actual = plan(
+      database.statements[0],
+      "anime",
+      "anime-kimishinu",
+      "person",
+      "person-test",
+    );
+    expect(actual).toContain("SEARCH search_memory USING INDEX");
+    expect(actual).not.toContain("SCAN search_memory");
+    expect(actual).not.toContain("USE TEMP B-TREE");
+    expect(actual).not.toContain("search_memory_hits");
+  });
   test("discovery briefing does not scan timeline memories or join their hits", async () => {
     database.resetMetrics();
     await readRecentDiscoverySearches(database.binding());

@@ -68,3 +68,28 @@ test("routine retains old source cursors beyond 300 unrelated searches and batch
   expect(result.memory.every((record) => record.cursor?.committedPostId === "100")).toBe(true);
   expect(result.recentSearches).toHaveLength(30);
 });
+
+test("discovery reads scoped state without lifetime hit aggregation or a global 300-row window", async () => {
+  for (let i = 0; i < 310; i++) {
+    database.sqlite
+      .query(
+        `INSERT INTO search_memory(id, scope_type, scope_id, search_kind, target_key, query_text)
+      VALUES (?, 'anime', 'anime-kimishinu', 'social', ?, 'current work')`,
+      )
+      .run(`scoped-${i}`, `query-${i}`);
+  }
+  database.exec(`INSERT INTO search_memory(id, scope_type, scope_id, search_kind, target_key, query_text)
+    VALUES ('unrelated', 'anime', 'old-work', 'social', 'old', 'unrelated work')`);
+  database.resetMetrics();
+  const result = await readResearchContext(database.binding(), "discovery");
+  expect(result.memory.filter((row) => row.id.startsWith("scoped-"))).toHaveLength(310);
+  expect(result.memory.some((row) => row.id === "unrelated")).toBe(false);
+  const memoryQueries = database.statements.filter((statement) =>
+    statement.includes('from "search_memory"'),
+  );
+  expect(memoryQueries.length).toBeGreaterThan(0);
+  for (const query of memoryQueries) {
+    expect(query.toLowerCase()).not.toContain("join");
+    expect(query.toLowerCase()).not.toContain("group by");
+  }
+});

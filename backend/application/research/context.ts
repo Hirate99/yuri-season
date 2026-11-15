@@ -6,7 +6,6 @@ import { readAdminAnimeResources } from "~/repositories/admin/resources";
 import { currentSeason } from "~/repositories/catalog";
 import {
   readRecentDiscoverySearches,
-  readSearchMemory,
   readSearchMemoryState,
   readSearchMemoryHits,
 } from "~/repositories/search-memory";
@@ -69,12 +68,32 @@ export async function readResearchContext(
         })),
     );
   async function scopedMemory() {
-    if (mode === "discovery" && !keys) return readSearchMemory(db);
+    const scopes =
+      mode === "discovery" && !keys
+        ? [
+            { scopeType: "season" as const, scopeId: season.id },
+            ...anime.map((work) => ({ scopeType: "anime" as const, scopeId: work.id })),
+            ...Object.values(resources).flatMap((resource) => [
+              ...resource.accounts
+                .filter((account) => account.ownerType === "person")
+                .map((account) => ({ scopeType: "person" as const, scopeId: account.ownerId })),
+              ...resource.staff.map((staff) => ({
+                scopeType: "person" as const,
+                scopeId: staff.personId,
+              })),
+              ...resource.cast.flatMap((cast) => [
+                { scopeType: "person" as const, scopeId: cast.personId },
+                { scopeType: "character" as const, scopeId: cast.characterId },
+              ]),
+            ]),
+          ]
+        : routineKeys;
+    const requested = [...new Map(scopes.map((key) => [JSON.stringify(key), key])).values()];
     const records = [];
     // Four parameters per key; keep below D1's 100-parameter ceiling.
     // Do not truncate current source cursors to a global recent-history window.
-    for (let offset = 0; offset < routineKeys.length; offset += 20)
-      records.push(...(await readSearchMemoryState(db, routineKeys.slice(offset, offset + 20))));
+    for (let offset = 0; offset < requested.length; offset += 20)
+      records.push(...(await readSearchMemoryState(db, requested.slice(offset, offset + 20))));
     return records;
   }
   const [memory, memoryHits, recentPublications, heldCandidates, recentSearches] =

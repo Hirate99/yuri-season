@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { searchMemoryBatchSchema } from "~/http/input/search-memory-input";
-import { readSearchMemory, rememberSearch } from "~/repositories/search-memory";
+import {
+  readSearchMemory,
+  readSearchMemoryHits,
+  rememberSearch,
+  resolveSearchHit,
+} from "~/repositories/search-memory";
 import { TestD1 } from "./support/d1-adapter";
 
 let database: TestD1;
@@ -45,6 +50,21 @@ function batch(outcome: "seen" | "published" = "seen") {
 }
 
 describe("search memory", () => {
+  test("unfinished queue retains old held hits and excludes resolved history", async () => {
+    const [record] = batch();
+    record.hits = [
+      { ...record.hits[0], canonicalUrl: "https://example.com/held", outcome: "held" },
+      { ...record.hits[0], canonicalUrl: "https://example.com/done", outcome: "published" },
+    ];
+    await rememberSearch(database.binding(), [record]);
+    expect(
+      (await readSearchMemoryHits(database.binding(), true)).map((hit) => hit.canonicalUrl),
+    ).toEqual(["https://example.com/held"]);
+    await resolveSearchHit(database.binding(), "https://example.com/held", "published");
+    expect(await readSearchMemoryHits(database.binding(), true)).toEqual([]);
+    expect(await readSearchMemoryHits(database.binding())).toHaveLength(2);
+  });
+
   test("replaying older coverage cannot roll back a newer cursor or hit", async () => {
     const [old] = batch();
     old.cursor = { committedPostId: "100" };

@@ -23,6 +23,7 @@ import { readAdminContentResources } from "./content-resources";
 export async function readAdminAnimeResources(
   db: D1Database,
   animeId: string,
+  includeContent = true,
 ): Promise<AdminAnimeResources> {
   const orm = database(db);
 
@@ -91,7 +92,9 @@ export async function readAdminAnimeResources(
           researchSourcesTable.id,
         ),
     ]),
-    readAdminContentResources(db, animeId),
+    includeContent
+      ? readAdminContentResources(db, animeId)
+      : Promise.resolve({ events: [], media: [], discussions: [], themeSongs: [] }),
   ]);
 
   const anime = animeRows[0];

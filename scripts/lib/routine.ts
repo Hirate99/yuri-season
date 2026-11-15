@@ -141,14 +141,20 @@ type Receipt = {
   observations: RoutineObservation[];
   records: SearchMemoryWrite[];
   syncedAt: string | null;
+  syncedCount?: number;
 };
 
 export async function recordRoutine(
   path: string,
-  context = fetchDiscoveryContext,
+  context: (sourceIds: string[]) => Promise<DiscoveryContext> = (sourceIds) =>
+    fetchDiscoveryContext("routine", sourceIds),
   sync = rememberSearchRecords,
 ) {
   const input = (await Bun.file(path).json()) as { observations: RoutineObservation[] };
+  if (!Array.isArray(input.observations) || !input.observations.length)
+    throw new Error("provide inspected observations");
+  if (new Set(input.observations.map((item) => item.sourceId)).size !== input.observations.length)
+    throw new Error("duplicate sourceId");
   const fingerprint = await stableFingerprint(JSON.stringify(input.observations));
   const archive = `${evidenceDirectory}/routine-${fingerprint}.json`;
   const saved = await readResearchJson<Receipt | null>(archive, null);
@@ -156,18 +162,31 @@ export async function recordRoutine(
   // Replay validated records with their original timestamps; the server protects newer memory.
   const receipt: Receipt = saved ?? {
     observations: input.observations,
-    records: await routineRecords(await context(), input.observations),
+    records: [],
     syncedAt: null,
+    syncedCount: 0,
   };
+  // Preserve original evidence before any network access. Each source is its own
+  // checkpoint, so an unrelated failure never replays already acknowledged work.
   await writeResearchJson(archive, receipt);
-  await sync(receipt.records);
+  for (let index = receipt.syncedCount ?? 0; index < receipt.observations.length; index++) {
+    const observation = receipt.observations[index];
+    if (!receipt.records[index]) {
+      const [record] = await routineRecords(await context([observation.sourceId]), [observation]);
+      receipt.records[index] = record;
+      await writeResearchJson(archive, receipt);
+    }
+    await sync([receipt.records[index]]);
+    receipt.syncedCount = index + 1;
+    await writeResearchJson(archive, receipt);
+  }
   receipt.syncedAt = new Date().toISOString();
   await writeResearchJson(archive, receipt);
   return { archive, syncedAt: receipt.syncedAt, recorded: receipt.records.length };
 }
 
 export async function routineContext({ details = false } = {}) {
-  const context = await fetchDiscoveryContext();
+  const context = await fetchDiscoveryContext("routine");
   const sources = routineSources(context);
   const legacy = await readResearchJson<DiscoveryCampaign | null>(
     ".research-cache/update-plan.json",

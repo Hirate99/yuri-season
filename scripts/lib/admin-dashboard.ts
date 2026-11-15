@@ -26,13 +26,15 @@ export async function fetchAdminResources(animeId: string): Promise<AdminAnimeRe
   return rpcData(adminApi().api.admin.anime[":id"].resources.$get({ param: { id: animeId } }));
 }
 
-export async function fetchSearchMemory(includeHits = false): Promise<{
+export async function fetchSearchMemory(includeHits: boolean | "unfinished" = false): Promise<{
   records: SearchMemorySummary[];
   hits?: SearchMemoryHitSummary[];
 }> {
   return rpcData(
     adminApi().api.admin.research.memory.$get({
-      query: includeHits ? { includeHits: "1" } : {},
+      query: includeHits
+        ? { includeHits: "1", ...(includeHits === "unfinished" ? { hitScope: "unfinished" } : {}) }
+        : {},
     }),
   );
 }

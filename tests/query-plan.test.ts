@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { TestD1 } from "./support/d1-adapter";
 import { readFeed } from "~/repositories/feed";
 import { readAdminCoverage } from "~/repositories/admin/coverage";
+import { readSearchMemoryHits, resolveSearchHit } from "~/repositories/search-memory";
+import { readAudit, readPublications, readRuns } from "~/repositories/admin/dashboard";
 
 type QueryPlanRow = { detail: string };
 
@@ -23,6 +25,44 @@ function plan(sql: string, ...bindings: Array<string | number>): string {
 }
 
 describe("backend query plans", () => {
+  test("global search hit reads use the recency index without sorting the full history", async () => {
+    database.resetMetrics();
+    await readSearchMemoryHits(database.binding());
+    const actual = plan(database.statements[0], 5000);
+    expect(actual).toContain("idx_search_hits_recent");
+    expect(actual).not.toContain("USE TEMP B-TREE");
+  });
+
+  test("resolving a URL searches its index instead of scanning all search hits", async () => {
+    database.resetMetrics();
+    await resolveSearchHit(database.binding(), "https://example.test/item", "published");
+    const actual = plan(database.statements[0], "published", "https://example.test/item");
+    expect(actual).toContain("SEARCH search_memory_hits USING INDEX idx_search_hits_url");
+  });
+
+  test("routine review queue skips resolved history using its partial index", async () => {
+    database.resetMetrics();
+    await readSearchMemoryHits(database.binding(), true);
+    const actual = plan(database.statements[0], 5000);
+    expect(actual).toContain("idx_search_hits_unfinished_recent");
+    expect(actual).not.toContain("USE TEMP B-TREE");
+    expect(actual).not.toContain("SEARCH search_memory ");
+  });
+
+  test("bounded admin histories do not scan and sort their entire tables", async () => {
+    for (const [read, index, limit] of [
+      [readRuns, "idx_research_runs_recent", 12],
+      [readAudit, "idx_audit_log_recent", 40],
+      [readPublications, "idx_feed_items_admin_recent", 40],
+    ] as const) {
+      database.resetMetrics();
+      await read(database.binding());
+      const actual = plan(database.statements[0], limit);
+      expect(actual).toContain(index);
+      expect(actual).not.toContain("USE TEMP B-TREE");
+    }
+  });
+
   test("media coverage probes publication links by index instead of scanning per media item", async () => {
     database.resetMetrics();
     await readAdminCoverage(database.binding());

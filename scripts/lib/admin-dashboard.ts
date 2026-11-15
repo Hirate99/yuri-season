@@ -1,9 +1,4 @@
-import type {
-  AdminAnimeResources,
-  AdminDashboard,
-  SearchMemoryHitSummary,
-  SearchMemorySummary,
-} from "@/domain";
+import type { AdminAnimeResources, AdminDashboard } from "@/domain";
 import { createApiClient, rpcData } from "@/lib/rpc";
 import { adminHeaders } from "./admin-headers";
 import { requiredResearchEnv } from "./research-env";
@@ -26,13 +21,6 @@ export async function fetchAdminResources(animeId: string): Promise<AdminAnimeRe
   return rpcData(adminApi().api.admin.anime[":id"].resources.$get({ param: { id: animeId } }));
 }
 
-export async function fetchSearchMemory(includeHits = false): Promise<{
-  records: SearchMemorySummary[];
-  hits?: SearchMemoryHitSummary[];
-}> {
-  return rpcData(
-    adminApi().api.admin.research.memory.$get({
-      query: includeHits ? { includeHits: "1" } : {},
-    }),
-  );
+export async function fetchResearchSources() {
+  return rpcData(adminApi().api.admin.research.sources.$get());
 }

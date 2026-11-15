@@ -2,34 +2,32 @@ import type {
   AdminAnimeResources,
   AdminDashboard,
   SearchMemoryHitSummary,
-  SearchMemorySummary,
+  SearchMemoryState,
 } from "@/domain";
-import { fetchAdminDashboard, fetchAdminResources, fetchSearchMemory } from "./admin-dashboard";
-import { mapConcurrent } from "./map-concurrent";
+import { adminApi } from "./admin-dashboard";
+import { rpcData } from "@/lib/rpc";
 
 export type DiscoveryContext = {
-  dashboard: AdminDashboard;
+  dashboard: Pick<AdminDashboard, "anime" | "seasons" | "recentPublications" | "heldCandidates">;
   resources: Record<string, AdminAnimeResources>;
-  memory: SearchMemorySummary[];
+  memory: SearchMemoryState[];
   memoryHits: SearchMemoryHitSummary[];
+  recentSearches?: Array<{
+    queryText: string;
+    searchedAt: string | null;
+    status: string;
+    lastResultCount: number;
+    usefulResultCount: number;
+  }>;
 };
 
-export async function fetchDiscoveryContext(): Promise<DiscoveryContext> {
-  const dashboard = await fetchAdminDashboard();
-
-  const [resourcePairs, memory] = await Promise.all([
-    mapConcurrent(
-      dashboard.anime,
-      4,
-      async (anime) => [anime.id, await fetchAdminResources(anime.id)] as const,
-    ),
-    fetchSearchMemory(true),
-  ]);
-
-  return {
-    dashboard,
-    resources: Object.fromEntries(resourcePairs),
-    memory: memory.records,
-    memoryHits: memory.hits ?? [],
-  };
+export async function fetchDiscoveryContext(
+  mode: "routine" | "discovery" = "discovery",
+  sourceIds?: string[],
+): Promise<DiscoveryContext> {
+  return rpcData(
+    adminApi().api.admin.research.context.$post({
+      json: { mode, sourceIds },
+    }),
+  );
 }

@@ -7,7 +7,7 @@ import type {
   SourceHealth,
   UpdateJob,
 } from "@/domain";
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, type SQL } from "drizzle-orm";
 
 import { database } from "~/infrastructure/db/client";
 import { mapAnime } from "~/infrastructure/db/mappers";
@@ -269,8 +269,8 @@ export async function readAudit(db: D1Database): Promise<AuditEntry[]> {
   }));
 }
 
-export async function readWorks(db: D1Database) {
-  return (await readAllAnimeSummaries(db)).map((row) => ({
+export async function readWorks(db: D1Database, where?: SQL) {
+  return (await readAllAnimeSummaries(db, where)).map((row) => ({
     ...mapAnime(row),
     seasonId: row.seasonId,
     seasonLabel: row.seasonLabel,

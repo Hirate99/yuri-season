@@ -99,8 +99,8 @@ export async function readAnimeSummaryBySlug(db: D1Database, slug: string) {
   return row ?? null;
 }
 
-export function readAllAnimeSummaries(db: D1Database) {
-  return animeSummaryQuery(db).orderBy(
+export function readAllAnimeSummaries(db: D1Database, where?: SQL) {
+  return animeSummaryQuery(db, where).orderBy(
     desc(seasonsTable.startsOn),
     desc(animeTable.featured),
     asc(broadcastSlotsTable.weekday),

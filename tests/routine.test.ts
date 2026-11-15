@@ -181,3 +181,57 @@ test("failed sync preserves evidence and replay uses original timestamps without
     await rmdir(directory);
   }
 });
+
+test("context failure preserves raw evidence and recovery skips acknowledged sources", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "yuri-routine-"));
+  const secondContext = structuredClone(context);
+  secondContext.resources["anime-1"].accounts[0].id = "account-2";
+  secondContext.memory[0].targetKey = "updates:anime-1:account-2";
+  const observations = [
+    { ...observation(), notes: crypto.randomUUID() },
+    { ...observation(), sourceId: "anime:anime-1:social:updates:anime-1:account-2" },
+  ];
+  const archive = `.research-cache/discovery-results/routine-${await stableFingerprint(JSON.stringify(observations))}.json`;
+  const input = join(directory, "observations.json");
+  try {
+    await Bun.write(input, JSON.stringify({ observations }));
+    let writes = 0;
+    await expect(
+      recordRoutine(
+        input,
+        async (ids) => {
+          const receipt = await Bun.file(archive).json();
+          expect(receipt.observations).toEqual(observations);
+          if (ids[0] === observations[1].sourceId) throw new Error("second source unavailable");
+          expect(ids).toEqual([observations[0].sourceId]);
+          return context;
+        },
+        async (records) => {
+          writes++;
+          expect(records).toHaveLength(1);
+          return { records: 1, hits: 1 };
+        },
+      ),
+    ).rejects.toThrow("second source unavailable");
+    expect(writes).toBe(1);
+    expect((await Bun.file(archive).json()).syncedCount).toBe(1);
+    await recordRoutine(
+      archive,
+      async (ids) => {
+        expect(ids).toEqual([observations[1].sourceId]);
+        return secondContext;
+      },
+      async (records) => {
+        writes++;
+        expect(records[0].targetKey).toBe("updates:anime-1:account-2");
+        return { records: 1, hits: 1 };
+      },
+    );
+    expect(writes).toBe(2);
+    expect((await Bun.file(archive).json()).syncedAt).toBeString();
+  } finally {
+    await rm(input, { force: true });
+    await rm(archive, { force: true });
+    await rmdir(directory);
+  }
+});

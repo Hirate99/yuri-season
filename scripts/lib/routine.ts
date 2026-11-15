@@ -1,7 +1,8 @@
 import type { SearchMemoryWrite } from "@/domain";
 import { searchMemoryBatchSchema } from "~/http/input/search-memory-input";
 import { stableFingerprint } from "~/shared/fingerprint";
-import { buildDiscoveryPlan, type DiscoveryQuery } from "./discovery-query-plan";
+import type { DiscoveryQuery } from "./discovery-query-plan";
+import { accountUpdateQuery, accountUpdateTarget } from "./discovery-account-updates";
 import { fetchDiscoveryContext, type DiscoveryContext } from "./discovery-context";
 import {
   memoryRecordForResult,
@@ -25,18 +26,50 @@ export type RoutineObservation = Omit<
 export function routineSources(context: DiscoveryContext, now = new Date()) {
   const season = context.dashboard.seasons.find((season) => season.isCurrent);
   if (!season) throw new Error("current season is missing");
-  const queries = buildDiscoveryPlan({
-    seasonId: season.id,
-    seasonLabel: season.label,
-    anime: context.dashboard.anime.filter((anime) => anime.seasonId === season.id),
-    resources: context.resources,
-    memory: context.memory,
-    memoryHits: context.memoryHits,
-    now,
-    force: true,
-    profile: "routine",
-    limit: Number.MAX_SAFE_INTEGER,
-  });
+  const queries: DiscoveryQuery[] = [];
+  for (const anime of context.dashboard.anime.filter((work) => work.seasonId === season.id)) {
+    const resources = context.resources[anime.id];
+    if (!resources) throw new Error(`source context missing for ${anime.id}`);
+    for (const account of resources.accounts) {
+      if (!["x", "twitter"].includes(account.platform.toLowerCase())) continue;
+      const target = accountUpdateTarget(resources, account, anime.id);
+      if (!target) continue;
+      const prior = context.memory.find(
+        (record) =>
+          record.scopeType === target.scopeType &&
+          record.scopeId === target.scopeId &&
+          record.searchKind === "social" &&
+          record.targetKey === target.targetKey,
+      );
+      queries.push({
+        ...target,
+        id: `${target.scopeType}:${target.scopeId}:social:${target.targetKey}`,
+        animeId: anime.id,
+        animeTitle: anime.titleZh,
+        searchKind: "social",
+        operation: target.timelineMode ? "timeline_scan" : "search",
+        stage: target.contentLane === "official" ? "official" : "people",
+        maxFreshHours: 3,
+        completionPolicy: {
+          allowedCompleteSurfaces: ["signed_in_timeline", "platform_api"],
+          mustReachPreviousCursor: true,
+          recordEveryOriginal: true,
+          searchEngineCanComplete: false,
+        },
+        queryText: accountUpdateQuery(
+          account,
+          anime.titleJa,
+          prior?.searchedAt ?? null,
+          now,
+          target.timelineMode,
+        ),
+        reason: "增量核验已验证账号的作品相关原帖，保留证据后推进游标。",
+        cursor: prior?.cursor ?? {},
+        rememberedAt: prior?.searchedAt ?? null,
+        knownHits: [],
+      });
+    }
+  }
   return queries
     .map((query) => {
       const memory = context.memory.find(
@@ -141,14 +174,20 @@ type Receipt = {
   observations: RoutineObservation[];
   records: SearchMemoryWrite[];
   syncedAt: string | null;
+  syncedCount?: number;
 };
 
 export async function recordRoutine(
   path: string,
-  context = fetchDiscoveryContext,
+  context: (sourceIds: string[]) => Promise<DiscoveryContext> = (sourceIds) =>
+    fetchDiscoveryContext("routine", sourceIds),
   sync = rememberSearchRecords,
 ) {
   const input = (await Bun.file(path).json()) as { observations: RoutineObservation[] };
+  if (!Array.isArray(input.observations) || !input.observations.length)
+    throw new Error("provide inspected observations");
+  if (new Set(input.observations.map((item) => item.sourceId)).size !== input.observations.length)
+    throw new Error("duplicate sourceId");
   const fingerprint = await stableFingerprint(JSON.stringify(input.observations));
   const archive = `${evidenceDirectory}/routine-${fingerprint}.json`;
   const saved = await readResearchJson<Receipt | null>(archive, null);
@@ -156,18 +195,31 @@ export async function recordRoutine(
   // Replay validated records with their original timestamps; the server protects newer memory.
   const receipt: Receipt = saved ?? {
     observations: input.observations,
-    records: await routineRecords(await context(), input.observations),
+    records: [],
     syncedAt: null,
+    syncedCount: 0,
   };
+  // Preserve original evidence before any network access. Each source is its own
+  // checkpoint, so an unrelated failure never replays already acknowledged work.
   await writeResearchJson(archive, receipt);
-  await sync(receipt.records);
+  for (let index = receipt.syncedCount ?? 0; index < receipt.observations.length; index++) {
+    const observation = receipt.observations[index];
+    if (!receipt.records[index]) {
+      const [record] = await routineRecords(await context([observation.sourceId]), [observation]);
+      receipt.records[index] = record;
+      await writeResearchJson(archive, receipt);
+    }
+    await sync([receipt.records[index]]);
+    receipt.syncedCount = index + 1;
+    await writeResearchJson(archive, receipt);
+  }
   receipt.syncedAt = new Date().toISOString();
   await writeResearchJson(archive, receipt);
   return { archive, syncedAt: receipt.syncedAt, recorded: receipt.records.length };
 }
 
 export async function routineContext({ details = false } = {}) {
-  const context = await fetchDiscoveryContext();
+  const context = await fetchDiscoveryContext("routine");
   const sources = routineSources(context);
   const legacy = await readResearchJson<DiscoveryCampaign | null>(
     ".research-cache/update-plan.json",
@@ -227,17 +279,7 @@ export async function routineContext({ details = false } = {}) {
                 null,
             },
       ),
-    recentSearches: context.memory
-      .filter((record) => !record.targetKey.startsWith("updates:"))
-      .sort((a, b) => b.searchedAt.localeCompare(a.searchedAt))
-      .slice(0, 30)
-      .map(({ queryText, searchedAt, status, lastResultCount, usefulResultCount }) => ({
-        queryText,
-        searchedAt,
-        status,
-        lastResultCount,
-        usefulResultCount,
-      })),
+    recentSearches: context.recentSearches ?? [],
     heldCandidates: context.dashboard.heldCandidates,
     pendingEvidence,
     legacyUnfinished:

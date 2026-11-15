@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { AdminAnimeResources, AdminAnimeSummary, SearchMemorySummary } from "@/domain";
 import { buildDiscoveryPlan } from "../scripts/lib/discovery-query-plan";
+import { routineSources } from "../scripts/lib/routine";
+import type { DiscoveryContext } from "../scripts/lib/discovery-context";
 
 const anime = {
   id: "anime-1",
@@ -196,18 +198,30 @@ describe("discovery query planning", () => {
         },
       ],
     };
-    const queries = buildDiscoveryPlan({
-      seasonId: "season-1",
-      seasonLabel: "2026 夏",
-      anime: [anime],
-      resources: { "anime-1": monitoredResources },
-      memory: [],
-      memoryHits: [],
-      now: new Date("2026-08-11T20:00:00Z"),
-      force: false,
-      profile: "routine",
-      limit: 100,
-    });
+    const queries = routineSources(
+      {
+        dashboard: {
+          seasons: [
+            {
+              id: "season-1",
+              slug: "2026-summer",
+              label: "2026 夏",
+              startsOn: "2026-07-01",
+              endsOn: "2026-09-30",
+              isCurrent: true,
+              animeCount: 1,
+            },
+          ],
+          anime: [anime],
+          recentPublications: [],
+          heldCandidates: [],
+        },
+        resources: { "anime-1": monitoredResources },
+        memory: [],
+        memoryHits: [],
+      } satisfies DiscoveryContext,
+      new Date("2026-08-11T20:00:00Z"),
+    ).map(({ query }) => query);
 
     expect(new Set(queries.map((query) => query.targetKey))).toEqual(
       new Set([
@@ -464,7 +478,7 @@ describe("discovery query planning", () => {
       memoryHits: [],
       now: new Date("2026-08-11T20:00:00Z"),
       force: false,
-      profile: "routine",
+      profile: "discovery",
       limit: 100,
     });
     expect(

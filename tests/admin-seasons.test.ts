@@ -37,7 +37,7 @@ describe("Admin seasons", () => {
       database.sqlite
         .query(
           `
-      SELECT action FROM audit_log WHERE entity_id = ? ORDER BY created_at
+      SELECT action FROM audit_log WHERE entity_id = ? ORDER BY created_at, rowid
     `,
         )
         .all(id),

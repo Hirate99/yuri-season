@@ -2,6 +2,13 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { TestD1 } from "./support/d1-adapter";
 import { readFeed } from "~/repositories/feed";
 import { readAdminCoverage } from "~/repositories/admin/coverage";
+import {
+  readRecentDiscoverySearches,
+  readSearchMemoryHits,
+  readSearchMemoryState,
+  resolveSearchHit,
+} from "~/repositories/search-memory";
+import { readAudit, readPublications, readRuns } from "~/repositories/admin/dashboard";
 
 type QueryPlanRow = { detail: string };
 
@@ -23,6 +30,70 @@ function plan(sql: string, ...bindings: Array<string | number>): string {
 }
 
 describe("backend query plans", () => {
+  test("scoped discovery state uses entity indexes without hit joins or sorting", async () => {
+    database.resetMetrics();
+    await readSearchMemoryState(database.binding(), [
+      { scopeType: "anime", scopeId: "anime-kimishinu" },
+      { scopeType: "person", scopeId: "person-test" },
+    ]);
+    const actual = plan(
+      database.statements[0],
+      "anime",
+      "anime-kimishinu",
+      "person",
+      "person-test",
+    );
+    expect(actual).toContain("SEARCH search_memory USING INDEX");
+    expect(actual).not.toContain("SCAN search_memory");
+    expect(actual).not.toContain("USE TEMP B-TREE");
+    expect(actual).not.toContain("search_memory_hits");
+  });
+  test("discovery briefing does not scan timeline memories or join their hits", async () => {
+    database.resetMetrics();
+    await readRecentDiscoverySearches(database.binding());
+    const actual = plan(database.statements[0], 30);
+    expect(actual).toContain("idx_search_memory_discovery_recent");
+    expect(actual).not.toContain("USE TEMP B-TREE");
+    expect(actual).not.toContain("search_memory_hits");
+  });
+  test("global search hit reads use the recency index without sorting the full history", async () => {
+    database.resetMetrics();
+    await readSearchMemoryHits(database.binding());
+    const actual = plan(database.statements[0], 5000);
+    expect(actual).toContain("idx_search_hits_recent");
+    expect(actual).not.toContain("USE TEMP B-TREE");
+  });
+
+  test("resolving a URL searches its index instead of scanning all search hits", async () => {
+    database.resetMetrics();
+    await resolveSearchHit(database.binding(), "https://example.test/item", "published");
+    const actual = plan(database.statements[0], "published", "https://example.test/item");
+    expect(actual).toContain("SEARCH search_memory_hits USING INDEX idx_search_hits_url");
+  });
+
+  test("routine review queue skips resolved history using its partial index", async () => {
+    database.resetMetrics();
+    await readSearchMemoryHits(database.binding(), true);
+    const actual = plan(database.statements[0], 5000);
+    expect(actual).toContain("idx_search_hits_unfinished_recent");
+    expect(actual).not.toContain("USE TEMP B-TREE");
+    expect(actual).not.toContain("SEARCH search_memory ");
+  });
+
+  test("bounded admin histories do not scan and sort their entire tables", async () => {
+    for (const [read, index, limit] of [
+      [readRuns, "idx_research_runs_recent", 12],
+      [readAudit, "idx_audit_log_recent", 40],
+      [readPublications, "idx_feed_items_admin_recent", 40],
+    ] as const) {
+      database.resetMetrics();
+      await read(database.binding());
+      const actual = plan(database.statements[0], limit);
+      expect(actual).toContain(index);
+      expect(actual).not.toContain("USE TEMP B-TREE");
+    }
+  });
+
   test("media coverage probes publication links by index instead of scanning per media item", async () => {
     database.resetMetrics();
     await readAdminCoverage(database.binding());
@@ -31,6 +102,7 @@ describe("backend query plans", () => {
     );
     expect(statement).toBeDefined();
     const actual = plan(statement!);
+    expect(actual).toContain("SCAN media_items USING COVERING INDEX idx_media_coverage");
     expect(actual).toContain("SEARCH feed_candidates USING COVERING INDEX idx_candidates_media");
     expect(actual).toContain("SEARCH feed_items USING COVERING INDEX idx_feed_items_media_public");
     expect(actual).not.toContain("SCAN feed_candidates");

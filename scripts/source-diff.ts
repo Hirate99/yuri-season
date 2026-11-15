@@ -1,7 +1,7 @@
 import { fetchSource } from "~/research/source-fetcher";
 import { normalizerVersion } from "~/research/connectors/normalize";
 import { adminSourceRecord } from "./lib/admin-source-record";
-import { fetchAdminDashboard } from "./lib/admin-dashboard";
+import { fetchResearchSources } from "./lib/admin-dashboard";
 import { localSourceTransport } from "./lib/local-source-transport";
 import { sourceChangeKind, type SourceChange } from "./lib/source-change";
 import {
@@ -58,7 +58,7 @@ async function check(): Promise<void> {
     sourceCursor: current.sourceCursor,
   };
 
-  const data = await fetchAdminDashboard();
+  const sources = await fetchResearchSources();
   const changes: SourceChange[] = [];
   const errors: Array<{ sourceId: string; message: string }> = [];
 
@@ -73,8 +73,8 @@ async function check(): Promise<void> {
 
   const eligibleSources =
     profile === "routine"
-      ? data.sources.filter(isRoutineUpdateSource)
-      : data.sources.filter((item) => item.enabled);
+      ? sources.filter(isRoutineUpdateSource)
+      : sources.filter((item) => item.enabled);
 
   const selection = rotatingSourceSelection(eligibleSources, current.sourceCursor, budget);
 

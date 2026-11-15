@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
+import { createResearchService } from "~/application/research/service";
 import { readResearchContext } from "~/application/research/context";
 import { TestD1 } from "./support/d1-adapter";
 
@@ -92,4 +93,14 @@ test("discovery reads scoped state without lifetime hit aggregation or a global 
     expect(query.toLowerCase()).not.toContain("join");
     expect(query.toLowerCase()).not.toContain("group by");
   }
+});
+
+test("source checking loads only the source list, without dashboard histories or coverage", async () => {
+  database.resetMetrics();
+  const sources = await createResearchService({ DB: database.binding() } as Env).sources.list();
+  expect(sources.length).toBeGreaterThan(0);
+  expect(database.executedStatements).toBe(1);
+  const query = database.statements.join("\n");
+  for (const table of ["audit_log", "research_runs", "update_jobs", "search_memory", "media_items"])
+    expect(query).not.toContain(`"${table}"`);
 });

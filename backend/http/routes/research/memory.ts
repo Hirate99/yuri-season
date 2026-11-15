@@ -34,6 +34,9 @@ export const memoryRoutes = new Hono<ApiEnvironment>()
   .post("/research/memory", validate("json", searchMemoryBatchSchema), async (context) =>
     context.json(await context.var.services.research.memory.write(context.req.valid("json"))),
   )
+  .get("/research/sources", async (context) =>
+    context.json(await context.var.services.research.sources.list()),
+  )
   .post("/research/source-checks", validate("json", sourceChecksSchema), async (context) =>
     context.json(
       await context.var.services.research.sources.recordChecks(context.req.valid("json")),

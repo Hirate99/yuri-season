@@ -6,6 +6,7 @@ import {
   readSearchMemoryHits,
   rememberSearch,
 } from "~/repositories/search-memory";
+import { readSources } from "~/repositories/admin/dashboard";
 import { recordSourceChecks } from "~/repositories/source-checks";
 import { ingestResearchBatch } from "~/research/batch";
 import { completeLocalJob, heartbeatLocalJob, leaseLocalJobs } from "~/research/local-jobs";
@@ -30,7 +31,10 @@ export function createResearchService(env: Env) {
       }),
       write: (input: SearchMemoryWrite[]) => rememberSearch(env.DB, input),
     },
-    sources: { recordChecks: (input: SourceCheckWrite[]) => recordSourceChecks(env.DB, input) },
+    sources: {
+      list: () => readSources(env.DB),
+      recordChecks: (input: SourceCheckWrite[]) => recordSourceChecks(env.DB, input),
+    },
     run: (lane: JobLane) => {
       if (String(env.UPDATE_MODE) !== "worker") {
         throw new HttpError(409, "当前部署使用本地研究模式，不能启动 Worker 研究任务。");

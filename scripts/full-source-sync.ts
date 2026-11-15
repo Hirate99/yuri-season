@@ -1,6 +1,6 @@
 import { fetchSource } from "~/research/source-fetcher";
 import { adminSourceRecord } from "./lib/admin-source-record";
-import { fetchAdminDashboard } from "./lib/admin-dashboard";
+import { fetchResearchSources } from "./lib/admin-dashboard";
 import {
   searchRecords,
   sourceChecks,
@@ -25,8 +25,7 @@ if (recordOnly) {
   result = (await cached.json()) as FullSyncResult;
   checkedSources = result.sources.length + result.errors.length;
 } else {
-  const dashboard = await fetchAdminDashboard();
-  const sources = dashboard.sources.filter((source) => source.enabled);
+  const sources = (await fetchResearchSources()).filter((source) => source.enabled);
   const errors: FullSyncResult["errors"] = [];
   const byHostname = keyedSerial();
 
